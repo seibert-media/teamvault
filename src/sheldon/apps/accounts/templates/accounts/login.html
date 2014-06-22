@@ -1,0 +1,21 @@
+{% extends "accounts/base_public.html" %}
+{% load i18n %}
+{% block "title" %}{% trans "Login" %}{% endblock %}
+{% block "container" %}
+<div class="background"></div>
+<div class="login-wrapper">
+	<form class="login" role="form">
+		<div class="login-icon">{% trans "Login" %}</div>
+		<input type="text" class="form-control" placeholder="Username" required autofocus>
+
+		<div class="input-group">
+			<input type="password" class="form-control" placeholder="Password" required>
+			<span class="input-group-btn">
+				<button class="btn btn-default" type="button"><i class="fa fa-chevron-right"></i></button>
+			</span>
+		</div>
+
+		<button class="hidden" type="submit">Sign in</button>
+	</form>
+</div>
+{% endblock %}

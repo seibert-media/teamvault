@@ -1,0 +1,76 @@
+body {
+	font-family: Lato;
+	font-weight: 300;
+}
+.background {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background-size: cover;
+	background-position: 50% 50%;
+	background: #7b36b4;
+	background: -moz-linear-gradient(top,  #7b36b4 0%, #220f33 100%);
+	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#7b36b4), color-stop(100%,#220f33));
+	background: -webkit-linear-gradient(top,  #7b36b4 0%,#220f33 100%);
+	background: -o-linear-gradient(top,  #7b36b4 0%,#220f33 100%);
+	background: -ms-linear-gradient(top,  #7b36b4 0%,#220f33 100%);
+	background: linear-gradient(to bottom,  #7b36b4 0%,#220f33 100%);
+	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#7b36b4', endColorstr='#220f33',GradientType=0 );
+
+
+}
+.login-icon {
+	color: #8f3ed1;
+	font-size: 50px;
+	margin-top: -20px;
+	margin-bottom: 20px;
+	text-align: center;
+}
+.login-wrapper {
+	height: 400px;
+	left: 50%;
+	margin-left: -200px;
+	margin-top: -200px;
+	position: fixed;
+	top: 50%;
+	width: 400px;
+}
+form.login {
+	background-color: white;
+	border-radius: 50px;
+	box-shadow: 0 0 80px 0 rgba(0, 0, 0, 0.5);
+	padding: 60px;
+}
+form.login .form-control, form.login button {
+	position: relative;
+	height: auto;
+	-webkit-box-sizing: border-box;
+	-moz-box-sizing: border-box;
+	box-sizing: border-box;
+	padding: 10px;
+	font-size: 16px;
+}
+form.login .form-control:focus {
+	z-index: 2;
+}
+form.login input[type="text"] {
+	margin-bottom: -1px;
+	border-bottom-right-radius: 0;
+	border-bottom-left-radius: 0;
+}
+form.login input[type="password"] {
+	margin-bottom: 10px;
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
+}
+form.login button {
+	border-top-right-radius: 0;
+	color: #8f3ed1;
+	margin-top: -10px;
+	z-index: 2;
+}
+form.login button:hover {
+	color: #8f3ed1;
+}
