@@ -1,3 +1,4 @@
+from os import environ
 from os.path import dirname, join, realpath
 
 PROJECT_ROOT = realpath(dirname(dirname(__file__)))
@@ -16,6 +17,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'south',
+    'sheldon.apps.secrets',
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -76,3 +78,10 @@ TEMPLATE_CONTEXT_PROCESSORS = (
 USE_I18N = True
 USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
+
+# sheldon
+
+environ.setdefault("SHELDON_SECRET_FILE", "/var/lib/sheldon/secret")
+
+SHELDON_SECRET_FILE = environ["SHELDON_SECRET_FILE"]
+SHELDON_SECRET = "UolYLuSBSabldUuR7KO9W0YagBx9QGaOR4kE3oxlUMA="
