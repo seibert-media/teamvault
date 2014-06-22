@@ -1,4 +1,5 @@
 /devdb.sqlite
 /devenv
+/secrets
 /src/sheldon/locale/de/LC_MESSAGES/django.mo
 /uploads

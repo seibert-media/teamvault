@@ -1,5 +1,5 @@
 from os import environ
-from os.path import dirname, join, realpath
+from os.path import dirname, exists, join, realpath
 
 PROJECT_ROOT = realpath(dirname(dirname(__file__)))
 
@@ -85,4 +85,4 @@ USE_THOUSAND_SEPARATOR = False
 environ.setdefault("SHELDON_SECRET_FILE", "/var/lib/sheldon/secret")
 
 SHELDON_SECRET_FILE = environ["SHELDON_SECRET_FILE"]
-SHELDON_SECRET = "UolYLuSBSabldUuR7KO9W0YagBx9QGaOR4kE3oxlUMA="
+SHELDON_SECRET = None
