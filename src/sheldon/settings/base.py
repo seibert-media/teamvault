@@ -1,7 +1,37 @@
-from os import environ
+from base64 import decodestring, encodestring
+try:
+    from ConfigParser import SafeConfigParser
+except ImportError:
+    from configparser import SafeConfigParser
+from os import environ, umask
 from os.path import dirname, exists, join, realpath
+from random import choice
+from string import ascii_letters, digits, punctuation
+
+from cryptography.fernet import Fernet
+
 
 PROJECT_ROOT = realpath(dirname(dirname(__file__)))
+
+if not exists(environ['SHELDON_CONFIG_FILE']):
+    SECRET_KEY = "".join(choice(ascii_letters + digits + punctuation) for i in range(50))
+    config = SafeConfigParser()
+    config.add_section("django")
+    config.set("django", "secret_key", encodestring(SECRET_KEY))
+    config.add_section("sheldon")
+    config.set("sheldon", "fernet_key", Fernet.generate_key())
+    old_umask = umask(7)
+    try:
+        with open(environ['SHELDON_CONFIG_FILE'], 'wb') as f:
+            config.write(f)
+    finally:
+        umask(old_umask)
+else:
+    config = SafeConfigParser()
+    config.read(environ['SHELDON_CONFIG_FILE'])
+
+
+### Django
 
 FIXTURE_DIRS = (
     join(PROJECT_ROOT, "fixtures"),
@@ -39,7 +69,7 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = "sheldon.urls"
 
-SECRET_KEY = "FIXME"
+SECRET_KEY = decodestring(config.get("django", "secret_key"))
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
@@ -80,9 +110,7 @@ USE_I18N = True
 USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
 
-# sheldon
 
-environ.setdefault("SHELDON_SECRET_FILE", "/var/lib/sheldon/secret")
+### sheldon
 
-SHELDON_SECRET_FILE = environ["SHELDON_SECRET_FILE"]
-SHELDON_SECRET = None
+SHELDON_SECRET_KEY = None

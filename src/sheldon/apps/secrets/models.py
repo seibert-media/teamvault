@@ -27,9 +27,9 @@ class Password(Secret):
     encrypted_password = models.TextField()
 
     def get_password(self, user):
-        f = Fernet(settings.SHELDON_SECRET)
+        f = Fernet(settings.SHELDON_SECRET_KEY)
         return f.decrypt(self.encrypted_password)
 
     def set_password(self, user, new_password):
-        f = Fernet(settings.SHELDON_SECRET)
+        f = Fernet(settings.SHELDON_SECRET_KEY)
         self.encrypted_password = f.encrypt(new_password)

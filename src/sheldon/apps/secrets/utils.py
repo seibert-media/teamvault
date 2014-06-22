@@ -1,11 +1,12 @@
+try:
+    from ConfigParser import SafeConfigParser
+except ImportError:
+    from configparser import SafeConfigParser
 from hashlib import sha1
-from os import umask
-from os.path import abspath, exists
+from os import environ
 from random import choice
 from string import digits, letters, punctuation
 
-from cryptography.fernet import Fernet
-from django.conf import settings
 from django.utils.translation import ugettext as _
 
 from ..settings.models import Setting
@@ -22,32 +23,21 @@ def generate_password(length=12, alphanum=False):
 
 
 def get_secret():
-    checksum = Setting.get("secret_hash", default=None)
+    checksum = Setting.get("fernet_key_hash", default=None)
+    config = SafeConfigParser()
+    config.read(environ['SHELDON_CONFIG_FILE'])
+    key = config.get("sheldon", "fernet_key")
+    key_hash = sha1(key).hexdigest()
 
-    if not exists(settings.SHELDON_SECRET_FILE):
-        if checksum is not None:
-            raise RuntimeError(_("secrets file not found at '{}'").format(
-                settings.SHELDON_SECRET_FILE,
-            ))
-        else:
-            key = Fernet.generate_key()
-            old_umask = umask(7)
-            try:
-                with open(settings.SHELDON_SECRET_FILE, 'w') as f:
-                    f.write(key)
-            finally:
-                umask(old_umask)
-            Setting.set("secret_hash", sha1(key).hexdigest())
-            return key
+    if checksum is None:
+        Setting.set("fernet_key_hash", key_hash)
 
-    with open(settings.SHELDON_SECRET_FILE) as f:
-        key = f.read()
-
-    if sha1(key).hexdigest() != checksum:
+    elif key_hash != checksum:
         raise RuntimeError(_(
             "secret in '{path}' does not match SHA1 hash in database ({hash})"
         ).format(
             hash=checksum,
-            path=abspath(settings.SHELDON_SECRET_FILE),
+            path=environ['SHELDON_CONFIG_FILE'],
         ))
+
     return key
