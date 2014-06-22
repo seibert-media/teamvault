@@ -18,6 +18,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'south',
     'sheldon.apps.secrets',
+    'sheldon.apps.settings',
 ]
 
 LANGUAGE_CODE = "en-us"
