@@ -4,8 +4,11 @@
 {% block "container" %}
 <div class="background"></div>
 <div class="login-wrapper">
-	<form class="login" role="form">
+	<form class="login" role="form" method="POST">
 		<div class="login-icon">{% trans "Login" %}</div>
+		{% if form.errors %}
+		<p>Your username and password didn't match. Please try again.</p>
+		{% endif %}
 		<input type="text" class="form-control" placeholder="Username" required autofocus>
 
 		<div class="input-group">
@@ -16,6 +19,8 @@
 		</div>
 
 		<button class="hidden" type="submit">Sign in</button>
+
+		{% csrf_token %}
 	</form>
 </div>
 {% endblock %}
