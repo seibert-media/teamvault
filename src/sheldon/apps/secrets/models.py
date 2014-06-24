@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.translation import ugettext as _
 
 from ..accounts.models import Team
+from .exceptions import PermissionError
 from .utils import generate_password
 
 
@@ -64,12 +65,51 @@ class Password(models.Model):
     )
 
     def get_password(self, user):
+        if not self.is_readable_by_user(user):
+            raise PermissionError(_(
+                "{user} not allowed access to '{name}' ({token})"
+            ).format(
+                name=self.name,
+                token=self.id_token,
+                user=user.username,
+            ))
         f = Fernet(settings.SHELDON_SECRET_KEY)
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
         return f.decrypt(self.current_revision.encrypted_password)
 
+    def is_readable_by_user(self, user):
+        """
+        'Readable' means user can access the actual secret password.
+        """
+        if self.visibility == self.VISIBILITY_ALL:
+            return True
+        if user in self.users.all():
+            return True
+        for team in self.teams.all():
+            if user in team.members.all():
+                return True
+        return False
+
+    def is_visible_to_user(self, user):
+        if self.visibility != self.VISIBILITY_HIDDEN:
+            return True
+        if user in self.users.all():
+            return True
+        for team in self.teams.all():
+            if user in team.members.all():
+                return True
+        return False
+
     def set_password(self, user, new_password):
+        if not self.is_readable_by_user(user):
+            raise PermissionError(_(
+                "{user} not allowed access to '{name}' ({token})"
+            ).format(
+                name=self.name,
+                token=self.id_token,
+                user=user.username,
+            ))
         p = PasswordRevision()
         p.accessed_by.add(user)
         p.password = self
