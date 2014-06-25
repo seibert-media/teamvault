@@ -14,6 +14,14 @@ def _generate_id_token():
 
 
 class Password(models.Model):
+    ACCESS_NAMEONLY = 1
+    ACCESS_ANY = 2
+    ACCESS_HIDDEN = 3
+    ACCESS_CHOICES = (
+        (ACCESS_NAMEONLY, _("default")),
+        (ACCESS_ANY, _("everyone")),
+        (ACCESS_HIDDEN, _("hidden")),
+    )
     STATUS_OK = 1
     STATUS_NEEDS_CHANGING = 2
     STATUS_DELETED = 3
@@ -22,13 +30,10 @@ class Password(models.Model):
         (STATUS_NEEDS_CHANGING, _("needs changing")),
         (STATUS_DELETED, _("deleted")),
     )
-    VISIBILITY_NAMEONLY = 1
-    VISIBILITY_ANY = 2
-    VISIBILITY_HIDDEN = 3
-    VISIBILITY_CHOICES = (
-        (VISIBILITY_NAMEONLY, _("default")),
-        (VISIBILITY_ANY, _("everyone")),
-        (VISIBILITY_HIDDEN, _("hidden")),
+
+    access_policy = models.PositiveSmallIntegerField(
+        choices=ACCESS_CHOICES,
+        default=ACCESS_NAMEONLY,
     )
     created = models.DateTimeField(auto_now_add=True)
     current_revision = models.ForeignKey(
@@ -61,10 +66,6 @@ class Password(models.Model):
         get_user_model(),
         related_name='passwords',
     )
-    visibility = models.PositiveSmallIntegerField(
-        choices=VISIBILITY_CHOICES,
-        default=VISIBILITY_NAMEONLY,
-    )
 
     def get_password(self, user):
         if not self.is_readable_by_user(user):
@@ -84,7 +85,7 @@ class Password(models.Model):
         """
         'Readable' means user can access the actual secret password.
         """
-        if self.visibility == self.VISIBILITY_ANY:
+        if self.visibility == self.ACCESS_ANY:
             return True
         if user in self.users.all():
             return True
@@ -94,7 +95,7 @@ class Password(models.Model):
         return False
 
     def is_visible_to_user(self, user):
-        if self.visibility != self.VISIBILITY_HIDDEN:
+        if self.visibility != self.ACCESS_HIDDEN:
             return True
         if user in self.users.all():
             return True
