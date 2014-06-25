@@ -35,6 +35,7 @@ class Password(models.Model):
         'PasswordRevision',
         blank=True,
         null=True,
+        related_name='_password_current_revision',
     )
     description = models.TextField(
         blank=True,
@@ -58,6 +59,7 @@ class Password(models.Model):
     )
     users = models.ManyToManyField(
         get_user_model(),
+        related_name='passwords',
     )
     visibility = models.PositiveSmallIntegerField(
         choices=VISIBILITY_CHOICES,
@@ -132,6 +134,7 @@ class PasswordRevision(models.Model):
     )
     set_by = models.ForeignKey(
         get_user_model(),
+        related_name='password_revisions_set',
     )
 
     class Meta:
