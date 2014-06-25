@@ -112,14 +112,22 @@ class Password(models.Model):
                 token=self.id_token,
                 user=user.username,
             ))
-        p = PasswordRevision()
+        f = Fernet(settings.SHELDON_SECRET_KEY)
+        encrypted_password = f.encrypt(new_password)
+        try:
+            # see the comment on unique_together for PasswordRevision
+            p = PasswordRevision.objects.get(
+                encrypted_password=encrypted_password,
+                password=self,
+            )
+        except PasswordRevision.DoesNotExist:
+            p = PasswordRevision()
         p.accessed_by.add(user)
+        p.encrypted_password = encrypted_password
         p.password = self
         p.set_by = user
-        f = Fernet(settings.SHELDON_SECRET_KEY)
-        p.encrypted_password = f.encrypt(new_password)
         p.save()
-        self.password = p
+        self.current_revision = p
         self.save()
 
 
