@@ -84,7 +84,7 @@ class Password(models.Model):
         """
         'Readable' means user can access the actual secret password.
         """
-        if self.visibility == self.VISIBILITY_ALL:
+        if self.visibility == self.VISIBILITY_ANY:
             return True
         if user in self.users.all():
             return True
