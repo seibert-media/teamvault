@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'south',
     'sheldon.apps.accounts',
+    'sheldon.apps.audit',
     'sheldon.apps.secrets',
     'sheldon.apps.settings',
 ]
