@@ -5,6 +5,7 @@ from django.db import models
 from django.utils.translation import ugettext as _
 
 from ..accounts.models import Team
+from ..audit.logging import log
 from .exceptions import PermissionError
 from .utils import generate_password
 
@@ -69,6 +70,17 @@ class Password(models.Model):
 
     def get_password(self, user):
         if not self.is_readable_by_user(user):
+            log(_(
+                    "{user} tried to access '{name}' ({id}) without permission"
+                ).format(
+                    id=self.id_token,
+                    name=self.name,
+                    user=user.username,
+                ),
+                actor=user,
+                level='warn',
+                password=self,
+            )
             raise PermissionError(_(
                 "{user} not allowed access to '{name}' ({token})"
             ).format(
@@ -77,6 +89,19 @@ class Password(models.Model):
                 user=user.username,
             ))
         f = Fernet(settings.SHELDON_SECRET_KEY)
+        log(_(
+                "{user} read '{name}' ({id}:{revision})"
+            ).format(
+                id=self.id_token,
+                name=self.name,
+                revision=self.current_revision.id,
+                user=user.username,
+            ),
+            actor=user,
+            level='info',
+            password=self,
+            password_revision=self.current_revision,
+        )
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
         return f.decrypt(self.current_revision.encrypted_password)
@@ -128,8 +153,26 @@ class Password(models.Model):
         p.password = self
         p.set_by = user
         p.save()
+        if self.current_revision:
+            previous_revision_id = self.current_revision.id
+        else:
+            previous_revision_id = _("none")
         self.current_revision = p
         self.save()
+        log(_(
+                "{user} set a new password for '{name}' ({id}:{oldrev}->{newrev})"
+            ).format(
+                id=self.id_token,
+                name=self.name,
+                newrev=self.current_revision.id,
+                oldrev=previous_revision_id,
+                user=user.username,
+            ),
+            actor=user,
+            level='info',
+            password=self,
+            password_revision=self.current_revision,
+        )
 
 
 class PasswordRevision(models.Model):
