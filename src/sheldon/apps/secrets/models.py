@@ -106,6 +106,12 @@ class Password(models.Model):
         self.current_revision.save()
         return f.decrypt(self.current_revision.encrypted_password)
 
+    @classmethod
+    def get_all_visible_to_user(cls, user):
+        q = cls.objects.filter(users__pk=user.pk)
+        q += cls.objects.filter(teams__members__pk=user.pk)
+        return q.distinct()
+
     def is_readable_by_user(self, user):
         """
         'Readable' means user can access the actual secret password.
