@@ -14,6 +14,54 @@ def _generate_id_token():
     return generate_password(length=32, alphanum=True)
 
 
+class AccessRequest(models.Model):
+    STATUS_PENDING = 1
+    STATUS_REJECTED = 2
+    STATUS_APPROVED = 3
+    STATUS_CHOICES = (
+        (STATUS_PENDING, _("pending")),
+        (STATUS_REJECTED, _("rejected")),
+        (STATUS_APPROVED, _("approved")),
+    )
+
+    closed = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+    closed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='access_requests_closed',
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    password = models.ForeignKey(
+        'Password',
+        related_name='access_requests',
+    )
+    reason_request = models.TextField(
+        blank=True,
+        null=True,
+    )
+    reason_rejected = models.TextField(
+        blank=True,
+        null=True,
+    )
+    requester = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='access_requests_created',
+    )
+    reviewers = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='access_requests_reviewed',
+    )
+    status = models.PositiveSmallIntegerField(
+        choices=STATUS_CHOICES,
+        default=STATUS_PENDING,
+    )
+
+    class Meta:
+        ordering = ('-created',)
+
+
 class Password(models.Model):
     ACCESS_NAMEONLY = 1
     ACCESS_ANY = 2

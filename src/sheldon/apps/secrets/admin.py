@@ -1,7 +1,36 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
-from .models import Password, PasswordRevision
+from .models import AccessRequest, Password, PasswordRevision
+
+
+class AccessRequestAdmin(admin.ModelAdmin):
+    fieldsets = (
+        (_("Subject"), {
+            'fields': (
+                'requester',
+                'password',
+                'created',
+                'reason_request',
+            ),
+        }),
+        (_("Status"), {
+            'fields': (
+                'reviewers',
+                'status',
+                'closed',
+                'closed_by',
+                'reason_rejected',
+            ),
+        }),
+    )
+    date_hierarchy = 'created'
+    list_display = ('requester', 'password', 'status', 'created')
+    list_filter = ('status',)
+    readonly_fields = ('created',)
+    search_fields = ('requester__username', 'password__name',)
+
+admin.site.register(AccessRequest, AccessRequestAdmin)
 
 
 class PasswordAdmin(admin.ModelAdmin):
