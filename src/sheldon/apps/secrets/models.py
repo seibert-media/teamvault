@@ -1,6 +1,7 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.db import models
+from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 
 from ..accounts.models import Team
@@ -51,7 +52,9 @@ class Password(models.Model):
         max_length=32,
         unique=True,
     )
-    last_modified = models.DateTimeField(auto_now=True)
+    last_read = models.DateTimeField(
+        default=now,
+    )
     name = models.CharField(max_length=92)
     needs_changing_on_leave = models.BooleanField(
         default=True,
@@ -106,6 +109,8 @@ class Password(models.Model):
         )
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
+        self.last_read = now()
+        self.save()
         return f.decrypt(self.current_revision.encrypted_password)
 
     @classmethod
@@ -166,6 +171,7 @@ class Password(models.Model):
         else:
             previous_revision_id = _("none")
         self.current_revision = p
+        self.last_read = now()
         self.save()
         log(_(
                 "{user} set a new password for '{name}' ({id}:{oldrev}->{newrev})"
