@@ -11,6 +11,9 @@ class Setting(models.Model):
         max_length=255,
     )
 
+    class Meta:
+        ordering = ('key',)
+
     @classmethod
     def get(cls, key, **kwargs):
         try:
