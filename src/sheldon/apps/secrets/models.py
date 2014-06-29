@@ -60,6 +60,7 @@ class Password(models.Model):
         default=True,
     )
     status = models.PositiveSmallIntegerField(
+        choices=STATUS_CHOICES,
         default=STATUS_OK,
     )
     teams = models.ManyToManyField(
