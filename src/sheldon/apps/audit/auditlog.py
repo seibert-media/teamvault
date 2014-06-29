@@ -13,7 +13,7 @@ def log(
     actor=None,
     password=None,
     password_revision=None,
-    team=None,
+    group=None,
     user=None,
 ):
     getattr(AUDIT_LOG, level)(msg)
@@ -22,6 +22,6 @@ def log(
     entry.actor = actor
     entry.password = password
     entry.password_revision = password_revision
-    entry.team = team
+    entry.group = group
     entry.user = user
     entry.save()

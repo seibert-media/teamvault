@@ -23,7 +23,7 @@ class PasswordAdmin(admin.ModelAdmin):
             'fields': (
                 'status',
                 'access_policy',
-                'teams',
+                'groups',
                 'users',
                 'needs_changing_on_leave',
             ),

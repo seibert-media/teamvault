@@ -1,10 +1,10 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 
-from ..accounts.models import Team
 from ..audit.auditlog import log
 from .exceptions import PermissionError
 from .utils import generate_password
@@ -47,6 +47,9 @@ class Password(models.Model):
         blank=True,
         null=True,
     )
+    groups = models.ManyToManyField(
+        Group,
+    )
     id_token = models.CharField(
         default=_generate_id_token,
         max_length=32,
@@ -62,9 +65,6 @@ class Password(models.Model):
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
         default=STATUS_OK,
-    )
-    teams = models.ManyToManyField(
-        Team,
     )
     users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -117,7 +117,7 @@ class Password(models.Model):
     @classmethod
     def get_all_visible_to_user(cls, user):
         q = cls.objects.filter(users__pk=user.pk)
-        q += cls.objects.filter(teams__members__pk=user.pk)
+        q += cls.objects.filter(groups__users__pk=user.pk)
         return q.distinct()
 
     def is_readable_by_user(self, user):
@@ -128,8 +128,8 @@ class Password(models.Model):
             return True
         if user in self.users.all():
             return True
-        for team in self.teams.all():
-            if user in team.members.all():
+        for group in self.groups.all():
+            if user in group.members.all():
                 return True
         return False
 
@@ -138,8 +138,8 @@ class Password(models.Model):
             return True
         if user in self.users.all():
             return True
-        for team in self.teams.all():
-            if user in team.members.all():
+        for group in self.groups.all():
+            if user in group.members.all():
                 return True
         return False
 

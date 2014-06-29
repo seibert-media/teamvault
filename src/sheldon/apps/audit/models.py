@@ -9,6 +9,12 @@ class LogEntry(models.Model):
         null=True,
         related_name='logged_actions',
     )
+    group = models.ForeignKey(
+        'auth.Group',
+        blank=True,
+        null=True,
+        related_name='logged_actions',
+    )
     message = models.TextField()
     password = models.ForeignKey(
         'secrets.Password',
@@ -18,12 +24,6 @@ class LogEntry(models.Model):
     )
     password_revision = models.ForeignKey(
         'secrets.PasswordRevision',
-        blank=True,
-        null=True,
-        related_name='logged_actions',
-    )
-    team = models.ForeignKey(
-        'accounts.Team',
         blank=True,
         null=True,
         related_name='logged_actions',

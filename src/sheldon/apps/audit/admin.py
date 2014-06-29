@@ -17,7 +17,7 @@ class LogEntryAdmin(admin.ModelAdmin):
                 'actor',
                 'password',
                 'password_revision',
-                'team',
+                'group',
                 'user',
             ),
         }),
@@ -30,7 +30,7 @@ class LogEntryAdmin(admin.ModelAdmin):
         'actor',
         'password',
         'password_revision',
-        'team',
+        'group',
         'user',
     )
     search_fields = ('message', 'actor__username')
