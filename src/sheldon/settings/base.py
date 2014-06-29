@@ -46,11 +46,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'south',
-    'sheldon.apps.accounts',
-    'sheldon.apps.audit',
-    'sheldon.apps.secrets',
-    'sheldon.apps.settings',
+    'sheldon.apps.accounts.AccountsConfig',
+    'sheldon.apps.audit.AuditConfig',
+    'sheldon.apps.secrets.SecretsConfig',
+    'sheldon.apps.settings.SettingsConfig',
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -94,7 +93,7 @@ TEMPLATE_LOADERS = (
 )
 
 TEMPLATE_DIRS = (
-    join(PROJECT_ROOT, "templates")
+    join(PROJECT_ROOT, "templates"),
 )
 
 TEMPLATE_CONTEXT_PROCESSORS = (
@@ -107,6 +106,8 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'django.core.context_processors.static',
     'django.contrib.messages.context_processors.messages',
 )
+
+TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 USE_I18N = True
 USE_L10N = True

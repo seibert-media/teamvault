@@ -1,10 +1,10 @@
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.db import models
 
 
 class LogEntry(models.Model):
     actor = models.ForeignKey(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         blank=True,
         null=True,
         related_name='logged_actions',
@@ -32,7 +32,7 @@ class LogEntry(models.Model):
         auto_now_add=True,
     )
     user = models.ForeignKey(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         blank=True,
         null=True,
         related_name='affected_by_actions',

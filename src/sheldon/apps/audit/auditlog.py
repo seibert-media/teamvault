@@ -3,6 +3,7 @@ from logging import getLogger
 from .models import LogEntry
 
 
+# TODO rename and add file handler
 AUDIT_LOG = getLogger(__name__)
 
 

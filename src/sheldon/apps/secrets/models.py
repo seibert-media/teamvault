@@ -1,11 +1,10 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth import get_user_model
 from django.db import models
-from django.utils.translation import ugettext as _
+from django.utils.translation import ugettext_lazy as _
 
 from ..accounts.models import Team
-from ..audit.logging import log
+from ..audit.auditlog import log
 from .exceptions import PermissionError
 from .utils import generate_password
 
@@ -64,7 +63,7 @@ class Password(models.Model):
         Team,
     )
     users = models.ManyToManyField(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         related_name='passwords',
     )
 
@@ -186,7 +185,7 @@ class Password(models.Model):
 
 class PasswordRevision(models.Model):
     accessed_by = models.ManyToManyField(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_password = models.TextField()
@@ -194,7 +193,7 @@ class PasswordRevision(models.Model):
         Password,
     )
     set_by = models.ForeignKey(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         related_name='password_revisions_set',
     )
 

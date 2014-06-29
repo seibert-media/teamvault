@@ -1,10 +1,10 @@
-from django.contrib.auth import get_user_model
+from django.conf import settings
 from django.db import models
 
 
 class Team(models.Model):
     members = models.ManyToManyField(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         related_name='teams',
         through='Membership',
     )
@@ -27,6 +27,6 @@ class Membership(models.Model):
         related_name='team_memberships',
     )
     user = models.ForeignKey(
-        get_user_model(),
+        settings.AUTH_USER_MODEL,
         related_name='memberships',
     )
