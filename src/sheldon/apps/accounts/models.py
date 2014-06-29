@@ -10,6 +10,9 @@ class Team(models.Model):
     )
     name = models.CharField(max_length=64)
 
+    class Meta:
+        ordering = ('name',)
+
     @property
     def admins(self):
         return self.objects.filter(membership__is_admin=True)

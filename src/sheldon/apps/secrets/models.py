@@ -68,6 +68,9 @@ class Password(models.Model):
         related_name='passwords',
     )
 
+    class Meta:
+        ordering = ('name',)
+
     def get_password(self, user):
         if not self.is_readable_by_user(user):
             log(_(
@@ -196,6 +199,7 @@ class PasswordRevision(models.Model):
     )
 
     class Meta:
+        ordering = ('-created',)
         # Consider the following scenario:
         # 1. an employee reads a password, it is "secret123"
         # 2. the password is changed to "secret234"

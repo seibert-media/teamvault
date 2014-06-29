@@ -37,3 +37,6 @@ class LogEntry(models.Model):
         null=True,
         related_name='affected_by_actions',
     )
+
+    class Meta:
+        ordering = ('-time',)
