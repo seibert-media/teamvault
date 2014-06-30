@@ -95,9 +95,6 @@ class Password(models.Model):
         blank=True,
         null=True,
     )
-    groups = models.ManyToManyField(
-        Group,
-    )
     id_token = models.CharField(
         default=_generate_id_token,
         max_length=32,
@@ -114,13 +111,13 @@ class Password(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_OK,
     )
-    users = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name='passwords',
     )
 
     class Meta:
         ordering = ('name',)
+        permissions = (
+            ("view_password", _("May request access to the encrypted password")),
+        )
 
     def get_password(self, user):
         if not self.is_readable_by_user(user):
@@ -167,29 +164,6 @@ class Password(models.Model):
         q = cls.objects.filter(users__pk=user.pk)
         q += cls.objects.filter(groups__users__pk=user.pk)
         return q.distinct()
-
-    def is_readable_by_user(self, user):
-        """
-        'Readable' means user can access the actual secret password.
-        """
-        if self.visibility == self.ACCESS_ANY:
-            return True
-        if user in self.users.all():
-            return True
-        for group in self.groups.all():
-            if user in group.members.all():
-                return True
-        return False
-
-    def is_visible_to_user(self, user):
-        if self.visibility != self.ACCESS_HIDDEN:
-            return True
-        if user in self.users.all():
-            return True
-        for group in self.groups.all():
-            if user in group.members.all():
-                return True
-        return False
 
     def set_password(self, user, new_password):
         if not self.is_readable_by_user(user):

@@ -33,6 +33,11 @@ else:
 
 ### Django
 
+AUTHENTICATION_BACKENDS = (
+    'django.contrib.auth.backends.ModelBackend',
+    'sheldon.apps.secrets.auth.ObjectPermissionBackend',
+)
+
 FIXTURE_DIRS = (
     join(PROJECT_ROOT, "fixtures"),
 )
@@ -46,6 +51,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'guardian',
     'sheldon.apps.accounts.AccountsConfig',
     'sheldon.apps.audit.AuditConfig',
     'sheldon.apps.secrets.SecretsConfig',
@@ -113,6 +119,10 @@ USE_I18N = True
 USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
 
+
+### Guardian
+
+ANONYMOUS_USER_ID = -1
 
 ### sheldon
 
