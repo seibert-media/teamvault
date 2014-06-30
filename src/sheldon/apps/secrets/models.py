@@ -86,6 +86,10 @@ class Password(models.Model):
         default=ACCESS_NAMEONLY,
     )
     created = models.DateTimeField(auto_now_add=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name='passwords_created',
+    )
     current_revision = models.ForeignKey(
         'PasswordRevision',
         blank=True,
@@ -112,6 +116,10 @@ class Password(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_OK,
     )
+    username = models.CharField(
+        blank=True,
+        max_length=255,
+        null=True,
     )
 
     class Meta:
