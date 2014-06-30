@@ -8,4 +8,6 @@ urlpatterns = patterns('',
     url(r'^$', RedirectView.as_view(pattern_name='accounts.login'), name='root'),
     url(r'^accounts/', include('sheldon.apps.accounts.urls'), name='accounts'),
     url(r'^admin/', include(admin.site.urls)),
+    url(r'^api/', include('sheldon.apps.secrets.api_urls'), name='api'),
+    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 )

@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'guardian',
+    'rest_framework',
     'sheldon.apps.accounts.AccountsConfig',
     'sheldon.apps.audit.AuditConfig',
     'sheldon.apps.secrets.SecretsConfig',
@@ -123,6 +124,16 @@ USE_THOUSAND_SEPARATOR = False
 ### Guardian
 
 ANONYMOUS_USER_ID = -1
+
+### REST Framework
+
+REST_FRAMEWORK = {
+    'DEFAULT_MODEL_SERIALIZER_CLASS':
+        'rest_framework.serializers.HyperlinkedModelSerializer',
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.DjangoObjectPermissions',
+    )
+}
 
 ### sheldon
 

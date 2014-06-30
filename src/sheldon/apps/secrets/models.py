@@ -4,6 +4,7 @@ from django.contrib.auth.models import Group
 from django.db import models
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
+from guardian.shortcuts import get_objects_for_user
 
 from ..audit.auditlog import log
 from .exceptions import PermissionError
@@ -161,9 +162,11 @@ class Password(models.Model):
 
     @classmethod
     def get_all_visible_to_user(cls, user):
-        q = cls.objects.filter(users__pk=user.pk)
-        q += cls.objects.filter(groups__users__pk=user.pk)
-        return q.distinct()
+        return (
+            get_objects_for_user(user, 'secrets.change_password', klass=cls) |
+            get_objects_for_user(user, 'secrets.view_password', klass=cls) |
+            cls.objects.filter(access_policy__in=(cls.ACCESS_ANY, cls.ACCESS_NAMEONLY))
+        )
 
     def set_password(self, user, new_password):
         if not self.is_readable_by_user(user):

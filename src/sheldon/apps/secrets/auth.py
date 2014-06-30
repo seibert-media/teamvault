@@ -19,11 +19,12 @@ class ObjectPermissionBackend(GuardianBackend):
         if isinstance(obj, Password):
             if perm == 'secrets.change_password' and obj.access_policy == Password.ACCESS_ANY:
                 return True
-            if perm == 'secrets.view_password' and obj.access_policy in (
-                Password.ACCESS_ANY,
-                Password.ACCESS_NAMEONLY,
-            ):
-                return True
+            if perm == 'secrets.view_password':
+                if obj.access_policy in (
+                    Password.ACCESS_ANY,
+                    Password.ACCESS_NAMEONLY,
+                ) or user_obj.has_perm('secrets.change_password', obj):
+                    return True
 
         return super(ObjectPermissionBackend, self).has_perm(
             user_obj,
