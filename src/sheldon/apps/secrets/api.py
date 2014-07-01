@@ -1,3 +1,4 @@
+from django.shortcuts import get_object_or_404
 from guardian.shortcuts import assign_perm
 from rest_framework import generics
 from rest_framework import serializers
@@ -53,6 +54,17 @@ class PasswordSerializer(serializers.ModelSerializer):
     def post_save(self, obj, created=False):
         if created:
             assign_perm('secrets.change_password', self.context['request'].user, obj)
+
+
+class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):
+    model = Password
+    serializer_class = PasswordSerializer
+
+    def get_object(self):
+        obj = get_object_or_404(Password, id_token=self.kwargs['id_token'])
+        if not self.request.user.has_perm('secrets.view_password', obj):
+            self.permission_denied(self.request)
+        return obj
 
 
 class PasswordList(generics.ListCreateAPIView):
