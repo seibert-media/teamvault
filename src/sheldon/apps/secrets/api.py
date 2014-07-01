@@ -46,11 +46,13 @@ class PasswordSerializer(serializers.ModelSerializer):
             'last_read',
         )
 
-    def save_object(self, obj, **kwargs):
-        if not obj.pk:
+    def pre_save(self, obj):
+        if not obj.created_by:
             obj.created_by = self.context['request'].user
-        super(PasswordSerializer, self).save_object(obj, **kwargs)
-        assign_perm('secrets.change_password', self.context['request'].user, obj)
+
+    def post_save(self, obj, created=False):
+        if created:
+            assign_perm('secrets.change_password', self.context['request'].user, obj)
 
 
 class PasswordList(generics.ListCreateAPIView):
