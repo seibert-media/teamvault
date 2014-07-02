@@ -6,7 +6,10 @@ from rest_framework import serializers
 from .models import Password
 
 
-class PasswordSerializer(serializers.ModelSerializer):
+class PasswordSerializer(serializers.HyperlinkedModelSerializer):
+    created_by = serializers.Field(
+        source='created_by.username',
+    )
     id_token = serializers.CharField(
         read_only=True,
         required=False,
