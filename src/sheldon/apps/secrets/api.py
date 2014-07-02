@@ -2,6 +2,11 @@ from django.shortcuts import get_object_or_404
 from guardian.shortcuts import assign_perm
 from rest_framework import generics
 from rest_framework import serializers
+from rest_framework import viewsets
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
 from .models import Password
 
@@ -77,3 +82,20 @@ class PasswordList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return Password.get_all_visible_to_user(self.request.user)
+
+
+class PasswordSecret(viewsets.ViewSet):
+    def retrieve(self, request, id_token=None):
+        obj = get_object_or_404(Password, id_token=id_token)
+        if not request.user.has_perm('secrets.change_password', obj):
+            self.permission_denied(request)
+        return Response({'password': obj.get_password(request.user)})
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def secret_get(request, id_token):
+    obj = get_object_or_404(Password, id_token=id_token)
+    if not request.user.has_perm('secrets.change_password', obj):
+        raise PermissionDenied()
+    return Response({'password': obj.get_password(request.user)})

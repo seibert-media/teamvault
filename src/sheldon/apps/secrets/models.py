@@ -2,6 +2,7 @@ from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.db import models
+from django.http import Http404
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from guardian.shortcuts import get_objects_for_user
@@ -129,7 +130,9 @@ class Password(models.Model):
         )
 
     def get_password(self, user):
-        if not self.is_readable_by_user(user):
+        if not self.current_revision:
+            raise Http404
+        if not user.has_perm('secrets.change_password', self):
             log(_(
                     "{user} tried to access '{name}' ({id}) without permission"
                 ).format(
@@ -166,7 +169,7 @@ class Password(models.Model):
         self.current_revision.save()
         self.last_read = now()
         self.save()
-        return f.decrypt(self.current_revision.encrypted_password)
+        return f.decrypt(self.current_revision.encrypted_password.encode('utf-8'))
 
     @classmethod
     def get_all_visible_to_user(cls, user):
@@ -177,7 +180,7 @@ class Password(models.Model):
         )
 
     def set_password(self, user, new_password):
-        if not self.is_readable_by_user(user):
+        if not user.has_perm('secrets.change_password', self):
             raise PermissionError(_(
                 "{user} not allowed access to '{name}' ({token})"
             ).format(
@@ -195,11 +198,11 @@ class Password(models.Model):
             )
         except PasswordRevision.DoesNotExist:
             p = PasswordRevision()
-        p.accessed_by.add(user)
         p.encrypted_password = encrypted_password
         p.password = self
         p.set_by = user
         p.save()
+        p.accessed_by.add(user)
         if self.current_revision:
             previous_revision_id = self.current_revision.id
         else:

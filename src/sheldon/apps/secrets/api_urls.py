@@ -1,6 +1,6 @@
 from django.conf.urls import patterns, url
 
-from .api import PasswordDetail, PasswordList
+from .api import PasswordDetail, PasswordList, secret_get
 
 
 urlpatterns = patterns(
@@ -14,5 +14,10 @@ urlpatterns = patterns(
         r'^passwords/(?P<id_token>\w+)/$',
         PasswordDetail.as_view(),
         name='api.password_detail',
+    ),
+    url(
+        r'^passwords/(?P<id_token>\w+)/secret$',
+        secret_get,
+        name='api.password_secret',
     ),
 )
