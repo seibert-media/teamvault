@@ -7,6 +7,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.reverse import reverse
 
 from .models import Password
 
@@ -29,9 +30,25 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         source='id',
     )
+    secret_url = serializers.CharField(
+        read_only=True,
+        required=False,
+        source='id',
+    )
+    url = serializers.HyperlinkedIdentityField(
+        view_name='api.password_detail',
+        lookup_field='id_token',
+    )
 
     def transform_secret_readable(self, obj, value):
         return self.context['request'].user.has_perm('secrets.change_password', obj)
+
+    def transform_secret_url(self, obj, value):
+        return reverse(
+            'api.password_secret',
+            kwargs={'id_token': obj.id_token},
+            request=self.context['request'],
+        )
 
     class Meta:
         model = Password
@@ -46,12 +63,13 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
             'needs_changing_on_leave',
             'password',
             'secret_readable',
+            'secret_url',
             'status',
+            'url',
             'username',
         )
         read_only_fields = (
             'created',
-            'created_by',
             'last_read',
         )
 
