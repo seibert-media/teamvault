@@ -18,11 +18,6 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
     current_revision = serializers.HyperlinkedRelatedField(
         view_name='api.password-revision_detail',
     )
-    id_token = serializers.CharField(
-        read_only=True,
-        required=False,
-        source='id_token',
-    )
     password = serializers.CharField(
         required=False,
         write_only=True,
@@ -62,7 +57,6 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
             'created_by',
             'current_revision',
             'description',
-            'id_token',
             'last_read',
             'name',
             'needs_changing_on_leave',

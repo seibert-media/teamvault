@@ -1,6 +1,5 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import Group
 from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
@@ -9,11 +8,6 @@ from guardian.shortcuts import get_objects_for_user
 
 from ..audit.auditlog import log
 from .exceptions import PermissionError
-from .utils import generate_password
-
-
-def _generate_id_token():
-    return generate_password(length=32, alphanum=True)
 
 
 class AccessRequest(models.Model):
@@ -101,11 +95,6 @@ class Password(models.Model):
         blank=True,
         null=True,
     )
-    id_token = models.CharField(
-        default=_generate_id_token,
-        max_length=32,
-        unique=True,
-    )
     last_read = models.DateTimeField(
         default=now,
     )
@@ -136,7 +125,7 @@ class Password(models.Model):
             log(_(
                     "{user} tried to access '{name}' ({id}) without permission"
                 ).format(
-                    id=self.id_token,
+                    id=self.id,
                     name=self.name,
                     user=user.username,
                 ),
@@ -145,17 +134,17 @@ class Password(models.Model):
                 password=self,
             )
             raise PermissionError(_(
-                "{user} not allowed access to '{name}' ({token})"
+                "{user} not allowed access to '{name}' ({id})"
             ).format(
+                id=self.id,
                 name=self.name,
-                token=self.id_token,
                 user=user.username,
             ))
         f = Fernet(settings.SHELDON_SECRET_KEY)
         log(_(
                 "{user} read '{name}' ({id}:{revision})"
             ).format(
-                id=self.id_token,
+                id=self.id,
                 name=self.name,
                 revision=self.current_revision.id,
                 user=user.username,
@@ -182,10 +171,10 @@ class Password(models.Model):
     def set_password(self, user, new_password):
         if not user.has_perm('secrets.change_password', self):
             raise PermissionError(_(
-                "{user} not allowed access to '{name}' ({token})"
+                "{user} not allowed access to '{name}' ({id})"
             ).format(
+                id=self.id,
                 name=self.name,
-                token=self.id_token,
                 user=user.username,
             ))
         f = Fernet(settings.SHELDON_SECRET_KEY)
@@ -213,7 +202,7 @@ class Password(models.Model):
         log(_(
                 "{user} set a new password for '{name}' ({id}:{oldrev}->{newrev})"
             ).format(
-                id=self.id_token,
+                id=self.id,
                 name=self.name,
                 newrev=self.current_revision.id,
                 oldrev=previous_revision_id,

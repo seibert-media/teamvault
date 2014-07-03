@@ -39,7 +39,6 @@ class PasswordAdmin(GuardedModelAdmin):
         (None, {
             'fields': (
                 'name',
-                'id_token',
                 'description',
             ),
         }),
@@ -58,13 +57,13 @@ class PasswordAdmin(GuardedModelAdmin):
         }),
     )
     date_hierarchy = 'created'
-    list_display = ('name', 'id_token', 'last_read')
+    list_display = ('name', 'last_read')
     list_filter = ('access_policy', 'needs_changing_on_leave', 'status')
     radio_fields = {
         'access_policy': admin.HORIZONTAL,
         'status': admin.HORIZONTAL,
     }
-    readonly_fields = ('created', 'last_read', 'id_token')
+    readonly_fields = ('created', 'last_read')
     search_fields = ('name', 'description')
 
 admin.site.register(Password, PasswordAdmin)
