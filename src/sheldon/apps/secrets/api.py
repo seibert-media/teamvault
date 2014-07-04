@@ -16,6 +16,7 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
         source='created_by.username',
     )
     current_revision = serializers.HyperlinkedRelatedField(
+        read_only=True,
         view_name='api.password-revision_detail',
     )
     password = serializers.CharField(
