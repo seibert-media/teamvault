@@ -73,13 +73,6 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
             'last_read',
         )
 
-    def pre_save(self, obj):
-        if not obj.created_by:
-            obj.created_by = self.context['request'].user
-
-    def post_save(self, obj, created=False):
-        if created:
-            assign_perm('secrets.change_password', self.context['request'].user, obj)
 
 
 class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
@@ -133,6 +126,14 @@ class PasswordList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         return Password.get_all_visible_to_user(self.request.user)
+
+
+    def pre_save(self, obj):
+        obj.created_by = self.request.user
+
+    def post_save(self, obj, created=False):
+        if created:
+            assign_perm('secrets.change_password', self.request.user, obj)
 
 
 class PasswordRevisionDetail(generics.RetrieveAPIView):
