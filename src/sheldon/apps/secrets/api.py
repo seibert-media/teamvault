@@ -140,7 +140,8 @@ class PasswordRevisionDetail(generics.RetrieveAPIView):
 
     def get_object(self):
         obj = get_object_or_404(PasswordRevision, pk=self.kwargs['pk'])
-        if not self.request.user.has_perm('secrets.change_password', obj.password):
+        if not self.request.user.has_perm('secrets.change_password', obj.password) or \
+                obj.password.status == Password.STATUS_DELETED:
             self.permission_denied(self.request)
         return obj
 

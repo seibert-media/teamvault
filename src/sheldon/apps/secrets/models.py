@@ -166,7 +166,7 @@ class Password(models.Model):
             get_objects_for_user(user, 'secrets.change_password', klass=cls) |
             get_objects_for_user(user, 'secrets.view_password', klass=cls) |
             cls.objects.filter(access_policy__in=(cls.ACCESS_ANY, cls.ACCESS_NAMEONLY))
-        )
+        ).exclude(status=cls.STATUS_DELETED)
 
     def set_password(self, user, new_password):
         if not user.has_perm('secrets.change_password', self):
