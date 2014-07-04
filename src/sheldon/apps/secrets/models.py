@@ -26,6 +26,8 @@ class AccessRequest(models.Model):
     )
     closed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        blank=True,
+        null=True,
         related_name='access_requests_closed',
     )
     created = models.DateTimeField(auto_now_add=True)
@@ -56,6 +58,13 @@ class AccessRequest(models.Model):
 
     class Meta:
         ordering = ('-created',)
+
+    @classmethod
+    def get_all_visible_to_user(cls, user):
+        return (
+            cls.objects.filter(requester=user) |
+            cls.objects.filter(reviewers=user)
+        )
 
 
 class Password(models.Model):

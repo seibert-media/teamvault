@@ -8,7 +8,92 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
-from .models import Password, PasswordRevision
+from .models import AccessRequest, Password, PasswordRevision
+
+
+class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
+    requester = serializers.Field(
+        source='requester.username',
+    )
+    password = serializers.HyperlinkedRelatedField(
+        view_name='api.password_detail',
+    )
+    reviewers = serializers.SlugRelatedField(
+        many=True,
+        read_only=True,
+        slug_field='username',
+    )
+    #url = serializers.HyperlinkedIdentityField(
+    #    view_name='api.access-request_detail',
+    #)
+
+    class Meta:
+        model = AccessRequest
+        fields = (
+            'closed',
+            'closed_by',
+            'created',
+            'password',
+            'reason_request',
+            'reason_rejected',
+            'requester',
+            'reviewers',
+            'status'
+            #'url',
+        )
+        read_only_fields = (
+            'closed',
+            'closed_by',
+            'created',
+        )
+
+
+class AccessRequestList(generics.ListCreateAPIView):
+    model = Password
+    paginate_by = 50
+    serializer_class = AccessRequestSerializer
+
+    def get_queryset(self):
+        return AccessRequest.get_all_visible_to_user(self.request.user)
+
+    def pre_save(self, obj):
+        obj.requester = self.request.user
+
+    def post_save(self, obj, created=False):
+        obj.reviewers.add(self.request.user) # TODO
+
+
+class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
+    created_by = serializers.Field(
+        source='set_by.username',
+    )
+    secret_url = serializers.CharField(
+        read_only=True,
+        required=False,
+        source='id',
+    )
+    url = serializers.HyperlinkedIdentityField(
+        view_name='api.password-revision_detail',
+    )
+
+    def transform_secret_url(self, obj, value):
+        return reverse(
+            'api.password-revision_secret',
+            kwargs={'pk': obj.pk},
+            request=self.context['request'],
+        )
+
+    class Meta:
+        model = PasswordRevision
+        fields = (
+            'created',
+            'created_by',
+            'secret_url',
+            'url',
+        )
+        read_only_fields = (
+            'created',
+        )
 
 
 class PasswordSerializer(serializers.HyperlinkedModelSerializer):
@@ -73,39 +158,6 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
             'last_read',
         )
 
-
-
-class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
-    created_by = serializers.Field(
-        source='set_by.username',
-    )
-    secret_url = serializers.CharField(
-        read_only=True,
-        required=False,
-        source='id',
-    )
-    url = serializers.HyperlinkedIdentityField(
-        view_name='api.password-revision_detail',
-    )
-
-    def transform_secret_url(self, obj, value):
-        return reverse(
-            'api.password-revision_secret',
-            kwargs={'pk': obj.pk},
-            request=self.context['request'],
-        )
-
-    class Meta:
-        model = PasswordRevision
-        fields = (
-            'created',
-            'created_by',
-            'secret_url',
-            'url',
-        )
-        read_only_fields = (
-            'created',
-        )
 
 
 class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):

@@ -1,10 +1,15 @@
 from django.conf.urls import patterns, url
 
-from .api import PasswordDetail, PasswordList, PasswordRevisionDetail, secret_get
+from .api import AccessRequestList, PasswordDetail, PasswordList, PasswordRevisionDetail, secret_get
 
 
 urlpatterns = patterns(
     '',
+    url(
+        r'^access-requests/$',
+        AccessRequestList.as_view(),
+        name='api.access-request_list',
+    ),
     url(
         r'^passwords/$',
         PasswordList.as_view(),
