@@ -187,7 +187,7 @@ class Password(models.Model):
                 user=user.username,
             ))
         f = Fernet(settings.SHELDON_SECRET_KEY)
-        encrypted_password = f.encrypt(new_password)
+        encrypted_password = f.encrypt(new_password.encode('utf-8'))
         try:
             # see the comment on unique_together for PasswordRevision
             p = PasswordRevision.objects.get(
