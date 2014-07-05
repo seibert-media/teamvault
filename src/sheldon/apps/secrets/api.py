@@ -206,4 +206,4 @@ def secret_get(request, pk):
     obj = get_object_or_404(PasswordRevision, pk=pk)
     if not request.user.has_perm('secrets.change_password', obj.password):
         raise PermissionDenied()
-    return Response({'password': obj.get_password(request.user)})
+    return Response({'password': obj.password.get_password(request.user)})
