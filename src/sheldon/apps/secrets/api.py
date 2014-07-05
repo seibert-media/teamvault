@@ -184,8 +184,9 @@ class PasswordList(generics.ListCreateAPIView):
         obj.created_by = self.request.user
 
     def post_save(self, obj, created=False):
-        if created:
-            assign_perm('secrets.change_password', self.request.user, obj)
+        assign_perm('secrets.change_password', self.request.user, obj)
+        if obj.password:
+            obj.set_password(self.request.user, obj.password)
 
 
 class PasswordRevisionDetail(generics.RetrieveAPIView):
