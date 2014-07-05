@@ -23,9 +23,9 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
         read_only=True,
         slug_field='username',
     )
-    #url = serializers.HyperlinkedIdentityField(
-    #    view_name='api.access-request_detail',
-    #)
+    url = serializers.HyperlinkedIdentityField(
+        view_name='api.access-request_detail',
+    )
 
     class Meta:
         model = AccessRequest
@@ -38,14 +38,29 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
             'reason_rejected',
             'requester',
             'reviewers',
-            'status'
-            #'url',
+            'status',
+            'url',
         )
         read_only_fields = (
             'closed',
             'closed_by',
             'created',
         )
+
+
+class AccessRequestDetail(generics.RetrieveUpdateDestroyAPIView):
+    model = AccessRequest
+    serializer_class = AccessRequestSerializer
+
+    def get_object(self):
+        obj = get_object_or_404(AccessRequest, pk=self.kwargs['pk'])
+        if (
+            not self.request.user == obj.requester and
+            not self.request.user in obj.reviewers and
+            not self.request.user.is_superuser()
+        ):
+            self.permission_denied(self.request)
+        return obj
 
 
 class AccessRequestList(generics.ListCreateAPIView):

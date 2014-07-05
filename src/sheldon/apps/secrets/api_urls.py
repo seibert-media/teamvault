@@ -1,6 +1,7 @@
 from django.conf.urls import patterns, url
 
-from .api import AccessRequestList, PasswordDetail, PasswordList, PasswordRevisionDetail, secret_get
+from .api import AccessRequestDetail, AccessRequestList, PasswordDetail, PasswordList, \
+    PasswordRevisionDetail, secret_get
 
 
 urlpatterns = patterns(
@@ -9,6 +10,11 @@ urlpatterns = patterns(
         r'^access-requests/$',
         AccessRequestList.as_view(),
         name='api.access-request_list',
+    ),
+    url(
+        r'^access-requests/(?P<pk>\d+)/$',
+        AccessRequestDetail.as_view(),
+        name='api.access-request_detail',
     ),
     url(
         r'^passwords/$',
