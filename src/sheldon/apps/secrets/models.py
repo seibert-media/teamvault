@@ -1,10 +1,10 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
+from django.contrib.auth.models import Group
 from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
-from guardian.shortcuts import get_objects_for_user
 
 from ..audit.auditlog import log
 from .exceptions import PermissionError
@@ -60,10 +60,19 @@ class AccessRequest(models.Model):
         ordering = ('-created',)
 
     @classmethod
-    def get_all_visible_to_user(cls, user):
+    def get_all_readable_by_user(cls, user):
+        if user.is_superuser:
+            return cls.objects.all()
         return (
             cls.objects.filter(requester=user) |
             cls.objects.filter(reviewers=user)
+        )
+
+    def is_readable_by_user(self, user):
+        return (
+            user == self.requester or
+            user in self.reviewers.all() or
+            user.is_superuser
         )
 
 
@@ -88,6 +97,14 @@ class Password(models.Model):
     access_policy = models.PositiveSmallIntegerField(
         choices=ACCESS_CHOICES,
         default=ACCESS_NAMEONLY,
+    )
+    allowed_groups = models.ManyToManyField(
+        Group,
+        related_name='allowed_passwords',
+    )
+    allowed_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        related_name='allowed_passwords',
     )
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -130,7 +147,7 @@ class Password(models.Model):
     def get_password(self, user):
         if not self.current_revision:
             raise Http404
-        if not user.has_perm('secrets.change_password', self):
+        if not self.is_readable_by_user(user):
             log(_(
                     "{user} tried to access '{name}' ({id}) without permission"
                 ).format(
@@ -170,15 +187,42 @@ class Password(models.Model):
         return f.decrypt(self.current_revision.encrypted_password.encode('utf-8'))
 
     @classmethod
-    def get_all_visible_to_user(cls, user):
+    def get_all_readable_by_user(cls, user):
+        if user.is_superuser:
+            return cls.objects.all()
         return (
-            get_objects_for_user(user, 'secrets.change_password', klass=cls) |
-            get_objects_for_user(user, 'secrets.view_password', klass=cls) |
-            cls.objects.filter(access_policy__in=(cls.ACCESS_ANY, cls.ACCESS_NAMEONLY))
+            cls.objects.filter(access_policy=cls.ACCESS_ANY) |
+            cls.objects.filter(allowed_users=user) |
+            cls.objects.filter(allowed_groups__in=user.groups.all())
         ).exclude(status=cls.STATUS_DELETED)
 
+    @classmethod
+    def get_all_visible_to_user(cls, user):
+        if user.is_superuser:
+            return cls.objects.all()
+        return (
+            cls.objects.filter(access_policy__in=(cls.ACCESS_ANY, cls.ACCESS_NAMEONLY)) |
+            cls.objects.filter(allowed_users=user) |
+            cls.objects.filter(allowed_groups__in=user.groups.all())
+        ).exclude(status=cls.STATUS_DELETED)
+
+    def is_readable_by_user(self, user):
+        return (
+            self.access_policy == self.ACCESS_ANY or
+            user in self.allowed_users.all() or
+            set(self.allowed_groups.all()).intersection(set(user.groups.all())) or
+            user.is_superuser
+        )
+
+    def is_visible_to_user(self, user):
+        return (
+            self.access_policy in (self.ACCESS_ANY, self.ACCESS_NAMEONLY) or
+            self.is_readable_by_user(user) or
+            user.is_superuser
+        )
+
     def set_password(self, user, new_password):
-        if not user.has_perm('secrets.change_password', self):
+        if not self.is_readable_by_user(user):
             raise PermissionError(_(
                 "{user} not allowed access to '{name}' ({id})"
             ).format(

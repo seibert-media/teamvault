@@ -35,7 +35,6 @@ else:
 
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
-    'sheldon.apps.secrets.auth.ObjectPermissionBackend',
 )
 
 FIXTURE_DIRS = (
@@ -51,7 +50,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'guardian',
     'rest_framework',
     'sheldon.apps.accounts.AccountsConfig',
     'sheldon.apps.audit.AuditConfig',
@@ -131,7 +129,7 @@ REST_FRAMEWORK = {
     'DEFAULT_MODEL_SERIALIZER_CLASS':
         'rest_framework.serializers.HyperlinkedModelSerializer',
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.DjangoObjectPermissions',
+        'rest_framework.permissions.IsAuthenticated',
     )
 }
 

@@ -1,10 +1,8 @@
 from django.shortcuts import get_object_or_404
-from guardian.shortcuts import assign_perm
 from rest_framework import generics
 from rest_framework import serializers
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
@@ -138,7 +136,7 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
     )
 
     def transform_secret_readable(self, obj, value):
-        return self.context['request'].user.has_perm('secrets.change_password', obj)
+        return obj.is_readable_by_user(self.context['request'].user)
 
     def transform_secret_url(self, obj, value):
         if not obj.current_revision:
@@ -181,7 +179,7 @@ class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         obj = get_object_or_404(Password, pk=self.kwargs['pk'])
-        if not self.request.user.has_perm('secrets.view_password', obj):
+        if not obj.is_visible_to_user(self.request.user):
             self.permission_denied(self.request)
         return obj
 
@@ -194,12 +192,11 @@ class PasswordList(generics.ListCreateAPIView):
     def get_queryset(self):
         return Password.get_all_visible_to_user(self.request.user)
 
-
     def pre_save(self, obj):
         obj.created_by = self.request.user
 
     def post_save(self, obj, created=False):
-        assign_perm('secrets.change_password', self.request.user, obj)
+        obj.allowed_users.add(self.request.user)
         if obj.password:
             obj.set_password(self.request.user, obj.password)
 
@@ -210,16 +207,14 @@ class PasswordRevisionDetail(generics.RetrieveAPIView):
 
     def get_object(self):
         obj = get_object_or_404(PasswordRevision, pk=self.kwargs['pk'])
-        if not self.request.user.has_perm('secrets.change_password', obj.password) or \
-                obj.password.status == Password.STATUS_DELETED:
+        if not obj.password.is_readable_by_user(self.request.user):
             self.permission_denied(self.request)
         return obj
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
 def secret_get(request, pk):
     obj = get_object_or_404(PasswordRevision, pk=pk)
-    if not request.user.has_perm('secrets.change_password', obj.password):
+    if not obj.password.is_readable_by_user(request.user):
         raise PermissionDenied()
     return Response({'password': obj.password.get_password(request.user)})
