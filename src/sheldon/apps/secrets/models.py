@@ -248,6 +248,6 @@ class PasswordRevision(models.Model):
         # password, they still know the password from step 1.
         # This unique_together forces passwords 1 and 3 to be the same
         # database object, retaining accessed_by. This way, when the
-        # employee leaves, password 3 is correctly assumed known by
+        # employee leaves, password 3 is correctly assumed known to
         # the employee.
         unique_together = (('encrypted_password', 'password'),)
