@@ -33,8 +33,6 @@ def devsetup():
         print(yellow("dev db already exists"))
     else:
         with cd(PROJECT_PATH):
-            print(green("creating initial database..."))
-            local("./manage syncdb --noinput")
             print(green("running initial schema migrations..."))
             local("./manage migrate")
 
