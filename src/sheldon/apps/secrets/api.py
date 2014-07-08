@@ -55,7 +55,7 @@ class AccessRequestDetail(generics.RetrieveUpdateDestroyAPIView):
         if (
             not self.request.user == obj.requester and
             not self.request.user in obj.reviewers and
-            not self.request.user.is_superuser()
+            not self.request.user.is_superuser
         ):
             self.permission_denied(self.request)
         return obj
