@@ -184,7 +184,7 @@ class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):
         return obj
 
     def post_save(self, obj, created=False):
-        if obj.password:
+        if hasattr(obj, 'password'):
             obj.set_password(self.request.user, obj.password)
 
 
@@ -201,7 +201,7 @@ class PasswordList(generics.ListCreateAPIView):
 
     def post_save(self, obj, created=False):
         obj.allowed_users.add(self.request.user)
-        if obj.password:
+        if hasattr(obj, 'password'):
             obj.set_password(self.request.user, obj.password)
 
 
