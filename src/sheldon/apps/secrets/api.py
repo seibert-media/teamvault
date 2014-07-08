@@ -183,6 +183,10 @@ class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):
             self.permission_denied(self.request)
         return obj
 
+    def post_save(self, obj, created=False):
+        if obj.password:
+            obj.set_password(self.request.user, obj.password)
+
 
 class PasswordList(generics.ListCreateAPIView):
     model = Password
