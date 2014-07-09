@@ -110,6 +110,14 @@ class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class PasswordSerializer(serializers.HyperlinkedModelSerializer):
+    allowed_groups = serializers.SlugRelatedField(
+        many=True,
+        slug_field='name',
+    )
+    allowed_users = serializers.SlugRelatedField(
+        many=True,
+        slug_field='username',
+    )
     created_by = serializers.Field(
         source='created_by.username',
     )
@@ -152,6 +160,8 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
         model = Password
         fields = (
             'access_policy',
+            'allowed_users',
+            'allowed_groups',
             'created',
             'created_by',
             'current_revision',
