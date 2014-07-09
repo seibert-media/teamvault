@@ -60,9 +60,23 @@ class AccessRequestDetail(generics.RetrieveUpdateDestroyAPIView):
             self.permission_denied(self.request)
         return obj
 
+    def pre_save(self, obj):
+        previous_state = AccessRequest.objects.get(pk=obj.pk)
+        if (
+            previous_state.status != AccessRequest.STATUS_PENDING or
+            obj.status == AccessRequest.STATUS_PENDING or
+            self.request.user not in previous_state.reviewers.all() or
+            obj.password != previous_state.password
+        ):
+            self.permission_denied(self.request)
+
+    def post_save(self, obj, created=False):
+        #obj.handle_status() TODO
+        pass
+
 
 class AccessRequestList(generics.ListCreateAPIView):
-    model = Password
+    model = AccessRequest
     paginate_by = 50
     serializer_class = AccessRequestSerializer
 
@@ -70,7 +84,9 @@ class AccessRequestList(generics.ListCreateAPIView):
         return AccessRequest.get_all_readable_by_user(self.request.user)
 
     def pre_save(self, obj):
+        obj.reason_rejected = ""
         obj.requester = self.request.user
+        obj.status = AccessRequest.STATUS_PENDING
 
     def post_save(self, obj, created=False):
         obj.reviewers.add(self.request.user) # TODO
