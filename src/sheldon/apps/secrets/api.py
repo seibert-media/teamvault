@@ -67,7 +67,7 @@ class AccessRequestList(generics.ListCreateAPIView):
     serializer_class = AccessRequestSerializer
 
     def get_queryset(self):
-        return AccessRequest.get_all_visible_to_user(self.request.user)
+        return AccessRequest.get_all_readable_by_user(self.request.user)
 
     def pre_save(self, obj):
         obj.requester = self.request.user
