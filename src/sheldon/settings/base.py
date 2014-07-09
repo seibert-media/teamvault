@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_gravatar',
     'rest_framework',
     'sheldon.apps.accounts.AccountsConfig',
     'sheldon.apps.audit.AuditConfig',
