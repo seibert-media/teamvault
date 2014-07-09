@@ -59,6 +59,13 @@ class AccessRequest(models.Model):
     class Meta:
         ordering = ('-created',)
 
+    def __repr__(self):
+        return "<AccessRequest {user}@'{name}' (#{id})>".format(
+            id=self.id,
+            name=self.password.name,
+            user=self.requester,
+        )
+
     @classmethod
     def get_all_readable_by_user(cls, user):
         if user.is_superuser:
@@ -143,6 +150,12 @@ class Password(models.Model):
         permissions = (
             ("view_password", _("May request access to the encrypted password")),
         )
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return "<Password '{name}' (#{id})>".format(id=self.id, name=self.name)
 
     def get_password(self, user):
         if not self.current_revision:
@@ -295,3 +308,6 @@ class PasswordRevision(models.Model):
         # employee leaves, password 3 is correctly assumed known to
         # the employee.
         unique_together = (('encrypted_password', 'password'),)
+
+    def __repr__(self):
+        return "<PasswordRevision '{name}' (#{id})>".format(id=self.id, name=self.password.name)
