@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework import serializers
+from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -46,7 +47,7 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
         )
 
 
-class AccessRequestDetail(generics.RetrieveUpdateDestroyAPIView):
+class AccessRequestDetail(generics.RetrieveUpdateAPIView):
     model = AccessRequest
     serializer_class = AccessRequestSerializer
 
@@ -198,10 +199,17 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
         )
 
 
-
 class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):
     model = Password
     serializer_class = PasswordSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        obj = self.get_object()
+        self.pre_delete(obj)
+        obj.status = Password.STATUS_DELETED
+        obj.save()
+        self.post_delete(obj)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_object(self):
         obj = get_object_or_404(Password, pk=self.kwargs['pk'])

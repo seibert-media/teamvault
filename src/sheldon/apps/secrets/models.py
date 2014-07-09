@@ -221,18 +221,24 @@ class Password(models.Model):
 
     def is_readable_by_user(self, user):
         return (
-            self.access_policy == self.ACCESS_ANY or
-            user in self.allowed_users.all() or
-            set(self.allowed_groups.all()).intersection(set(user.groups.all())) or
-            user.is_superuser
+            user.is_superuser or (
+                (
+                    self.access_policy == self.ACCESS_ANY or
+                    user in self.allowed_users.all() or
+                    set(self.allowed_groups.all()).intersection(set(user.groups.all()))
+                ) and self.status != self.STATUS_DELETED
+            )
         )
 
     def is_visible_to_user(self, user):
         return (
-            self.access_policy in (self.ACCESS_ANY, self.ACCESS_NAMEONLY) or
-            self.is_readable_by_user(user) or
-            user.is_superuser
-        )
+            user.is_superuser or (
+                (
+                    self.access_policy in (self.ACCESS_ANY, self.ACCESS_NAMEONLY) or
+                    self.is_readable_by_user(user)
+                ) and self.status != self.STATUS_DELETED
+            )
+       )
 
     def set_password(self, user, new_password):
         if not self.is_readable_by_user(user):
