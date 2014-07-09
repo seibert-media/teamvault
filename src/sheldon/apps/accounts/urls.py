@@ -13,5 +13,10 @@ urlpatterns = patterns(
         {'template_name': "accounts/login.html"},
         name='accounts.login',
     ),
-    url(r'^logout$', logout, name='accounts.logout'),
+    url(
+        r'^logout$',
+        logout,
+        {'template_name': "accounts/logout.html"},
+        name='accounts.logout',
+    ),
 )

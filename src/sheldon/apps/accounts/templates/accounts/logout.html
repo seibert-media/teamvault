@@ -1,0 +1,12 @@
+{% extends "accounts/base_public.html" %}
+{% load i18n %}
+{% block "title" %}{% trans "Login" %}{% endblock %}
+{% block "container" %}
+<div class="background"></div>
+<div class="login-wrapper">
+	<form class="login" role="form" method="POST">
+		<div class="login-icon">{% trans "TeamVault" %}</div>
+		Logged out
+	</form>
+</div>
+{% endblock %}

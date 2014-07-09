@@ -61,6 +61,10 @@ LANGUAGE_CODE = "en-us"
 
 LOCALE_PATHS = (PROJECT_ROOT + "/locale",)
 
+LOGIN_REDIRECT_URL = "/"
+LOGIN_URL = 'accounts.login'
+LOGOUT_URL = 'accounts.logout'
+
 MEDIA_ROOT = realpath(dirname(dirname(dirname(PROJECT_ROOT)))) + "/uploads"
 MEDIA_URL = "/uploads/"
 

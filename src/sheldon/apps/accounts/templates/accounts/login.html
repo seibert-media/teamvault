@@ -5,14 +5,14 @@
 <div class="background"></div>
 <div class="login-wrapper">
 	<form class="login" role="form" method="POST">
-		<div class="login-icon">{% trans "Login" %}</div>
+		<div class="login-icon">{% trans "TeamVault" %}</div>
 		{% if form.errors %}
 		<p>Your username and password didn't match. Please try again.</p>
 		{% endif %}
-		<input type="text" class="form-control" placeholder="Username" required autofocus>
+		<input type="text" name="username" class="form-control" placeholder="Username" required autofocus>
 
 		<div class="input-group">
-			<input type="password" class="form-control" placeholder="Password" required>
+			<input type="password" name="password" class="form-control" placeholder="Password" required>
 			<span class="input-group-btn">
 				<button class="btn btn-default" type="button"><i class="fa fa-chevron-right"></i></button>
 			</span>
