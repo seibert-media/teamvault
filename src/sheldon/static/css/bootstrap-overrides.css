@@ -1,0 +1,59 @@
+.navbar-default {
+	background-color: #282828;
+	border-color: #282828;
+	border-radius: 0;
+}
+.navbar-default .navbar-brand {
+	color: #708999;
+	font-weight: 300;
+}
+.navbar-default .navbar-brand:hover {
+	color: #708999;
+}
+.navbar-default .navbar-nav > .active > a {
+	background-color: #323232;
+	color: #e0e0e0;
+}
+.navbar-default .navbar-nav > .active > a:hover {
+	color: white;
+}
+.navbar-default .navbar-nav > li > a {
+	color: #c0c0c0;
+}
+.navbar-default .navbar-nav > li > a:hover,
+.navbar-default .navbar-nav > li > a:focus {
+	background-color: #303030 !important;
+	color: white;
+}
+.nav .open > a, .nav .open > a:hover, .nav .open > a:focus {
+	background-color: #303030 !important;
+}
+.navbar-default .navbar-nav > .open > a,
+.navbar-default .navbar-nav > .open > a:hover,
+.navbar-default .navbar-nav > .open > a:focus {
+	color: #c0c0c0;
+}
+
+textarea:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="datetime"]:focus,
+input[type="datetime-local"]:focus,
+input[type="date"]:focus,
+input[type="month"]:focus,
+input[type="time"]:focus,
+input[type="week"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="color"]:focus,
+.uneditable-input:focus {
+	border-color: #7F9BAD;
+	outline: 0;
+	outline: thin dotted \9;
+	-webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px #7F9BAD;
+	-moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px #7F9BAD;
+	box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px #7F9BAD;
+}

@@ -1,26 +1,32 @@
-{% extends "accounts/base_public.html" %}
+{% extends "base.html" %}
 {% load i18n %}
+{% load staticfiles %}
+{% block "css" %}
+<link href="{% static 'css/login.css' %}" rel="stylesheet">
+{% endblock %}
 {% block "title" %}{% trans "Login" %}{% endblock %}
-{% block "container" %}
-<div class="background"></div>
-<div class="login-wrapper">
-	<form class="login" role="form" method="POST">
-		<div class="login-icon">{% trans "TeamVault" %}</div>
-		{% if form.errors %}
-		<p>Your username and password didn't match. Please try again.</p>
-		{% endif %}
-		<input type="text" name="username" class="form-control" placeholder="Username" required autofocus>
+{% block "global_content" %}
+<div class="container">
+	<div class="background"></div>
+	<div class="login-wrapper">
+		<form class="login" role="form" method="POST">
+			<div class="login-icon">{% trans "TeamVault" %}</div>
+			{% if form.errors %}
+			<p>Your username and password didn't match. Please try again.</p>
+			{% endif %}
+			<input type="text" name="username" class="form-control" placeholder="Username" required autofocus>
 
-		<div class="input-group">
-			<input type="password" name="password" class="form-control" placeholder="Password" required>
-			<span class="input-group-btn">
-				<button class="btn btn-default" type="button"><i class="fa fa-chevron-right"></i></button>
-			</span>
-		</div>
+			<div class="input-group">
+				<input type="password" name="password" class="form-control" placeholder="Password" required>
+				<span class="input-group-btn">
+					<button class="btn btn-default" type="button"><i class="fa fa-chevron-right"></i></button>
+				</span>
+			</div>
 
-		<button class="hidden" type="submit">Sign in</button>
+			<button class="hidden" type="submit">Sign in</button>
 
-		{% csrf_token %}
-	</form>
+			{% csrf_token %}
+		</form>
+	</div>
 </div>
 {% endblock %}
