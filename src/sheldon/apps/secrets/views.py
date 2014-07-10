@@ -20,22 +20,25 @@ def live_search(request):
     search_term = request.GET['q']
     search_result = []
     all_passwords = Password.get_all_visible_to_user(request.user)
-    filtered_passwords = all_passwords.filter(name__contains=search_term)[:20]
+    filtered_passwords = list(all_passwords.filter(name__contains=search_term)[:20])
+    unreadable_passwords = filtered_passwords[:]
     sorted_passwords = []
 
     # sort readable passwords to top...
     for password in filtered_passwords:
         if password.is_readable_by_user(request.user):
-            sorted_passwords.append(password)
+            sorted_passwords.append((password, ("unlock",)))
+            unreadable_passwords.remove(password)
 
     # and others to the bottom
-    for password in filtered_passwords:
-        if password not in sorted_passwords:
-            sorted_passwords.append(password)
+    for password in unreadable_passwords:
+        sorted_passwords.append((password, ("lock",)))
 
-    for password in sorted_passwords:
+    for password, icons in sorted_passwords:
         search_result.append((
             password.name,
+            "http://example.com",
+            icons,
         ))
 
     return HttpResponse(dumps(search_result), content_type="application/json")
