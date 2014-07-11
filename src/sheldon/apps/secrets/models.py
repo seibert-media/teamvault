@@ -260,6 +260,7 @@ class Password(models.Model):
         except PasswordRevision.DoesNotExist:
             p = PasswordRevision()
         p.encrypted_password = encrypted_password
+        p.length = len(new_password)
         p.password = self
         p.set_by = user
         p.save()
@@ -293,6 +294,9 @@ class PasswordRevision(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_password = models.TextField()
+    length = models.PositiveSmallIntegerField(
+        default=0,
+    )
     password = models.ForeignKey(
         Password,
     )
