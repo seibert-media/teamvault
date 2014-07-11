@@ -20,7 +20,7 @@ def live_search(request):
     search_term = request.GET['q']
     search_result = []
     all_passwords = Password.get_all_visible_to_user(request.user)
-    filtered_passwords = list(all_passwords.filter(name__contains=search_term)[:20])
+    filtered_passwords = list(all_passwords.filter(name__icontains=search_term)[:20])
     unreadable_passwords = filtered_passwords[:]
     sorted_passwords = []
 
