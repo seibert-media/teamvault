@@ -6,22 +6,20 @@
 	<meta charset="utf-8">
 	<title>{% trans "Sheldon" %} &middot; {% block "title" %}{% endblock %}</title>
 
-	<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.2.0/css/bootstrap.min.css">
-
-	<link rel="stylesheet" href="https://netdna.bootstrapcdn.com/font-awesome/4.1.0/css/font-awesome.min.css">
-
 	<link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Lato:100,300,400" media="screen">
 
+	<link rel="stylesheet" href="{% static 'bundled/font-awesome-4.1.0/css/font-awesome.min.css' %}">
+	<link rel="stylesheet" href="{% static 'bundled/bootstrap-3.2.0-dist/css/bootstrap.min.css' %}">
 	<link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
 	<link href="{% static 'css/base.css' %}" rel="stylesheet">
-
 	{% block "css" %}{% endblock %}
+
+	<script src="{% static 'bundled/jquery-2.1.1.min.js' %}"></script>
+	<script src="{% static 'bundled/bootstrap-3.2.0-dist/js/bootstrap.min.js' %}"></script>
 	{% block "js" %}{% endblock %}
 </head>
 <body>
 	<div class="background"></div>
 	{% block "global_content" %}{% endblock %}
-	<script src="//code.jquery.com/jquery-2.1.1.min.js"></script>
-	<script src="//maxcdn.bootstrapcdn.com/bootstrap/3.2.0/js/bootstrap.min.js"></script>
 </body>
 </html>
