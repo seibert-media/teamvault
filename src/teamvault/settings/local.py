@@ -27,7 +27,7 @@ LOGGING = {
             'handlers': ['console'],
             'level': 'DEBUG',
         },
-        'sheldon': {
+        'teamvault': {
             'handlers': ['console'],
             'level': 'DEBUG',
         }

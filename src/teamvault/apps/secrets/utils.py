@@ -25,8 +25,8 @@ def generate_password(length=12, alphanum=False):
 def get_secret():
     checksum = Setting.get("fernet_key_hash", default=None)
     config = SafeConfigParser()
-    config.read(environ['SHELDON_CONFIG_FILE'])
-    key = config.get("sheldon", "fernet_key")
+    config.read(environ['TEAMVAULT_CONFIG_FILE'])
+    key = config.get("teamvault", "fernet_key")
     key_hash = sha1(key).hexdigest()
 
     if checksum is None:
@@ -37,7 +37,7 @@ def get_secret():
             "secret in '{path}' does not match SHA1 hash in database ({hash})"
         ).format(
             hash=checksum,
-            path=environ['SHELDON_CONFIG_FILE'],
+            path=environ['TEAMVAULT_CONFIG_FILE'],
         ))
 
     return key

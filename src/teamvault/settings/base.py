@@ -13,22 +13,22 @@ from cryptography.fernet import Fernet
 
 PROJECT_ROOT = realpath(dirname(dirname(__file__)))
 
-if not exists(environ['SHELDON_CONFIG_FILE']):
+if not exists(environ['TEAMVAULT_CONFIG_FILE']):
     SECRET_KEY = "".join(choice(ascii_letters + digits + punctuation) for i in range(50))
     config = SafeConfigParser()
     config.add_section("django")
     config.set("django", "secret_key", encodestring(SECRET_KEY))
-    config.add_section("sheldon")
-    config.set("sheldon", "fernet_key", Fernet.generate_key())
+    config.add_section("teamvault")
+    config.set("teamvault", "fernet_key", Fernet.generate_key())
     old_umask = umask(7)
     try:
-        with open(environ['SHELDON_CONFIG_FILE'], 'wb') as f:
+        with open(environ['TEAMVAULT_CONFIG_FILE'], 'wb') as f:
             config.write(f)
     finally:
         umask(old_umask)
 else:
     config = SafeConfigParser()
-    config.read(environ['SHELDON_CONFIG_FILE'])
+    config.read(environ['TEAMVAULT_CONFIG_FILE'])
 
 
 ### Django
@@ -52,10 +52,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_gravatar',
     'rest_framework',
-    'sheldon.apps.accounts.AccountsConfig',
-    'sheldon.apps.audit.AuditConfig',
-    'sheldon.apps.secrets.SecretsConfig',
-    'sheldon.apps.settings.SettingsConfig',
+    'teamvault.apps.accounts.AccountsConfig',
+    'teamvault.apps.audit.AuditConfig',
+    'teamvault.apps.secrets.SecretsConfig',
+    'teamvault.apps.settings.SettingsConfig',
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -78,7 +78,7 @@ MIDDLEWARE_CLASSES = (
     "django.contrib.messages.middleware.MessageMiddleware",
 )
 
-ROOT_URLCONF = "sheldon.urls"
+ROOT_URLCONF = "teamvault.urls"
 
 SECRET_KEY = decodestring(config.get("django", "secret_key"))
 
@@ -138,6 +138,6 @@ REST_FRAMEWORK = {
     )
 }
 
-### sheldon
+### TeamVault
 
-SHELDON_SECRET_KEY = None
+TEAMVAULT_SECRET_KEY = None

@@ -10,7 +10,7 @@ VENV_PATH = PROJECT_PATH + "/devenv"
 
 
 def compile_translations():
-    with lcd(PROJECT_PATH + "/src/sheldon"):
+    with lcd(PROJECT_PATH + "/src/teamvault"):
         local("../../devenv/bin/python ../manage_local.py compilemessages")
 
 
@@ -23,9 +23,9 @@ def devsetup():
             local("virtualenv " + VENV_PATH)
             print(green("installing dependencies..."))
             local(VENV_PATH + "/bin/pip install -r " + PROJECT_PATH + "/requirements.txt")
-            print(green("linking sheldon into sys.path..."))
+            print(green("linking teamvault into sys.path..."))
             local("ln -s {0} {1}".format(
-                PROJECT_PATH + "/src/sheldon",
+                PROJECT_PATH + "/src/teamvault",
                 VENV_PATH + "/lib/python2.7/site-packages",
             ))
 
@@ -38,5 +38,5 @@ def devsetup():
 
 
 def update_translations():
-    with lcd(PROJECT_PATH + "/src/sheldon"):
+    with lcd(PROJECT_PATH + "/src/teamvault"):
         local("../../devenv/bin/python ../manage_local.py makemessages -a")

@@ -179,7 +179,7 @@ class Password(models.Model):
                 name=self.name,
                 user=user.username,
             ))
-        f = Fernet(settings.SHELDON_SECRET_KEY)
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         log(_(
                 "{user} read '{name}' ({id}:{revision})"
             ).format(
@@ -249,7 +249,7 @@ class Password(models.Model):
                 name=self.name,
                 user=user.username,
             ))
-        f = Fernet(settings.SHELDON_SECRET_KEY)
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         encrypted_password = f.encrypt(new_password.encode('utf-8'))
         try:
             # see the comment on unique_together for PasswordRevision
