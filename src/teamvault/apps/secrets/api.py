@@ -11,6 +11,9 @@ from .models import AccessRequest, Password, PasswordRevision
 
 
 class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
+    api_url = serializers.HyperlinkedIdentityField(
+        view_name='api.access-request_detail',
+    )
     requester = serializers.Field(
         source='requester.username',
     )
@@ -22,13 +25,11 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
         read_only=True,
         slug_field='username',
     )
-    url = serializers.HyperlinkedIdentityField(
-        view_name='api.access-request_detail',
-    )
 
     class Meta:
         model = AccessRequest
         fields = (
+            'api_url',
             'closed',
             'closed_by',
             'created',
@@ -38,7 +39,6 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
             'requester',
             'reviewers',
             'status',
-            'url',
         )
         read_only_fields = (
             'closed',
@@ -94,6 +94,9 @@ class AccessRequestList(generics.ListCreateAPIView):
 
 
 class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
+    api_url = serializers.HyperlinkedIdentityField(
+        view_name='api.password-revision_detail',
+    )
     created_by = serializers.Field(
         source='set_by.username',
     )
@@ -101,9 +104,6 @@ class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
         read_only=True,
         required=False,
         source='id',
-    )
-    url = serializers.HyperlinkedIdentityField(
-        view_name='api.password-revision_detail',
     )
 
     def transform_secret_url(self, obj, value):
@@ -116,10 +116,10 @@ class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = PasswordRevision
         fields = (
+            'api_url',
             'created',
             'created_by',
             'secret_url',
-            'url',
         )
         read_only_fields = (
             'created',
@@ -134,6 +134,9 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
     allowed_users = serializers.SlugRelatedField(
         many=True,
         slug_field='username',
+    )
+    api_url = serializers.HyperlinkedIdentityField(
+        view_name='api.password_detail',
     )
     created_by = serializers.Field(
         source='created_by.username',
@@ -156,9 +159,6 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         source='id',
     )
-    url = serializers.HyperlinkedIdentityField(
-        view_name='api.password_detail',
-    )
 
     def transform_secret_readable(self, obj, value):
         return obj.is_readable_by_user(self.context['request'].user)
@@ -179,6 +179,7 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
             'access_policy',
             'allowed_users',
             'allowed_groups',
+            'api_url',
             'created',
             'created_by',
             'current_revision',
@@ -190,7 +191,6 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
             'secret_readable',
             'secret_url',
             'status',
-            'url',
             'username',
         )
         read_only_fields = (
