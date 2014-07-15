@@ -139,6 +139,10 @@ class Password(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_OK,
     )
+    url = models.URLField(
+        blank=True,
+        null=True,
+    )
     username = models.CharField(
         blank=True,
         max_length=255,

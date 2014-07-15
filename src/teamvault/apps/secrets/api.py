@@ -192,6 +192,7 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
             'secret_url',
             'status',
             'username',
+            'url',
         )
         read_only_fields = (
             'created',
