@@ -1,11 +1,10 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
-from guardian.admin import GuardedModelAdmin
 
 from .models import AccessRequest, Password, PasswordRevision
 
 
-class AccessRequestAdmin(GuardedModelAdmin):
+class AccessRequestAdmin(admin.ModelAdmin):
     fieldsets = (
         (_("Subject"), {
             'fields': (
@@ -34,7 +33,7 @@ class AccessRequestAdmin(GuardedModelAdmin):
 admin.site.register(AccessRequest, AccessRequestAdmin)
 
 
-class PasswordAdmin(GuardedModelAdmin):
+class PasswordAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
@@ -69,7 +68,7 @@ class PasswordAdmin(GuardedModelAdmin):
 admin.site.register(Password, PasswordAdmin)
 
 
-class PasswordRevisionAdmin(GuardedModelAdmin):
+class PasswordRevisionAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
