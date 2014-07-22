@@ -33,7 +33,9 @@
 .navbar-default .navbar-nav > .open > a:focus {
 	color: #c0c0c0;
 }
-
+.tooltip-inner {
+	white-space: pre-wrap;
+}
 textarea:focus,
 input[type="text"]:focus,
 input[type="password"]:focus,
