@@ -1,12 +1,19 @@
-{% extends "accounts/base_public.html" %}
+{% extends "base.html" %}
 {% load i18n %}
-{% block "title" %}{% trans "Login" %}{% endblock %}
-{% block "container" %}
-<div class="background"></div>
-<div class="login-wrapper">
-	<form class="login" role="form" method="POST">
-		<div class="login-icon">{% trans "TeamVault" %}</div>
-		Logged out
-	</form>
+{% load staticfiles %}
+{% block "css" %}
+<link href="{% static 'css/login.css' %}" rel="stylesheet">
+{% endblock %}
+{% block "title" %}{% trans "Logout" %}{% endblock %}
+{% block "global_content" %}
+<div class="container">
+	<div class="background"></div>
+	<div class="login-wrapper">
+		<div class="logout">
+			<div class="login-icon">{% trans "TeamVault" %}</div>
+			{% trans "Logged out." %}&nbsp;
+			<a href="{% url 'accounts.login' %}">{% trans "Log in again?" %}</a>
+		</div>
+	</div>
 </div>
 {% endblock %}
