@@ -223,6 +223,15 @@ class Password(models.Model):
             cls.objects.filter(allowed_groups__in=user.groups.all())
         ).exclude(status=cls.STATUS_DELETED)
 
+    @classmethod
+    def get_search_results(cls, user, term):
+        return cls.get_all_visible_to_user(user).filter(
+            models.Q(name__icontains=term) |
+            models.Q(username__icontains=term) |
+            models.Q(description__icontains=term) |
+            models.Q(url__icontains=term)
+        )
+
     def is_readable_by_user(self, user):
         return (
             user.is_superuser or (

@@ -45,10 +45,14 @@ class PasswordList(ListView):
     def get_context_data(self, **kwargs):
         context = super(PasswordList, self).get_context_data(**kwargs)
         context['readable_passwords'] = Password.get_all_readable_by_user(self.request.user)
+        context['search_term'] = self.request.GET.get('search', None)
         return context
 
     def get_queryset(self):
-        return Password.get_all_visible_to_user(self.request.user)
+        if "search" in self.request.GET:
+            return Password.get_search_results(self.request.user, self.request.GET['search'])
+        else:
+            return Password.get_all_visible_to_user(self.request.user)
 
 
 @login_required
