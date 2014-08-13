@@ -19,11 +19,21 @@
 				<li class="{% block "nav_search" %}{% endblock %}">
 					<a href="{% url 'dashboard' %}"><i class="fa fa-search"></i>&nbsp; {% trans "Search" %}</a>
 				</li>
-				<li class="{% block "nav_add" %}{% endblock %}"><a href="#"><i class="fa fa-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a></li>
 				<li class="{% block "nav_browse" %}{% endblock %}">
 					<a href="{% url 'secrets.password-list' %}"><i class="fa fa-folder-o"></i>&nbsp; {% trans "Browse" %}</a>
 				</li>
 			</ul>
+			<div class="btn-group">
+				<button type="button" class="btn btn-nav"><i class="fa fa-plus-circle"></i>&nbsp; Add Password</button>
+				<button type="button" class="btn btn-nav dropdown-toggle" data-toggle="dropdown">
+					<span class="caret"></span>
+					<span class="sr-only">Toggle Dropdown</span>
+				</button>
+				<ul class="dropdown-menu" role="menu">
+					<li><a href="#"><i class="fa fa-credit-card"></i>&nbsp; Add Credit Card</a></li>
+					<li><a href="#"><i class="fa fa-upload"></i>&nbsp; Upload File</a></li>
+				</ul>
+			</div>
 			<ul class="nav navbar-nav navbar-right">
 				{% if request.user.is_staff %}
 				<li class="dropdown">
