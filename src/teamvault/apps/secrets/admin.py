@@ -38,6 +38,7 @@ class PasswordAdmin(admin.ModelAdmin):
         (None, {
             'fields': (
                 'name',
+                'content_type',
                 'description',
             ),
         }),

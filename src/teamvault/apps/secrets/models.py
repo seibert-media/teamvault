@@ -92,6 +92,14 @@ class Password(models.Model):
         (ACCESS_ANY, _("everyone")),
         (ACCESS_HIDDEN, _("hidden")),
     )
+    CONTENT_PASSWORD = 1
+    CONTENT_CC = 2
+    CONTENT_FILE = 3
+    CONTENT_CHOICES = (
+        (CONTENT_PASSWORD, _("Password")),
+        (CONTENT_CC, _("Credit Card")),
+        (CONTENT_FILE, _("File")),
+    )
     STATUS_OK = 1
     STATUS_NEEDS_CHANGING = 2
     STATUS_DELETED = 3
@@ -112,6 +120,10 @@ class Password(models.Model):
     allowed_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='allowed_passwords',
+    )
+    content_type = models.PositiveSmallIntegerField(
+        choices=CONTENT_CHOICES,
+        default=CONTENT_PASSWORD,
     )
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -151,9 +163,6 @@ class Password(models.Model):
 
     class Meta:
         ordering = ('name',)
-        permissions = (
-            ("view_password", _("May request access to the encrypted password")),
-        )
 
     def __str__(self):
         return self.name
