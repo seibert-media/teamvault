@@ -67,19 +67,19 @@ def live_search(request):
     # sort readable passwords to top...
     for password in filtered_passwords:
         if password.is_readable_by_user(request.user):
-            sorted_passwords.append((password, ("unlock",)))
+            sorted_passwords.append((password, "unlock"))
             unreadable_passwords.remove(password)
 
     # and others to the bottom
     for password in unreadable_passwords:
-        sorted_passwords.append((password, ("lock",)))
+        sorted_passwords.append((password, "lock"))
 
-    for password, icons in sorted_passwords:
-        search_result.append((
-            password.name,
-            reverse('secrets.password-detail', kwargs={'pk': password.pk}),
-            icons,
-        ))
+    for password, icon in sorted_passwords:
+        search_result.append({
+            'name': password.name,
+            'url': reverse('secrets.password-detail', kwargs={'pk': password.pk}),
+            'icon': icon,
+        })
 
     return HttpResponse(dumps(search_result), content_type="application/json")
 
