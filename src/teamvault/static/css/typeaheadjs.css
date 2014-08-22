@@ -30,6 +30,9 @@
 	width: 100%;
 	z-index: 1000;
 }
+.tt-hint {
+	color: #cccccc;
+}
 .tt-suggestion.tt-cursor {
 	background-color: #f6f6f6;
 }
