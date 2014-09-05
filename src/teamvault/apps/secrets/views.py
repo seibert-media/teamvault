@@ -6,10 +6,39 @@ from json import dumps
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse
+from django.http import HttpResponse, Http404
 from django.views.generic import DetailView, ListView
+from django.views.generic.edit import FormView
 
+from .forms import AddPasswordForm #, AddCCForm, UploadFileForm
 from .models import Password
+
+
+_CONTENT_TYPES = dict(Password.CONTENT_CHOICES)
+PRETTY_CONTENT_TYPES = {
+    'cc': _CONTENT_TYPES[Password.CONTENT_CC],
+    'file': _CONTENT_TYPES[Password.CONTENT_FILE],
+    'password': _CONTENT_TYPES[Password.CONTENT_PASSWORD],
+}
+
+
+class PasswordAdd(FormView):
+    template_name = 'secrets/add.html'
+    form_class = AddPasswordForm
+
+    def form_valid(self, form):
+        # This method is called when valid form data has been POSTed.
+        # It should return an HttpResponse.
+        return super(PasswordAdd, self).form_valid(form)
+
+    def get_context_data(self, **kwargs):
+        context = super(PasswordAdd, self).get_context_data(**kwargs)
+        context['content_type'] = self.kwargs['content_type']
+        try:
+            context['pretty_content_type'] = PRETTY_CONTENT_TYPES[self.kwargs['content_type']]
+        except KeyError:
+            raise Http404
+        return context
 
 
 class PasswordDetail(DetailView):
