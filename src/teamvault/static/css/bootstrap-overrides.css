@@ -1,6 +1,6 @@
 .navbar-default {
-	background-color: #282828;
-	border-color: #282828;
+	background-color: #444C59;
+	border-color: #444C59;
 	border-radius: 0;
 }
 .navbar-default .navbar-brand {
@@ -11,27 +11,27 @@
 	color: #708999;
 }
 .navbar-default .navbar-nav > .active > a {
-	background-color: #323232;
-	color: #e0e0e0;
+	background-color: #4E5666;
+	color: #f0f0f0;
 }
 .navbar-default .navbar-nav > .active > a:hover {
 	color: white;
 }
 .navbar-default .navbar-nav > li > a {
-	color: #c0c0c0;
+	color: #f0f0f0;
 }
 .navbar-default .navbar-nav > li > a:hover,
 .navbar-default .navbar-nav > li > a:focus {
-	background-color: #303030 !important;
+	background-color: #576173 !important;
 	color: white;
 }
 .nav .open > a, .nav .open > a:hover, .nav .open > a:focus {
-	background-color: #303030 !important;
+	background-color: #576173 !important;
 }
 .navbar-default .navbar-nav > .open > a,
 .navbar-default .navbar-nav > .open > a:hover,
 .navbar-default .navbar-nav > .open > a:focus {
-	color: #c0c0c0;
+	color: #f0f0f0;
 }
 .tooltip-inner {
 	white-space: pre-wrap;
