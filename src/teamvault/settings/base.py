@@ -80,7 +80,7 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = "teamvault.urls"
 
-SECRET_KEY = decodestring(config.get("django", "secret_key"))
+SECRET_KEY = decodestring(config.get("django", "secret_key").encode('utf-8'))
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 

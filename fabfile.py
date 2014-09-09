@@ -20,13 +20,13 @@ def devsetup():
     else:
         with cd(PROJECT_PATH):
             print(green("creating virtualenv..."))
-            local("virtualenv " + VENV_PATH)
+            local("virtualenv --python=python3.4 " + VENV_PATH)
             print(green("installing dependencies..."))
             local(VENV_PATH + "/bin/pip install -r " + PROJECT_PATH + "/requirements.txt")
             print(green("linking teamvault into sys.path..."))
             local("ln -s {0} {1}".format(
                 PROJECT_PATH + "/src/teamvault",
-                VENV_PATH + "/lib/python2.7/site-packages",
+                VENV_PATH + "/lib/python3.4/site-packages",
             ))
 
     if os.path.exists(PROJECT_PATH + "/devdb.sqlite"):

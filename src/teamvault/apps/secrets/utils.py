@@ -5,7 +5,7 @@ except ImportError:
 from hashlib import sha1
 from os import environ
 from random import choice
-from string import digits, letters, punctuation
+from string import ascii_letters, digits, punctuation
 
 from django.utils.translation import ugettext as _
 
@@ -16,7 +16,7 @@ def generate_password(length=12, alphanum=False):
     """
     Returns a password of the given length.
     """
-    char_pool = letters + digits
+    char_pool = ascii_letters + digits
     if not alphanum:
         char_pool += punctuation
     return "".join(choice(char_pool) for i in range(length))
@@ -27,7 +27,7 @@ def get_secret():
     config = SafeConfigParser()
     config.read(environ['TEAMVAULT_CONFIG_FILE'])
     key = config.get("teamvault", "fernet_key")
-    key_hash = sha1(key).hexdigest()
+    key_hash = sha1(key.encode('utf-8')).hexdigest()
 
     if checksum is None:
         Setting.set("fernet_key_hash", key_hash)
