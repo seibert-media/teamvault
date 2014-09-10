@@ -31,10 +31,6 @@ class AccessRequest(models.Model):
         related_name='access_requests_closed',
     )
     created = models.DateTimeField(auto_now_add=True)
-    password = models.ForeignKey(
-        'Password',
-        related_name='access_requests',
-    )
     reason_request = models.TextField(
         blank=True,
         null=True,
@@ -50,6 +46,10 @@ class AccessRequest(models.Model):
     reviewers = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         related_name='access_requests_reviewed',
+    )
+    secret = models.ForeignKey(
+        'Secret',
+        related_name='access_requests',
     )
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
@@ -83,7 +83,7 @@ class AccessRequest(models.Model):
         )
 
 
-class Password(models.Model):
+class Secret(models.Model):
     ACCESS_NAMEONLY = 1
     ACCESS_ANY = 2
     ACCESS_HIDDEN = 3
@@ -131,7 +131,7 @@ class Password(models.Model):
         related_name='passwords_created',
     )
     current_revision = models.ForeignKey(
-        'PasswordRevision',
+        'SecretRevision',
         blank=True,
         null=True,
         related_name='_password_current_revision',
@@ -210,7 +210,7 @@ class Password(models.Model):
         self.current_revision.save()
         self.last_read = now()
         self.save()
-        return f.decrypt(self.current_revision.encrypted_password.encode('utf-8'))
+        return f.decrypt(self.current_revision.encrypted_data.encode('utf-8'))
 
     @classmethod
     def get_all_readable_by_user(cls, user):
@@ -262,7 +262,7 @@ class Password(models.Model):
             )
        )
 
-    def set_password(self, user, new_password):
+    def set_data(self, user, plaintext_data):
         if not self.is_readable_by_user(user):
             raise PermissionError(_(
                 "{user} not allowed access to '{name}' ({id})"
@@ -271,19 +271,21 @@ class Password(models.Model):
                 name=self.name,
                 user=user.username,
             ))
+        if isinstance(plaintext_data, str):
+            plaintext_data = plaintext_data.encode('utf-8')
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        encrypted_password = f.encrypt(new_password.encode('utf-8'))
+        encrypted_data = f.encrypt(plaintext_data)
         try:
-            # see the comment on unique_together for PasswordRevision
-            p = PasswordRevision.objects.get(
-                encrypted_password=encrypted_password,
-                password=self,
+            # see the comment on unique_together for SecretRevision
+            p = SecretRevision.objects.get(
+                encrypted_data=encrypted_data,
+                secret=self,
             )
-        except PasswordRevision.DoesNotExist:
-            p = PasswordRevision()
-        p.encrypted_password = encrypted_password
-        p.length = len(new_password)
-        p.password = self
+        except SecretRevision.DoesNotExist:
+            p = SecretRevision()
+        p.encrypted_data = encrypted_data
+        p.length = len(plaintext_data)
+        p.secret = self
         p.set_by = user
         p.save()
         p.accessed_by.add(user)
@@ -295,7 +297,7 @@ class Password(models.Model):
         self.last_read = now()
         self.save()
         log(_(
-                "{user} set a new password for '{name}' ({id}:{oldrev}->{newrev})"
+                "{user} set a new secret for '{name}' ({id}:{oldrev}->{newrev})"
             ).format(
                 id=self.id,
                 name=self.name,
@@ -305,22 +307,22 @@ class Password(models.Model):
             ),
             actor=user,
             level='info',
-            password=self,
-            password_revision=self.current_revision,
+            secret=self,
+            secret_revision=self.current_revision,
         )
 
 
-class PasswordRevision(models.Model):
+class SecretRevision(models.Model):
     accessed_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
     )
     created = models.DateTimeField(auto_now_add=True)
-    encrypted_password = models.TextField()
+    encrypted_data = models.BinaryField()
     length = models.PositiveSmallIntegerField(
         default=0,
     )
-    password = models.ForeignKey(
-        Password,
+    secret = models.ForeignKey(
+        Secret,
     )
     set_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -339,7 +341,7 @@ class PasswordRevision(models.Model):
         # database object, retaining accessed_by. This way, when the
         # employee leaves, password 3 is correctly assumed known to
         # the employee.
-        unique_together = (('encrypted_password', 'password'),)
+        unique_together = (('encrypted_data', 'secret'),)
 
     def __repr__(self):
-        return "<PasswordRevision '{name}' (#{id})>".format(id=self.id, name=self.password.name)
+        return "<SecretRevision '{name}' (#{id})>".format(id=self.id, name=self.secret.name)

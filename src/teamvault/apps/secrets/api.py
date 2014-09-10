@@ -7,7 +7,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
-from .models import AccessRequest, Password, PasswordRevision
+from .models import AccessRequest, Secret, SecretRevision
 
 
 class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
@@ -17,8 +17,8 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
     requester = serializers.Field(
         source='requester.username',
     )
-    password = serializers.HyperlinkedRelatedField(
-        view_name='api.password_detail',
+    secret = serializers.HyperlinkedRelatedField(
+        view_name='api.secret_detail',
     )
     reviewers = serializers.SlugRelatedField(
         many=True,
@@ -33,7 +33,7 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
             'closed',
             'closed_by',
             'created',
-            'password',
+            'secret',
             'reason_request',
             'reason_rejected',
             'requester',
@@ -93,7 +93,7 @@ class AccessRequestList(generics.ListCreateAPIView):
         obj.reviewers.add(self.request.user) # TODO
 
 
-class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
+class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     api_url = serializers.HyperlinkedIdentityField(
         view_name='api.password-revision_detail',
     )
@@ -114,7 +114,7 @@ class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
         )
 
     class Meta:
-        model = PasswordRevision
+        model = SecretRevision
         fields = (
             'api_url',
             'created',
@@ -126,7 +126,7 @@ class PasswordRevisionSerializer(serializers.HyperlinkedModelSerializer):
         )
 
 
-class PasswordSerializer(serializers.HyperlinkedModelSerializer):
+class SecretSerializer(serializers.HyperlinkedModelSerializer):
     allowed_groups = serializers.SlugRelatedField(
         many=True,
         slug_field='name',
@@ -174,7 +174,7 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
         )
 
     class Meta:
-        model = Password
+        model = Secret
         fields = (
             'access_policy',
             'allowed_users',
@@ -200,20 +200,20 @@ class PasswordSerializer(serializers.HyperlinkedModelSerializer):
         )
 
 
-class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):
-    model = Password
-    serializer_class = PasswordSerializer
+class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
+    model = Secret
+    serializer_class = SecretSerializer
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()
         self.pre_delete(obj)
-        obj.status = Password.STATUS_DELETED
+        obj.status = Secret.STATUS_DELETED
         obj.save()
         self.post_delete(obj)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_object(self):
-        obj = get_object_or_404(Password, pk=self.kwargs['pk'])
+        obj = get_object_or_404(Secret, pk=self.kwargs['pk'])
         if not obj.is_visible_to_user(self.request.user):
             self.permission_denied(self.request)
         return obj
@@ -223,13 +223,13 @@ class PasswordDetail(generics.RetrieveUpdateDestroyAPIView):
             obj.set_password(self.request.user, obj.password)
 
 
-class PasswordList(generics.ListCreateAPIView):
-    model = Password
+class SecretList(generics.ListCreateAPIView):
+    model = Secret
     paginate_by = 50
-    serializer_class = PasswordSerializer
+    serializer_class = SecretSerializer
 
     def get_queryset(self):
-        return Password.get_all_visible_to_user(self.request.user)
+        return Secret.get_all_visible_to_user(self.request.user)
 
     def pre_save(self, obj):
         obj.created_by = self.request.user
@@ -240,12 +240,12 @@ class PasswordList(generics.ListCreateAPIView):
             obj.set_password(self.request.user, obj.password)
 
 
-class PasswordRevisionDetail(generics.RetrieveAPIView):
-    model = PasswordRevision
-    serializer_class = PasswordRevisionSerializer
+class SecretRevisionDetail(generics.RetrieveAPIView):
+    model = SecretRevision
+    serializer_class = SecretRevisionSerializer
 
     def get_object(self):
-        obj = get_object_or_404(PasswordRevision, pk=self.kwargs['pk'])
+        obj = get_object_or_404(SecretRevision, pk=self.kwargs['pk'])
         if not obj.password.is_readable_by_user(self.request.user):
             self.permission_denied(self.request)
         return obj
@@ -253,7 +253,7 @@ class PasswordRevisionDetail(generics.RetrieveAPIView):
 
 @api_view(['GET'])
 def secret_get(request, pk):
-    obj = get_object_or_404(PasswordRevision, pk=pk)
+    obj = get_object_or_404(SecretRevision, pk=pk)
     if not obj.password.is_readable_by_user(request.user):
         raise PermissionDenied()
     return Response({'password': obj.password.get_password(request.user)})

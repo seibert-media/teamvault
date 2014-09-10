@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
-from .models import AccessRequest, Password, PasswordRevision
+from .models import AccessRequest, Secret, SecretRevision
 
 
 class AccessRequestAdmin(admin.ModelAdmin):
@@ -9,7 +9,7 @@ class AccessRequestAdmin(admin.ModelAdmin):
         (_("Subject"), {
             'fields': (
                 'requester',
-                'password',
+                'secret',
                 'created',
                 'reason_request',
             ),
@@ -25,7 +25,7 @@ class AccessRequestAdmin(admin.ModelAdmin):
         }),
     )
     date_hierarchy = 'created'
-    list_display = ('requester', 'password', 'status', 'created')
+    list_display = ('requester', 'secret', 'status', 'created')
     list_filter = ('status',)
     readonly_fields = ('created',)
     search_fields = ('requester__username', 'password__name',)
@@ -33,7 +33,7 @@ class AccessRequestAdmin(admin.ModelAdmin):
 admin.site.register(AccessRequest, AccessRequestAdmin)
 
 
-class PasswordAdmin(admin.ModelAdmin):
+class SecretAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
@@ -68,15 +68,15 @@ class PasswordAdmin(admin.ModelAdmin):
     readonly_fields = ('created', 'last_read')
     search_fields = ('name', 'description')
 
-admin.site.register(Password, PasswordAdmin)
+admin.site.register(Secret, SecretAdmin)
 
 
-class PasswordRevisionAdmin(admin.ModelAdmin):
+class SecretRevisionAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {
             'fields': (
-                'password',
-                'encrypted_password',
+                'secret',
+                'encrypted_data',
             ),
         }),
         (_("Audit"), {
@@ -88,8 +88,8 @@ class PasswordRevisionAdmin(admin.ModelAdmin):
         }),
     )
     date_hierarchy = 'created'
-    list_display = ('password', 'id', 'created')
+    list_display = ('secret', 'id', 'created')
     readonly_fields = ('accessed_by', 'created', 'set_by')
-    search_fields = ('password__name',)
+    search_fields = ('secret__name',)
 
-admin.site.register(PasswordRevision, PasswordRevisionAdmin)
+admin.site.register(SecretRevision, SecretRevisionAdmin)

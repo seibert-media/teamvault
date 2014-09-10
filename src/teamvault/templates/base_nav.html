@@ -20,18 +20,18 @@
 					<a href="{% url 'dashboard' %}"><i class="fa fa-search"></i>&nbsp; {% trans "Search" %}</a>
 				</li>
 				<li class="{% block "nav_browse" %}{% endblock %}">
-					<a href="{% url 'secrets.password-list' %}"><i class="fa fa-folder-o"></i>&nbsp; {% trans "Browse" %}</a>
+					<a href="{% url 'secrets.secret-list' %}"><i class="fa fa-folder-o"></i>&nbsp; {% trans "Browse" %}</a>
 				</li>
 			</ul>
 			<div class="btn-group">
-				<a href="{% url 'secrets.add' content_type='password' %}" class="btn btn-nav"><i class="fa fa-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
+				<a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-nav"><i class="fa fa-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
 				<button type="button" class="btn btn-nav dropdown-toggle" data-toggle="dropdown">
 					<span class="caret"></span>
 					<span class="sr-only">Toggle Dropdown</span>
 				</button>
 				<ul class="dropdown-menu" role="menu">
-					<li><a href="{% url 'secrets.add' content_type='cc' %}"><i class="fa fa-credit-card"></i>&nbsp; Add Credit Card</a></li>
-					<li><a href="{% url 'secrets.add' content_type='file' %}"><i class="fa fa-upload"></i>&nbsp; Upload File</a></li>
+					<li><a href="{% url 'secrets.secret-add' content_type='cc' %}"><i class="fa fa-credit-card"></i>&nbsp; Add Credit Card</a></li>
+					<li><a href="{% url 'secrets.secret-add' content_type='file' %}"><i class="fa fa-upload"></i>&nbsp; Upload File</a></li>
 				</ul>
 			</div>
 			<ul class="nav navbar-nav navbar-right">

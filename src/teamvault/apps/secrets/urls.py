@@ -2,7 +2,7 @@ from django.conf.urls import patterns, url
 from django.contrib.auth.decorators import login_required
 from django.views.generic import TemplateView
 
-from .views import live_search, PasswordAdd, PasswordDetail, PasswordList
+from .views import live_search, SecretAdd, SecretDetail, SecretList
 
 urlpatterns = patterns('',
     url(
@@ -11,22 +11,22 @@ urlpatterns = patterns('',
         name='dashboard',
     ),
     url(
-        r'^passwords/$',
-        login_required(PasswordList.as_view()),
-        name='secrets.password-list',
+        r'^secrets/$',
+        login_required(SecretList.as_view()),
+        name='secrets.secret-list',
     ),
     url(
-        r'^passwords/(?P<pk>\d+)$',
-        login_required(PasswordDetail.as_view()),
-        name='secrets.password-detail',
+        r'^secrets/(?P<pk>\d+)$',
+        login_required(SecretDetail.as_view()),
+        name='secrets.secret-detail',
     ),
     url(
-        r'^passwords/add/(?P<content_type>\w+)$',
-        login_required(PasswordAdd.as_view()),
-        name='secrets.add',
+        r'^secrets/add/(?P<content_type>\w+)$',
+        login_required(SecretAdd.as_view()),
+        name='secrets.secret-add',
     ),
     url(
-        r'^passwords/live-search$',
+        r'^secrets/live-search$',
         live_search,
         name='secrets.live-search',
     ),

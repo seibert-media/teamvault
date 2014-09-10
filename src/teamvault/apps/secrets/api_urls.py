@@ -1,7 +1,7 @@
 from django.conf.urls import patterns, url
 
-from .api import AccessRequestDetail, AccessRequestList, PasswordDetail, PasswordList, \
-    PasswordRevisionDetail, secret_get
+from .api import AccessRequestDetail, AccessRequestList, SecretDetail, SecretList, \
+    SecretRevisionDetail, secret_get
 
 
 urlpatterns = patterns(
@@ -18,22 +18,22 @@ urlpatterns = patterns(
     ),
     url(
         r'^passwords/$',
-        PasswordList.as_view(),
-        name='api.password_list',
+        SecretList.as_view(),
+        name='api.secret_list',
     ),
     url(
         r'^passwords/(?P<pk>\d+)/$',
-        PasswordDetail.as_view(),
-        name='api.password_detail',
+        SecretDetail.as_view(),
+        name='api.secret_detail',
     ),
     url(
-        r'^password-revisions/(?P<pk>\d+)/$',
-        PasswordRevisionDetail.as_view(),
-        name='api.password-revision_detail',
+        r'^secret-revisions/(?P<pk>\d+)/$',
+        SecretRevisionDetail.as_view(),
+        name='api.secret-revision_detail',
     ),
     url(
-        r'^password-revisions/(?P<pk>\d+)/secret$',
+        r'^secret-revisions/(?P<pk>\d+)/secret$',
         secret_get,
-        name='api.password-revision_secret',
+        name='api.secret-revision_secret',
     ),
 )

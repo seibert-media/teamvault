@@ -15,8 +15,8 @@ class LogEntryAdmin(admin.ModelAdmin):
         (_("Linked objects"), {
             'fields': (
                 'actor',
-                'password',
-                'password_revision',
+                'secret',
+                'secret_revision',
                 'group',
                 'user',
             ),
@@ -28,8 +28,8 @@ class LogEntryAdmin(admin.ModelAdmin):
         'time',
         'message',
         'actor',
-        'password',
-        'password_revision',
+        'secret',
+        'secret_revision',
         'group',
         'user',
     )

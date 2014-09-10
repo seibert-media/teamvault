@@ -16,14 +16,14 @@ class LogEntry(models.Model):
         related_name='logged_actions',
     )
     message = models.TextField()
-    password = models.ForeignKey(
-        'secrets.Password',
+    secret = models.ForeignKey(
+        'secrets.Secret',
         blank=True,
         null=True,
         related_name='logged_actions',
     )
-    password_revision = models.ForeignKey(
-        'secrets.PasswordRevision',
+    secret_revision = models.ForeignKey(
+        'secrets.SecretRevision',
         blank=True,
         null=True,
         related_name='logged_actions',
