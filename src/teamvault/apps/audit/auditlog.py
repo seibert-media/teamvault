@@ -11,8 +11,8 @@ def log(
     msg,
     level='info',
     actor=None,
-    password=None,
-    password_revision=None,
+    secret=None,
+    secret_revision=None,
     group=None,
     user=None,
 ):
@@ -20,8 +20,8 @@ def log(
     entry = LogEntry()
     entry.message = msg
     entry.actor = actor
-    entry.password = password
-    entry.password_revision = password_revision
+    entry.secret = secret
+    entry.secret_revision = secret_revision
     entry.group = group
     entry.user = user
     entry.save()

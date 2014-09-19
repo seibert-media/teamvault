@@ -95,7 +95,7 @@ class AccessRequestList(generics.ListCreateAPIView):
 
 class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     api_url = serializers.HyperlinkedIdentityField(
-        view_name='api.password-revision_detail',
+        view_name='api.secret-revision_detail',
     )
     created_by = serializers.Field(
         source='set_by.username',
@@ -108,7 +108,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
 
     def transform_secret_url(self, obj, value):
         return reverse(
-            'api.password-revision_secret',
+            'api.secret-revision_secret',
             kwargs={'pk': obj.pk},
             request=self.context['request'],
         )
@@ -136,14 +136,14 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         slug_field='username',
     )
     api_url = serializers.HyperlinkedIdentityField(
-        view_name='api.password_detail',
+        view_name='api.secret_detail',
     )
     created_by = serializers.Field(
         source='created_by.username',
     )
     current_revision = serializers.HyperlinkedRelatedField(
         read_only=True,
-        view_name='api.password-revision_detail',
+        view_name='api.secret-revision_detail',
     )
     password = serializers.CharField(
         required=False,
@@ -168,7 +168,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             # password has not been set yet
             return None
         return reverse(
-            'api.password-revision_secret',
+            'api.secret-revision_secret',
             kwargs={'pk': obj.current_revision.pk},
             request=self.context['request'],
         )
@@ -220,7 +220,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def post_save(self, obj, created=False):
         if hasattr(obj, 'password'):
-            obj.set_password(self.request.user, obj.password)
+            obj.set_data(self.request.user, obj.password)
 
 
 class SecretList(generics.ListCreateAPIView):
@@ -237,7 +237,7 @@ class SecretList(generics.ListCreateAPIView):
     def post_save(self, obj, created=False):
         obj.allowed_users.add(self.request.user)
         if hasattr(obj, 'password'):
-            obj.set_password(self.request.user, obj.password)
+            obj.set_data(self.request.user, obj.password)
 
 
 class SecretRevisionDetail(generics.RetrieveAPIView):
@@ -246,7 +246,7 @@ class SecretRevisionDetail(generics.RetrieveAPIView):
 
     def get_object(self):
         obj = get_object_or_404(SecretRevision, pk=self.kwargs['pk'])
-        if not obj.password.is_readable_by_user(self.request.user):
+        if not obj.secret.is_readable_by_user(self.request.user):
             self.permission_denied(self.request)
         return obj
 
@@ -254,6 +254,6 @@ class SecretRevisionDetail(generics.RetrieveAPIView):
 @api_view(['GET'])
 def secret_get(request, pk):
     obj = get_object_or_404(SecretRevision, pk=pk)
-    if not obj.password.is_readable_by_user(request.user):
+    if not obj.secret.is_readable_by_user(request.user):
         raise PermissionDenied()
-    return Response({'password': obj.password.get_password(request.user)})
+    return Response({'password': obj.secret.get_data(request.user)})

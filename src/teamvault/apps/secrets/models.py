@@ -170,7 +170,7 @@ class Secret(models.Model):
     def __repr__(self):
         return "<Password '{name}' (#{id})>".format(id=self.id, name=self.name)
 
-    def get_password(self, user):
+    def get_data(self, user):
         if not self.current_revision:
             raise Http404
         if not self.is_readable_by_user(user):
@@ -183,7 +183,7 @@ class Secret(models.Model):
                 ),
                 actor=user,
                 level='warn',
-                password=self,
+                secret=self,
             )
             raise PermissionError(_(
                 "{user} not allowed access to '{name}' ({id})"
@@ -203,8 +203,8 @@ class Secret(models.Model):
             ),
             actor=user,
             level='info',
-            password=self,
-            password_revision=self.current_revision,
+            secret=self,
+            secret_revision=self.current_revision,
         )
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
