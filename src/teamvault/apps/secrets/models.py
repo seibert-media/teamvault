@@ -210,7 +210,11 @@ class Secret(models.Model):
         self.current_revision.save()
         self.last_read = now()
         self.save()
-        return f.decrypt(self.current_revision.encrypted_data.encode('utf-8'))
+
+        plaintext_data = f.decrypt(self.current_revision.encrypted_data)
+        if self.content_type != Secret.CONTENT_FILE:
+            plaintext_data = plaintext_data.decode('utf-8')
+        return plaintext_data
 
     @classmethod
     def get_all_readable_by_user(cls, user):
@@ -271,6 +275,9 @@ class Secret(models.Model):
                 name=self.name,
                 user=user.username,
             ))
+        # save the length before encoding so multi-byte characters don't
+        # mess up the result
+        plaintext_length = len(plaintext_data)
         if isinstance(plaintext_data, str):
             plaintext_data = plaintext_data.encode('utf-8')
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
@@ -284,7 +291,7 @@ class Secret(models.Model):
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
         p.encrypted_data = encrypted_data
-        p.length = len(plaintext_data)
+        p.length = plaintext_length
         p.secret = self
         p.set_by = user
         p.save()
@@ -318,7 +325,7 @@ class SecretRevision(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
-    length = models.PositiveSmallIntegerField(
+    length = models.PositiveIntegerField(
         default=0,
     )
     secret = models.ForeignKey(
