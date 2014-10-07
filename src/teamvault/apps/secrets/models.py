@@ -1,6 +1,7 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
@@ -169,6 +170,9 @@ class Secret(models.Model):
 
     def __repr__(self):
         return "<Password '{name}' (#{id})>".format(id=self.id, name=self.name)
+
+    def get_absolute_url(self):
+        return reverse('secrets.secret-detail', args=[str(self.id)])
 
     def get_data(self, user):
         if not self.current_revision:
