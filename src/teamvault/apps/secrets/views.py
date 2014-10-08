@@ -6,16 +6,25 @@ from json import dumps
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
-from django.http import HttpResponse, Http404
+from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import FormView
 
-from .forms import AddSecretForm #, AddCCForm, UploadFileForm
+from .forms import AddCCForm, AddFileForm, AddPasswordForm
 from .models import Secret
 
-
+CONTENT_TYPE_FORMS = {
+    'cc': AddCCForm,
+    'file': AddFileForm,
+    'password': AddPasswordForm,
+}
+CONTENT_TYPE_IDS = {
+    'cc': Secret.CONTENT_CC,
+    'file': Secret.CONTENT_FILE,
+    'password': Secret.CONTENT_PASSWORD,
+}
 _CONTENT_TYPES = dict(Secret.CONTENT_CHOICES)
-PRETTY_CONTENT_TYPES = {
+CONTENT_TYPE_NAMES = {
     'cc': _CONTENT_TYPES[Secret.CONTENT_CC],
     'file': _CONTENT_TYPES[Secret.CONTENT_FILE],
     'password': _CONTENT_TYPES[Secret.CONTENT_PASSWORD],
@@ -23,22 +32,33 @@ PRETTY_CONTENT_TYPES = {
 
 
 class SecretAdd(FormView):
-    template_name = 'secrets/add.html'
-    form_class = AddSecretForm
-
     def form_valid(self, form):
-        # This method is called when valid form data has been POSTed.
-        # It should return an HttpResponse.
-        return super(SecretAdd, self).form_valid(form)
+        secret = Secret()
+        secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
+        secret.created_by = self.request.user
+        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
+                     'username'):
+            setattr(secret, attr, form.cleaned_data[attr])
+        secret.save()
+        if secret.content_type == Secret.CONTENT_PASSWORD:
+            plaintext_data = form.cleaned_data['password']
+        secret.set_data(self.request.user, plaintext_data)
+        return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
         context = super(SecretAdd, self).get_context_data(**kwargs)
         context['content_type'] = self.kwargs['content_type']
         try:
-            context['pretty_content_type'] = PRETTY_CONTENT_TYPES[self.kwargs['content_type']]
+            context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError:
             raise Http404
         return context
+
+    def get_form_class(self):
+        return CONTENT_TYPE_FORMS[self.kwargs['content_type']]
+
+    def get_template_names(self):
+        return "secrets/addedit_{}.html".format(self.kwargs['content_type'])
 
 
 class SecretDetail(DetailView):
