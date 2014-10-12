@@ -2,7 +2,7 @@ from django.conf.urls import patterns, url
 from django.contrib.auth.decorators import login_required
 from django.views.generic import TemplateView
 
-from .views import live_search, SecretAdd, SecretDetail, SecretList
+from .views import live_search, SecretAdd, secret_delete, SecretDetail, SecretList
 
 urlpatterns = patterns('',
     url(
@@ -19,6 +19,11 @@ urlpatterns = patterns('',
         r'^secrets/(?P<pk>\d+)$',
         login_required(SecretDetail.as_view()),
         name='secrets.secret-detail',
+    ),
+    url(
+        r'^secrets/(?P<pk>\d+)/delete$',
+        secret_delete,
+        name='secrets.secret-delete',
     ),
     url(
         r'^secrets/add/(?P<content_type>\w+)$',

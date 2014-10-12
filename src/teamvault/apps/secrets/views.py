@@ -61,6 +61,34 @@ class SecretAdd(FormView):
         return "secrets/addedit_{}.html".format(self.kwargs['content_type'])
 
 
+@login_required
+def secret_delete(request, pk):
+    secret = get_object_or_404(Secret, pk=pk)
+    if not secret.is_visible_to_user(request.user):
+        raise Http404
+    if not secret.is_readable_by_user(request.user):
+        raise PermissionDenied()
+    if request.method == 'POST':
+        log(_(
+                "{user} deleted '{name}' ({id}:{revision})"
+            ).format(
+                id=secret.id,
+                name=secret.name,
+                revision=secret.current_revision.id,
+                user=request.user.username,
+            ),
+            actor=request.user,
+            level='info',
+            secret=secret,
+            secret_revision=secret.current_revision,
+        )
+        secret.status = Secret.STATUS_DELETED
+        secret.save()
+        return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
+    else:
+        return render(request, "secrets/delete.html", {'secret': secret})
+
+
 class SecretDetail(DetailView):
     context_object_name = 'secret'
     model = Secret
