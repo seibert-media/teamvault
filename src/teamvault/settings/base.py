@@ -122,6 +122,7 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 USE_I18N = True
 USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
+USE_TZ = True
 
 
 ### Guardian
