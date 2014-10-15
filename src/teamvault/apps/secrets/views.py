@@ -111,7 +111,7 @@ class SecretDetail(DetailView):
     def get_object(self):
         object = super(SecretDetail, self).get_object()
         if not object.is_visible_to_user(self.request.user):
-            raise PermissionDenied()
+            raise Http404
         return object
 
 
