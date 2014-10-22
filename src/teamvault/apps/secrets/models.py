@@ -116,10 +116,12 @@ class Secret(models.Model):
     )
     allowed_groups = models.ManyToManyField(
         Group,
+        blank=True,
         related_name='allowed_passwords',
     )
     allowed_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
+        blank=True,
         related_name='allowed_passwords',
     )
     content_type = models.PositiveSmallIntegerField(
