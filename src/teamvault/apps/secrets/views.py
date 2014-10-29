@@ -2,14 +2,18 @@
 from __future__ import unicode_literals
 
 from json import dumps
+from urllib.parse import urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect, Http404
+from django.shortcuts import get_object_or_404, render
+from django.utils.translation import ugettext_lazy as _
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import FormView
 
+from ..audit.auditlog import log
 from .forms import AddCCForm, AddFileForm, AddPasswordForm
 from .models import Secret
 
