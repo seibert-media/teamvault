@@ -36,17 +36,41 @@ CONTENT_TYPE_NAMES = {
 
 
 class SecretAdd(FormView):
+    def post(self, request, *args, **kwargs):
+        """
+        Select2 passes in selected values as CSV instead of as a real
+        multiple value field, so we need to split them here before
+        any validation takes place.
+        """
+        request.POST = request.POST.copy()
+        for csv_field in ('allowed_groups', 'allowed_users'):
+            if request.POST.getlist(csv_field) == ['']:
+                del request.POST[csv_field]
+            else:
+                request.POST.setlist(
+                    csv_field,
+                    request.POST.getlist(csv_field)[0].split(","),
+                )
+        return super(SecretAdd, self).post(self, request, *args, **kwargs)
+
     def form_valid(self, form):
         secret = Secret()
         secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
         secret.created_by = self.request.user
+
         for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
                      'username'):
             setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
+
+        for attr in ('allowed_groups', 'allowed_users'):
+            getattr(secret, attr).add(*form.cleaned_data[attr])
+        secret.save()
+
         if secret.content_type == Secret.CONTENT_PASSWORD:
             plaintext_data = form.cleaned_data['password']
         secret.set_data(self.request.user, plaintext_data)
+
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
