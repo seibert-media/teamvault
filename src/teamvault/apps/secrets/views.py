@@ -92,10 +92,7 @@ class SecretAdd(FormView):
 @login_required
 def secret_delete(request, pk):
     secret = get_object_or_404(Secret, pk=pk)
-    if not secret.is_visible_to_user(request.user):
-        raise Http404
-    if not secret.is_readable_by_user(request.user):
-        raise PermissionDenied()
+    secret.check_access(request.user)
     if request.method == 'POST':
         log(_(
                 "{user} deleted '{name}' ({id}:{revision})"

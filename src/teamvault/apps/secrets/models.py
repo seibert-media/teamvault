@@ -1,6 +1,7 @@
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.http import Http404
@@ -172,6 +173,12 @@ class Secret(models.Model):
 
     def __repr__(self):
         return "<Password '{name}' (#{id})>".format(id=self.id, name=self.name)
+
+    def check_access(self, user):
+        if not self.is_visible_to_user(user):
+            raise Http404
+        elif not self.is_readable_by_user(user):
+            raise PermissionDenied()
 
     def get_absolute_url(self):
         return reverse('secrets.secret-detail', args=[str(self.id)])
