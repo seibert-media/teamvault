@@ -19,7 +19,7 @@ def search_groups(request):
 def search_users(request):
     search_term = request.GET['q']
     search_result = {'results': []}
-    users = User.objects.filter(username__icontains=search_term)
+    users = User.objects.filter(is_active=True, username__icontains=search_term)
     for user in users:
         search_result['results'].append({'id': user.id, 'text': user.username})
     return HttpResponse(dumps(search_result), content_type="application/json")
