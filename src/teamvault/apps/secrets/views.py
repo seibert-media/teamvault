@@ -11,22 +11,23 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import ugettext_lazy as _
 from django.views.generic import DetailView, ListView
-from django.views.generic.edit import FormView
+from django.views.generic.edit import CreateView, UpdateView
 
 from ..audit.auditlog import log
-from .forms import AddCCForm, AddFileForm, AddPasswordForm
+from .forms import AddCCForm, AddFileForm, PasswordForm
 from .models import Secret
 
 CONTENT_TYPE_FORMS = {
     'cc': AddCCForm,
     'file': AddFileForm,
-    'password': AddPasswordForm,
+    'password': PasswordForm,
 }
 CONTENT_TYPE_IDS = {
     'cc': Secret.CONTENT_CC,
     'file': Secret.CONTENT_FILE,
     'password': Secret.CONTENT_PASSWORD,
 }
+CONTENT_TYPE_IDENTIFIERS = {v: k for k, v in CONTENT_TYPE_IDS.items()}
 _CONTENT_TYPES = dict(Secret.CONTENT_CHOICES)
 CONTENT_TYPE_NAMES = {
     'cc': _CONTENT_TYPES[Secret.CONTENT_CC],
@@ -35,24 +36,25 @@ CONTENT_TYPE_NAMES = {
 }
 
 
-class SecretAdd(FormView):
-    def post(self, request, *args, **kwargs):
-        """
-        Select2 passes in selected values as CSV instead of as a real
-        multiple value field, so we need to split them here before
-        any validation takes place.
-        """
-        request.POST = request.POST.copy()
-        for csv_field in ('allowed_groups', 'allowed_users'):
-            if request.POST.getlist(csv_field) == ['']:
-                del request.POST[csv_field]
-            else:
-                request.POST.setlist(
-                    csv_field,
-                    request.POST.getlist(csv_field)[0].split(","),
-                )
-        return super(SecretAdd, self).post(self, request, *args, **kwargs)
+def _patch_post_data(POST):
+    """
+    Select2 passes in selected values as CSV instead of as a real
+    multiple value field, so we need to split them before any validation
+    takes place.
+    """
+    POST = POST.copy()
+    for csv_field in ('allowed_groups', 'allowed_users'):
+        if POST.getlist(csv_field) == ['']:
+            del POST[csv_field]
+        else:
+            POST.setlist(
+                csv_field,
+                POST.getlist(csv_field)[0].split(","),
+            )
+    return POST
 
+
+class SecretAdd(CreateView):
     def form_valid(self, form):
         secret = Secret()
         secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
@@ -60,11 +62,12 @@ class SecretAdd(FormView):
 
         for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
                      'username'):
-            setattr(secret, attr, form.cleaned_data[attr])
+            if attr in form.cleaned_data:
+                setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
 
         for attr in ('allowed_groups', 'allowed_users'):
-            getattr(secret, attr).add(*form.cleaned_data[attr])
+            setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
@@ -75,7 +78,6 @@ class SecretAdd(FormView):
 
     def get_context_data(self, **kwargs):
         context = super(SecretAdd, self).get_context_data(**kwargs)
-        context['content_type'] = self.kwargs['content_type']
         try:
             context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError:
@@ -87,6 +89,52 @@ class SecretAdd(FormView):
 
     def get_template_names(self):
         return "secrets/addedit_{}.html".format(self.kwargs['content_type'])
+
+    def post(self, request, *args, **kwargs):
+        request.POST = _patch_post_data(request.POST)
+        return super(SecretAdd, self).post(request, *args, **kwargs)
+
+
+class SecretEdit(UpdateView):
+    context_object_name = 'secret'
+
+    def form_valid(self, form):
+        secret = self.object
+
+        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
+                     'username'):
+            if attr in form.cleaned_data:
+                setattr(secret, attr, form.cleaned_data[attr])
+        secret.save()
+
+        for attr in ('allowed_groups', 'allowed_users'):
+            setattr(secret, attr, form.cleaned_data[attr])
+        secret.save()
+
+        if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
+            secret.set_data(self.request.user, form.cleaned_data['password'])
+
+        return HttpResponseRedirect(secret.get_absolute_url())
+
+    def get_context_data(self, **kwargs):
+        context = super(SecretEdit, self).get_context_data(**kwargs)
+        context['pretty_content_type'] = self.object.get_content_type_display()
+        return context
+
+    def get_form_class(self):
+        return CONTENT_TYPE_FORMS[CONTENT_TYPE_IDENTIFIERS[self.object.content_type]]
+
+    def get_object(self, queryset=None):
+        secret = get_object_or_404(Secret, pk=self.kwargs['pk'])
+        secret.check_access(self.request.user)
+        return secret
+
+    def get_template_names(self):
+        return "secrets/addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
+
+    def post(self, request, *args, **kwargs):
+        request.POST = _patch_post_data(request.POST)
+        return super(SecretEdit, self).post(request, *args, **kwargs)
 
 
 @login_required
