@@ -127,10 +127,6 @@ USE_THOUSAND_SEPARATOR = False
 USE_TZ = True
 
 
-### Guardian
-
-ANONYMOUS_USER_ID = -1
-
 ### REST Framework
 
 REST_FRAMEWORK = {
