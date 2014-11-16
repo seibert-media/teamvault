@@ -28,8 +28,9 @@ class Select2DataWidget(SelectMultiple):
         if value is None:
             return "[]"
         output = []
+        value_ints = [int(v) for v in value]
         for option_id, option_label in self.choices:
-            if option_id in value:
+            if option_id in value_ints:
                 output.append({'id': str(option_id), 'text': option_label})
         return mark_safe(dumps(output))
 
@@ -67,10 +68,12 @@ class AddFileForm(forms.ModelForm):
 class SecretForm(forms.ModelForm):
     allowed_groups = forms.ModelMultipleChoiceField(
         queryset=Group.objects.all(),
+        required=False,
         widget=Select2DataWidget,
     )
     allowed_users = forms.ModelMultipleChoiceField(
         queryset=User.objects.filter(is_active=True),
+        required=False,
         widget=Select2DataWidget,
     )
 

@@ -17,6 +17,11 @@ from ..audit.auditlog import log
 from .forms import AddCCForm, AddFileForm, PasswordForm
 from .models import Secret
 
+ACCESS_STR_IDS = {
+    'ACCESS_ANY': str(Secret.ACCESS_ANY),
+    'ACCESS_DEFAULT': str(Secret.ACCESS_NAMEONLY),
+    'ACCESS_HIDDEN': str(Secret.ACCESS_HIDDEN),
+}
 CONTENT_TYPE_FORMS = {
     'cc': AddCCForm,
     'file': AddFileForm,
@@ -82,6 +87,7 @@ class SecretAdd(CreateView):
             context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError:
             raise Http404
+        context.update(ACCESS_STR_IDS)
         return context
 
     def get_form_class(self):
@@ -119,6 +125,7 @@ class SecretEdit(UpdateView):
     def get_context_data(self, **kwargs):
         context = super(SecretEdit, self).get_context_data(**kwargs)
         context['pretty_content_type'] = self.object.get_content_type_display()
+        context.update(ACCESS_STR_IDS)
         return context
 
     def get_form_class(self):
