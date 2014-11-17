@@ -31,6 +31,11 @@ urlpatterns = patterns('',
         name='secrets.secret-edit',
     ),
     url(
+        r'^secrets/(?P<pk>\d+)/request_access$',
+        views.access_request_create,
+        name='secrets.secret-request_access',
+    ),
+    url(
         r'^secrets/add/(?P<content_type>\w+)$',
         login_required(views.SecretAdd.as_view()),
         name='secrets.secret-add',

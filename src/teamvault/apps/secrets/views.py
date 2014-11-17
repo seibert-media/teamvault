@@ -15,7 +15,7 @@ from django.views.generic.edit import CreateView, UpdateView
 
 from ..audit.auditlog import log
 from .forms import AddCCForm, AddFileForm, PasswordForm
-from .models import Secret
+from .models import AccessRequest, Secret
 
 ACCESS_STR_IDS = {
     'ACCESS_ANY': str(Secret.ACCESS_ANY),
@@ -57,6 +57,28 @@ def _patch_post_data(POST):
                 POST.getlist(csv_field)[0].split(","),
             )
     return POST
+
+
+@login_required
+def access_request_create(request, pk):
+    secret = Secret.objects.get(pk=pk)
+    if not secret.is_visible_to_user(request.user):
+        raise Http404
+    try:
+        AccessRequest.objects.get(
+            requester=request.user,
+            secret=secret,
+            status=AccessRequest.STATUS_PENDING,
+        )
+    except AccessRequest.DoesNotExist:
+        if request.method == 'POST' and not secret.is_readable_by_user(request.user):
+            access_request = AccessRequest()
+            access_request.reason_request = request.POST['reason']
+            access_request.requester = request.user
+            access_request.secret = secret
+            access_request.save()
+            access_request.assign_reviewers()
+    return HttpResponseRedirect(secret.get_absolute_url())
 
 
 class SecretAdd(CreateView):
@@ -185,7 +207,14 @@ class SecretDetail(DetailView):
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
         else:
-            context['placeholder'] = "<access denied>"
+            try:
+                context['access_request'] = AccessRequest.objects.get(
+                    secret=secret,
+                    status=AccessRequest.STATUS_PENDING,
+                    requester=self.request.user,
+                )
+            except AccessRequest.DoesNotExist:
+                context['access_request'] = None
         return context
 
     def get_object(self):

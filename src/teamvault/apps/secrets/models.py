@@ -77,6 +77,9 @@ class AccessRequest(models.Model):
             cls.objects.filter(reviewers=user)
         )
 
+    def assign_reviewers(self):
+        pass  # TODO
+
     def is_readable_by_user(self, user):
         return (
             user == self.requester or

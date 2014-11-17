@@ -90,7 +90,8 @@ class AccessRequestList(generics.ListCreateAPIView):
         obj.status = AccessRequest.STATUS_PENDING
 
     def post_save(self, obj, created=False):
-        obj.reviewers.add(self.request.user) # TODO
+        if created:
+            obj.assign_reviewers()
 
 
 class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
