@@ -4,3 +4,4 @@ django-filter==0.7
 django-gravatar2==1.1.4
 djangorestframework==2.4.4
 pytz==2014.10
+hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap
