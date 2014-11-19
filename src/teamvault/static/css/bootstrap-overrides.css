@@ -113,9 +113,12 @@ input[type="color"]:focus,
 }
 
 /* http://stackoverflow.com/questions/22276536/typeahead-js-interferes-with-bootstrap-input-groups */
-.twitter-typeahead{ float:left; width:100% }
+.twitter-typeahead {
+	float:left;
+	width:100%;
+}
 .input-group .twitter-typeahead .form-control:not(:first-child):not(:last-child) {
-  border-radius: 4px 0px 0px 4px;
+	border-radius: 4px 0px 0px 4px;
 }
 .input-group-lg .twitter-typeahead input.form-control {
 	font-size: 18px;
