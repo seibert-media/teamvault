@@ -124,3 +124,19 @@ input[type="color"]:focus,
 	font-size: 18px;
 	height: 46px;
 }
+
+.badge {
+	padding: 3px 9px 3px 9px;
+	font-size: 12px;
+	font-weight: bold;
+	font-family: Helvetica, Arial, sans-serif;
+	white-space: nowrap;
+	color: #ffffff;
+	background-color: #999999;
+	-webkit-border-radius: 9px;
+	-moz-border-radius: 9px;
+	border-radius: 9px;
+}
+.badge-danger {
+	background-color: #dd0000;
+}

@@ -114,7 +114,7 @@ TEMPLATE_CONTEXT_PROCESSORS = (
     'django.core.context_processors.media',
     'django.core.context_processors.request',
     'django.core.context_processors.static',
-    'django.contrib.messages.context_processors.messages',
+    'teamvault.apps.secrets.context_processors.access_request_count',
 )
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
