@@ -116,7 +116,7 @@ class SecretAdd(CreateView):
         return CONTENT_TYPE_FORMS[self.kwargs['content_type']]
 
     def get_template_names(self):
-        return "secrets/addedit_{}.html".format(self.kwargs['content_type'])
+        return "secrets/secret_addedit_{}.html".format(self.kwargs['content_type'])
 
     def post(self, request, *args, **kwargs):
         request.POST = _patch_post_data(request.POST)
@@ -159,7 +159,7 @@ class SecretEdit(UpdateView):
         return secret
 
     def get_template_names(self):
-        return "secrets/addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
+        return "secrets/secret_addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
 
     def post(self, request, *args, **kwargs):
         request.POST = _patch_post_data(request.POST)
@@ -188,13 +188,13 @@ def secret_delete(request, pk):
         secret.save()
         return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
     else:
-        return render(request, "secrets/delete.html", {'secret': secret})
+        return render(request, "secrets/secret_delete.html", {'secret': secret})
 
 
 class SecretDetail(DetailView):
     context_object_name = 'secret'
     model = Secret
-    template_name = "secrets/detail.html"
+    template_name = "secrets/secret_detail.html"
 
     def get_context_data(self, **kwargs):
         context = super(SecretDetail, self).get_context_data(**kwargs)
@@ -226,7 +226,7 @@ class SecretDetail(DetailView):
 
 class SecretList(ListView):
     context_object_name = 'secrets'
-    template_name = "secrets/list.html"
+    template_name = "secrets/secret_list.html"
 
     def get_context_data(self, **kwargs):
         context = super(SecretList, self).get_context_data(**kwargs)
