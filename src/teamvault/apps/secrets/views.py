@@ -81,6 +81,22 @@ def access_request_create(request, pk):
     return HttpResponseRedirect(secret.get_absolute_url())
 
 
+class AccessRequestList(ListView):
+    context_object_name = 'access_requests'
+    template_name = "secrets/accessrequests_list.html"
+
+    def get_context_data(self, **kwargs):
+        queryset = self.get_queryset()
+        context = super(AccessRequestList, self).get_context_data(**kwargs)
+        context['reviewable'] = queryset.exclude(requester=self.request.user)
+        context['pending_review'] = queryset.filter(requester=self.request.user)
+        return context
+
+    def get_queryset(self):
+        queryset = AccessRequest.get_all_readable_by_user(self.request.user)
+        return queryset.filter(status=AccessRequest.STATUS_PENDING)
+
+
 class SecretAdd(CreateView):
     def form_valid(self, form):
         secret = Secret()

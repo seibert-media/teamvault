@@ -11,6 +11,11 @@ urlpatterns = patterns('',
         name='dashboard',
     ),
     url(
+        r'^access_requests/$',
+        login_required(views.AccessRequestList.as_view()),
+        name='secrets.access_request-list',
+    ),
+    url(
         r'^secrets/$',
         login_required(views.SecretList.as_view()),
         name='secrets.secret-list',

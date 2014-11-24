@@ -140,3 +140,6 @@ input[type="color"]:focus,
 .badge-danger {
 	background-color: #dd0000;
 }
+td {
+	vertical-align: middle !important;
+}

@@ -53,7 +53,7 @@
 						<span class="caret"></span>
 					</a>
 					<ul class="dropdown-menu" role="menu">
-						<li><a href="{# url 'secrets.access_request-list' #}"><i class="fa fa-check-square-o"></i>&nbsp; {% trans "Access Requests" %} &nbsp; <span class="badge">{{ access_request_count }}</span></a></li>
+						<li><a href="{% url 'secrets.access_request-list' %}"><i class="fa fa-check-square-o"></i>&nbsp; {% trans "Access Requests" %} &nbsp; <span class="badge">{{ access_request_count }}</span></a></li>
 						<li class="divider"></li>
 						<li><a href="{% url 'accounts.logout' %}"><i class="fa fa-sign-out"></i>&nbsp; {% trans "Logout" %}</a></li>
 					</ul>
