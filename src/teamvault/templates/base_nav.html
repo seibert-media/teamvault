@@ -35,7 +35,7 @@
 				</ul>
 			</div>
 			<ul class="nav navbar-nav navbar-right">
-				{% if request.user.is_staff %}
+				{% if request.user.is_superuser %}
 				<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i>&nbsp; {% trans "Administration" %} <span class="caret"></span></a>
 					<ul class="dropdown-menu" role="menu">
