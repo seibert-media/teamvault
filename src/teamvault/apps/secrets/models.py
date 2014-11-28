@@ -80,6 +80,9 @@ class AccessRequest(models.Model):
     def assign_reviewers(self):
         pass  # TODO
 
+    def get_absolute_url(self):
+        return reverse('secrets.access_request-detail', args=[str(self.id)])
+
     def is_readable_by_user(self, user):
         return (
             user == self.requester or

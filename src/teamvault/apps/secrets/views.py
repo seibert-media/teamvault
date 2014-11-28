@@ -81,6 +81,27 @@ def access_request_create(request, pk):
     return HttpResponseRedirect(secret.get_absolute_url())
 
 
+class AccessRequestDetail(DetailView):
+    context_object_name = 'access_request'
+    model = AccessRequest
+    template_name = "secrets/accessrequest_detail.html"
+
+    def get_object(self):
+        if self.request.user.is_superuser:
+            return get_object_or_404(
+                AccessRequest,
+                pk=self.kwargs['pk'],
+                status=AccessRequest.STATUS_PENDING,
+            )
+        else:
+            return get_object_or_404(
+                AccessRequest,
+                pk=self.kwargs['pk'],
+                reviewers=self.request.user,
+                status=AccessRequest.STATUS_PENDING,
+            )
+
+
 class AccessRequestList(ListView):
     context_object_name = 'access_requests'
     template_name = "secrets/accessrequests_list.html"
