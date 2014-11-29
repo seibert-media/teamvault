@@ -93,6 +93,7 @@ class PasswordForm(SecretForm):
         if self.instance.pk is None and not self.cleaned_data['password']:
             # password is only required when adding a new secret
             raise forms.ValidationError(_("Please enter a password."))
+        return self.cleaned_data['password']
 
     class Meta:
         model = Secret
