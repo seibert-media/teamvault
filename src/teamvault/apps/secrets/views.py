@@ -10,6 +10,7 @@ from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import ugettext_lazy as _
+from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
@@ -79,6 +80,25 @@ def access_request_create(request, pk):
             access_request.save()
             access_request.assign_reviewers()
     return HttpResponseRedirect(secret.get_absolute_url())
+
+
+@login_required
+@require_http_methods(["POST"])
+def access_request_review(request, pk, action):
+    access_request = get_object_or_404(
+        AccessRequest,
+        pk=pk,
+        status=AccessRequest.STATUS_PENDING,
+    )
+    if not request.user.is_superuser and not request.user in access_request.reviewers.all():
+        raise PermissionDenied()
+
+    if action == 'allow':
+        access_request.approve(request.user)
+    else:
+        access_request.reject(request.user, reason=request.POST.get('reason', None))
+
+    return HttpResponseRedirect(reverse('secrets.access_request-list'))
 
 
 class AccessRequestDetail(DetailView):

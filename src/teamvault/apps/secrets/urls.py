@@ -21,6 +21,11 @@ urlpatterns = patterns('',
         name='secrets.access_request-detail',
     ),
     url(
+        r'^access_requests/(?P<pk>\d+)/(?P<action>(allow|deny))$',
+        views.access_request_review,
+        name='secrets.access_request-review',
+    ),
+    url(
         r'^secrets/$',
         login_required(views.SecretList.as_view()),
         name='secrets.secret-list',

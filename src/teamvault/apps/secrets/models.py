@@ -77,8 +77,63 @@ class AccessRequest(models.Model):
             cls.objects.filter(reviewers=user)
         )
 
+    def approve(self, reviewer):
+        if not self.status == self.STATUS_PENDING:
+            raise PermissionDenied(_("Can't approve closed access request"))
+
+        # make sure user is still allowed to handle secret, privileges might
+        # have been revoked since the access request was made
+        self.secret.check_access(reviewer)
+
+        log(
+            _("{reviewer} has approved access request #{access_request} for {requester}, "
+              "allowing access to '{secret}'").format(
+                access_request=self.id,
+                requester=self.requester,
+                reviewer=reviewer,
+                secret=self.secret.name,
+            ),
+            actor=reviewer,
+            secret=self.secret,
+            user=self.requester,
+        )
+
+        self.closed = now()
+        self.closed_by = reviewer
+        self.status = self.STATUS_APPROVED
+        self.save()
+
+        self.secret.allowed_users.add(self.requester)
+
     def assign_reviewers(self):
         pass  # TODO
+
+    def reject(self, reviewer, reason=None):
+        if self.status != self.STATUS_PENDING:
+            raise PermissionDenied(_("Can't reject closed access request"))
+
+        # make sure user is still allowed to handle secret, privileges might
+        # have been revoked since the access request was made
+        self.secret.check_access(reviewer)
+
+        log(
+            _("{reviewer} has rejected access request #{access_request} for {requester}, "
+              "NOT allowing access to '{secret}'").format(
+                access_request=self.id,
+                requester=self.requester,
+                reviewer=reviewer,
+                secret=self.secret.name,
+            ),
+            actor=reviewer,
+            secret=self.secret,
+            user=self.requester,
+        )
+
+        self.closed = now()
+        self.closed_by = reviewer
+        self.reason_rejected = reason
+        self.status = self.STATUS_REJECTED
+        self.save()
 
     def get_absolute_url(self):
         return reverse('secrets.access_request-detail', args=[str(self.id)])
