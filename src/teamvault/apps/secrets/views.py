@@ -299,7 +299,8 @@ class SecretList(ListView):
 
 
 @login_required
-def live_search(request):
+@require_http_methods(["GET"])
+def secret_search(request):
     search_term = request.GET['q']
     search_result = []
     all_secrets = Secret.get_all_visible_to_user(request.user)

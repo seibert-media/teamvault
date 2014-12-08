@@ -56,8 +56,8 @@ urlpatterns = patterns('',
         name='secrets.secret-add',
     ),
     url(
-        r'^secrets/live-search$',
-        views.live_search,
-        name='secrets.live-search',
+        r'^secrets/search$',
+        views.secret_search,
+        name='secrets.secret-search',
     ),
 )
