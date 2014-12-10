@@ -42,14 +42,14 @@ CONTENT_TYPE_NAMES = {
 }
 
 
-def _patch_post_data(POST):
+def _patch_post_data(POST, fields):
     """
     Select2 passes in selected values as CSV instead of as a real
     multiple value field, so we need to split them before any validation
     takes place.
     """
     POST = POST.copy()
-    for csv_field in ('allowed_groups', 'allowed_users'):
+    for csv_field in fields:
         if POST.getlist(csv_field) == ['']:
             del POST[csv_field]
         else:
@@ -176,7 +176,7 @@ class SecretAdd(CreateView):
         return "secrets/secret_addedit_{}.html".format(self.kwargs['content_type'])
 
     def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(request.POST)
+        request.POST = _patch_post_data(request.POST, ('allowed_groups', 'allowed_users'))
         return super(SecretAdd, self).post(request, *args, **kwargs)
 
 
@@ -219,7 +219,7 @@ class SecretEdit(UpdateView):
         return "secrets/secret_addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
 
     def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(request.POST)
+        request.POST = _patch_post_data(request.POST, ('allowed_groups', 'allowed_users'))
         return super(SecretEdit, self).post(request, *args, **kwargs)
 
 
