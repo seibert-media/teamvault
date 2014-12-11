@@ -51,6 +51,11 @@ urlpatterns = patterns('',
         name='secrets.secret-request_access',
     ),
     url(
+        r'^secrets/(?P<pk>\d+)/share$',
+        views.secret_share,
+        name='secrets.secret-share',
+    ),
+    url(
         r'^secrets/add/(?P<content_type>\w+)$',
         login_required(views.SecretAdd.as_view()),
         name='secrets.secret-add',
