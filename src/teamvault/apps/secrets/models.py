@@ -249,9 +249,8 @@ class Secret(models.Model):
             raise Http404
         if not self.is_readable_by_user(user):
             log(_(
-                    "{user} tried to access '{name}' ({id}) without permission"
+                    "{user} tried to access '{name}' without permission"
                 ).format(
-                    id=self.id,
                     name=self.name,
                     user=user.username,
                 ),
@@ -268,11 +267,9 @@ class Secret(models.Model):
             ))
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         log(_(
-                "{user} read '{name}' ({id}:{revision})"
+                "{user} read '{name}'"
             ).format(
-                id=self.id,
                 name=self.name,
-                revision=self.current_revision.id,
                 user=user.username,
             ),
             actor=user,
@@ -378,9 +375,8 @@ class Secret(models.Model):
         self.last_read = now()
         self.save()
         log(_(
-                "{user} set a new secret for '{name}' ({id}:{oldrev}->{newrev})"
+                "{user} set a new secret for '{name}' ({oldrev}->{newrev})"
             ).format(
-                id=self.id,
                 name=self.name,
                 newrev=self.current_revision.id,
                 oldrev=previous_revision_id,
