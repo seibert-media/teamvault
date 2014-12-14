@@ -17,12 +17,12 @@ urlpatterns = patterns(
         name='api.access-request_detail',
     ),
     url(
-        r'^passwords/$',
+        r'^secrets/$',
         SecretList.as_view(),
         name='api.secret_list',
     ),
     url(
-        r'^passwords/(?P<pk>\d+)/$',
+        r'^secrets/(?P<pk>\d+)/$',
         SecretDetail.as_view(),
         name='api.secret_detail',
     ),
