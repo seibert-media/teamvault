@@ -147,13 +147,13 @@ class AccessRequest(models.Model):
 
 
 class Secret(models.Model):
-    ACCESS_NAMEONLY = 1
-    ACCESS_ANY = 2
-    ACCESS_HIDDEN = 3
-    ACCESS_CHOICES = (
-        (ACCESS_NAMEONLY, _("default")),
-        (ACCESS_ANY, _("everyone")),
-        (ACCESS_HIDDEN, _("hidden")),
+    ACCESS_POLICY_REQUEST = 1
+    ACCESS_POLICY_ANY = 2
+    ACCESS_POLICY_HIDDEN = 3
+    ACCESS_POLICY_CHOICES = (
+        (ACCESS_POLICY_REQUEST, _("request")),
+        (ACCESS_POLICY_ANY, _("everyone")),
+        (ACCESS_POLICY_HIDDEN, _("hidden")),
     )
     CONTENT_PASSWORD = 1
     CONTENT_CC = 2
@@ -173,8 +173,8 @@ class Secret(models.Model):
     )
 
     access_policy = models.PositiveSmallIntegerField(
-        choices=ACCESS_CHOICES,
-        default=ACCESS_NAMEONLY,
+        choices=ACCESS_POLICY_CHOICES,
+        default=ACCESS_POLICY_REQUEST,
     )
     allowed_groups = models.ManyToManyField(
         Group,
@@ -292,7 +292,7 @@ class Secret(models.Model):
         if user.is_superuser:
             return cls.objects.all()
         return (
-            cls.objects.filter(access_policy=cls.ACCESS_ANY) |
+            cls.objects.filter(access_policy=cls.ACCESS_POLICY_ANY) |
             cls.objects.filter(allowed_users=user) |
             cls.objects.filter(allowed_groups__in=user.groups.all())
         ).exclude(status=cls.STATUS_DELETED)
@@ -302,7 +302,7 @@ class Secret(models.Model):
         if user.is_superuser:
             return cls.objects.all()
         return (
-            cls.objects.filter(access_policy__in=(cls.ACCESS_ANY, cls.ACCESS_NAMEONLY)) |
+            cls.objects.filter(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_REQUEST)) |
             cls.objects.filter(allowed_users=user) |
             cls.objects.filter(allowed_groups__in=user.groups.all())
         ).exclude(status=cls.STATUS_DELETED)
@@ -320,7 +320,7 @@ class Secret(models.Model):
         return (
             user.is_superuser or (
                 (
-                    self.access_policy == self.ACCESS_ANY or
+                    self.access_policy == self.ACCESS_POLICY_ANY or
                     user in self.allowed_users.all() or
                     set(self.allowed_groups.all()).intersection(set(user.groups.all()))
                 ) and self.status != self.STATUS_DELETED
@@ -331,7 +331,7 @@ class Secret(models.Model):
         return (
             user.is_superuser or (
                 (
-                    self.access_policy in (self.ACCESS_ANY, self.ACCESS_NAMEONLY) or
+                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_REQUEST) or
                     self.is_readable_by_user(user)
                 ) and self.status != self.STATUS_DELETED
             )

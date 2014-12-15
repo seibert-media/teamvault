@@ -20,9 +20,9 @@ from .forms import AddCCForm, AddFileForm, PasswordForm
 from .models import AccessRequest, Secret
 
 ACCESS_STR_IDS = {
-    'ACCESS_ANY': str(Secret.ACCESS_ANY),
-    'ACCESS_DEFAULT': str(Secret.ACCESS_NAMEONLY),
-    'ACCESS_HIDDEN': str(Secret.ACCESS_HIDDEN),
+    'ACCESS_POLICY_ANY': str(Secret.ACCESS_POLICY_ANY),
+    'ACCESS_POLICY_REQUEST': str(Secret.ACCESS_POLICY_REQUEST),
+    'ACCESS_POLICY_HIDDEN': str(Secret.ACCESS_POLICY_HIDDEN),
 }
 CONTENT_TYPE_FORMS = {
     'cc': AddCCForm,
