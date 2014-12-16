@@ -1,3 +1,4 @@
+from django.contrib.auth.models import Group, User
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework import serializers
@@ -10,6 +11,21 @@ from rest_framework.reverse import reverse
 from .models import AccessRequest, Secret, SecretRevision
 
 
+ACCESS_POLICY_REPR = {
+    Secret.ACCESS_POLICY_ANY: "any",
+    Secret.ACCESS_POLICY_HIDDEN: "hidden",
+    Secret.ACCESS_POLICY_REQUEST: "request",
+}
+REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
+
+STATUS_REPR = {
+    Secret.STATUS_DELETED: "deleted",
+    Secret.STATUS_NEEDS_CHANGING: "needs_changing",
+    Secret.STATUS_OK: "ok",
+}
+REPR_STATUS = {v: k for k, v in STATUS_REPR.items()}
+
+
 class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
     api_url = serializers.HyperlinkedIdentityField(
         view_name='api.access-request_detail',
@@ -18,11 +34,12 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
         source='requester.username',
     )
     secret = serializers.HyperlinkedRelatedField(
+        queryset=Secret.objects.exclude(status=Secret.STATUS_DELETED),
         view_name='api.secret_detail',
     )
     reviewers = serializers.SlugRelatedField(
         many=True,
-        read_only=True,
+        queryset=User.objects.exclude(is_active=False),
         slug_field='username',
     )
 
@@ -101,18 +118,20 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     created_by = serializers.Field(
         source='set_by.username',
     )
-    secret_url = serializers.CharField(
+    data_url = serializers.CharField(
         read_only=True,
         required=False,
         source='id',
     )
 
-    def transform_secret_url(self, obj, value):
-        return reverse(
-            'api.secret-revision_secret',
-            kwargs={'pk': obj.pk},
+    def to_representation(self, instance):
+        rep = super(SecretSerializer, self).to_representation(instance)
+        rep['data_url'] = reverse(
+            'api.secret-revision_data',
+            kwargs={'pk': instance.pk},
             request=self.context['request'],
         )
+        return rep
 
     class Meta:
         model = SecretRevision
@@ -130,70 +149,113 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
 class SecretSerializer(serializers.HyperlinkedModelSerializer):
     allowed_groups = serializers.SlugRelatedField(
         many=True,
+        queryset=Group.objects.all(),
         slug_field='name',
     )
     allowed_users = serializers.SlugRelatedField(
         many=True,
+        queryset=User.objects.exclude(is_active=False),
         slug_field='username',
     )
     api_url = serializers.HyperlinkedIdentityField(
         view_name='api.secret_detail',
     )
-    created_by = serializers.Field(
+    created_by = serializers.CharField(
+        read_only=True,
+        required=False,
         source='created_by.username',
     )
     current_revision = serializers.HyperlinkedRelatedField(
         read_only=True,
         view_name='api.secret-revision_detail',
     )
+    data_readable = serializers.BooleanField(
+        read_only=True,
+        required=False,
+        source='id',
+    )
+    data_url = serializers.CharField(
+        read_only=True,
+        required=False,
+        source='id',
+    )
     password = serializers.CharField(
         required=False,
         write_only=True,
     )
-    secret_readable = serializers.BooleanField(
-        read_only=True,
-        required=False,
-        source='id',
-    )
-    secret_url = serializers.CharField(
-        read_only=True,
-        required=False,
-        source='id',
-    )
 
-    def transform_secret_readable(self, obj, value):
-        return obj.is_readable_by_user(self.context['request'].user)
+    def create(self, validated_data):
+        allowed_groups = validated_data.pop('allowed_groups', [])
+        allowed_users = validated_data.pop('allowed_users', [])
 
-    def transform_secret_url(self, obj, value):
-        if not obj.current_revision:
+        if 'password' in validated_data:
+            data = validated_data.pop('password')
+
+        instance = self.Meta.model.objects.create(**validated_data)
+
+        instance.allowed_groups = allowed_groups
+        instance.allowed_users = allowed_users
+        instance._data = data
+        return instance
+
+    def to_internal_value(self, data):
+        try:
+            data['access_policy'] = REPR_ACCESS_POLICY[data.get('access_policy', None)]
+        except KeyError:
+            # Validation will catch it
+            pass
+
+        try:
+            data['status'] = REPR_STATUS[data.get('status', None)]
+        except KeyError:
+            # Validation will catch it
+            pass
+
+        return super(SecretSerializer, self).to_internal_value(data)
+
+    def to_representation(self, instance):
+        rep = super(SecretSerializer, self).to_representation(instance)
+        rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
+        rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
+        if not instance.current_revision:
             # password has not been set yet
-            return None
-        return reverse(
-            'api.secret-revision_secret',
-            kwargs={'pk': obj.current_revision.pk},
-            request=self.context['request'],
-        )
+            rep['data_url'] = None
+        else:
+            rep['data_url'] = reverse(
+                'api.secret-revision_data',
+                kwargs={'pk': instance.current_revision.pk},
+                request=self.context['request'],
+            )
+        rep['status'] = STATUS_REPR[rep['status']]
+        return rep
+
+    def update(self, instance, validated_data):
+        data = None
+        if 'password' in validated_data:
+            data = validated_data.pop('password')
+        instance._data = data
+        return instance
 
     class Meta:
         model = Secret
         fields = (
             'access_policy',
-            'allowed_users',
             'allowed_groups',
+            'allowed_users',
             'api_url',
             'created',
             'created_by',
             'current_revision',
+            'data_readable',
+            'data_url',
             'description',
             'last_read',
             'name',
             'needs_changing_on_leave',
             'password',
-            'secret_readable',
-            'secret_url',
             'status',
-            'username',
             'url',
+            'username',
         )
         read_only_fields = (
             'created',
@@ -219,9 +281,11 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
             self.permission_denied(self.request)
         return obj
 
-    def post_save(self, obj, created=False):
-        if hasattr(obj, 'password'):
-            obj.set_data(self.request.user, obj.password)
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if hasattr(instance, '_data'):
+            instance.set_data(self.request.user, instance._data)
+            del instance._data
 
 
 class SecretList(generics.ListCreateAPIView):
@@ -232,13 +296,11 @@ class SecretList(generics.ListCreateAPIView):
     def get_queryset(self):
         return Secret.get_all_visible_to_user(self.request.user)
 
-    def pre_save(self, obj):
-        obj.created_by = self.request.user
-
-    def post_save(self, obj, created=False):
-        obj.allowed_users.add(self.request.user)
-        if hasattr(obj, 'password'):
-            obj.set_data(self.request.user, obj.password)
+    def perform_create(self, serializer):
+        instance = serializer.save(created_by=self.request.user)
+        if hasattr(instance, '_data'):
+            instance.set_data(self.request.user, instance._data)
+            del instance._data
 
 
 class SecretRevisionDetail(generics.RetrieveAPIView):
@@ -247,14 +309,12 @@ class SecretRevisionDetail(generics.RetrieveAPIView):
 
     def get_object(self):
         obj = get_object_or_404(SecretRevision, pk=self.kwargs['pk'])
-        if not obj.secret.is_readable_by_user(self.request.user):
-            self.permission_denied(self.request)
+        obj.secret.check_access(self.request.user)
         return obj
 
 
 @api_view(['GET'])
-def secret_get(request, pk):
+def data_get(request, pk):
     obj = get_object_or_404(SecretRevision, pk=pk)
-    if not obj.secret.is_readable_by_user(request.user):
-        raise PermissionDenied()
+    obj.secret.check_access(request.user)
     return Response({'password': obj.secret.get_data(request.user)})

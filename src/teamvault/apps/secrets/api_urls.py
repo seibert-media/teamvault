@@ -1,7 +1,7 @@
 from django.conf.urls import patterns, url
 
 from .api import AccessRequestDetail, AccessRequestList, SecretDetail, SecretList, \
-    SecretRevisionDetail, secret_get
+    SecretRevisionDetail, data_get
 
 
 urlpatterns = patterns(
@@ -32,8 +32,8 @@ urlpatterns = patterns(
         name='api.secret-revision_detail',
     ),
     url(
-        r'^secret-revisions/(?P<pk>\d+)/secret$',
-        secret_get,
-        name='api.secret-revision_secret',
+        r'^secret-revisions/(?P<pk>\d+)/data$',
+        data_get,
+        name='api.secret-revision_data',
     ),
 )
