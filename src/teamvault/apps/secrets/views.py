@@ -259,7 +259,7 @@ class SecretDetail(DetailView):
         secret = self.get_object()
         context['readable'] = secret.is_readable_by_user(self.request.user)
         context['secret_url'] = reverse(
-            'api.secret-revision_secret',
+            'api.secret-revision_data',
             kwargs={'pk': secret.current_revision.pk},
         )
         if context['readable']:
