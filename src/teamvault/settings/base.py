@@ -10,6 +10,8 @@ from string import ascii_letters, digits, punctuation
 
 from cryptography.fernet import Fernet
 
+from ..apps.settings import CONFIG, configure_database
+
 
 PROJECT_ROOT = realpath(dirname(dirname(__file__)))
 
@@ -36,6 +38,8 @@ else:
 AUTHENTICATION_BACKENDS = (
     'django.contrib.auth.backends.ModelBackend',
 )
+
+DATABASES = configure_database(CONFIG)
 
 FIXTURE_DIRS = (
     join(PROJECT_ROOT, "fixtures"),

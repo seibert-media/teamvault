@@ -8,6 +8,24 @@ from sys import argv
 from django.apps import AppConfig
 
 
+DATABASE_ENGINES = {
+    "mysql": 'django.db.backends.mysql',
+    "oracle": 'django.db.backends.oracle',
+    "postgres": 'django.db.backends.postgresql_psycopg2',
+    "sqlite": 'django.db.backends.sqlite3',
+}
+
+CONFIG = SafeConfigParser()
+CONFIG.read(environ['TEAMVAULT_CONFIG_FILE'])
+
+
+def get_from_config(config, section, option, default):
+    if config.has_option(section, option):
+        return config.get(section, option)
+    else:
+        return default
+
+
 class SettingsConfig(AppConfig):
     name = 'teamvault.apps.settings'
 
@@ -18,12 +36,27 @@ class SettingsConfig(AppConfig):
         from django.conf import settings
         from .utils import get_secret
 
-        config = SafeConfigParser()
-        config.read(environ['TEAMVAULT_CONFIG_FILE'])
+        settings.TEAMVAULT_SECRET_KEY = get_secret(CONFIG)
 
-        settings.TEAMVAULT_SECRET_KEY = get_secret(config)
+        configure_ldap_auth(CONFIG, settings)
 
-        configure_ldap_auth(config, settings)
+
+def configure_database(config):
+    """
+    Called directly from the settings module.
+    """
+    DATABASES = {
+        'default': {
+            'ENGINE': DATABASE_ENGINES[get_from_config(config, "database", "engine", "postgres")],
+            'HOST': get_from_config(config, "database", "host", "localhost"),
+            'NAME': get_from_config(config, "database", "name", "teamvault"),
+            'PASSWORD': get_from_config(config, "database", "password", ""),
+            'USER': get_from_config(config, "database", "user", "teamvault"),
+        },
+    }
+    if config.has_option("database", "port"):
+        DATABASES['default']['PORT'] = config.get("database", "port")
+    return DATABASES
 
 
 def configure_ldap_auth(config, settings):

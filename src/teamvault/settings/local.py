@@ -36,10 +36,3 @@ LOGGING = {
 }
 
 MEDIA_ROOT = realpath(dirname(dirname(PROJECT_ROOT))) + "/uploads"
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': realpath(dirname(dirname(PROJECT_ROOT))) + '/devdb.sqlite'
-    }
-}
