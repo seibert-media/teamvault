@@ -94,10 +94,6 @@ STATIC_ROOT = realpath(dirname(dirname(PROJECT_ROOT))) + "/static"
 # remember this is hardcoded in the error page templates (e.g. 500.html)
 STATIC_URL = "/static/"
 
-STATICFILES_DIRS = (
-    join(PROJECT_ROOT, "static"),
-)
-
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',
     'django.template.loaders.app_directories.Loader',

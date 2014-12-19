@@ -35,3 +35,6 @@ LOGGING = {
     }
 }
 
+STATICFILES_DIRS = (
+    join(PROJECT_ROOT, "static"),
+)
