@@ -70,9 +70,6 @@ LOGIN_REDIRECT_URL = "/"
 LOGIN_URL = 'accounts.login'
 LOGOUT_URL = 'accounts.logout'
 
-MEDIA_ROOT = realpath(dirname(dirname(dirname(PROJECT_ROOT)))) + "/uploads"
-MEDIA_URL = "/uploads/"
-
 MIDDLEWARE_CLASSES = (
     "django.middleware.common.CommonMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",

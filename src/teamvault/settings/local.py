@@ -35,4 +35,3 @@ LOGGING = {
     }
 }
 
-MEDIA_ROOT = realpath(dirname(dirname(PROJECT_ROOT))) + "/uploads"
