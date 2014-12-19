@@ -43,7 +43,7 @@ class SettingsConfig(AppConfig):
 
 def configure_database(config):
     """
-    Called directly from the settings module.
+    Called directly from the Django settings module.
     """
     DATABASES = {
         'default': {
