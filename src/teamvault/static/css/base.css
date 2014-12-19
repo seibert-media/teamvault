@@ -32,3 +32,10 @@ img.avatar {
 .dropdown-menu i {
 	color: #92A6B2;
 }
+footer {
+	color: #cccccc;
+	font-size: 10px;
+	text-align: center;
+	padding-top: 100px;
+	padding-bottom: 20px;
+}

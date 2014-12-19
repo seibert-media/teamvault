@@ -1,4 +1,6 @@
+from ... import VERSION_STRING
 from .models import AccessRequest
+
 
 def access_request_count(request):
     if request.user.is_anonymous():
@@ -9,3 +11,7 @@ def access_request_count(request):
             status=AccessRequest.STATUS_PENDING,
         ).count(),
     }
+
+
+def version(request):
+    return {'version': VERSION_STRING}
