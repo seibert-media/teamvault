@@ -12,7 +12,7 @@ class SettingsConfig(AppConfig):
 
         from django.conf import settings
         from . import config
-
-        config.configure_base_url(config.CONFIG, settings)
-        config.configure_ldap_auth(config.CONFIG, settings)
-        config.configure_teamvault_secret_key(config.CONFIG, settings)
+        parsed_config = config.get_config()
+        config.configure_base_url(parsed_config, settings)
+        config.configure_ldap_auth(parsed_config, settings)
+        config.configure_teamvault_secret_key(parsed_config, settings)

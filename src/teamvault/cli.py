@@ -1,8 +1,10 @@
 from argparse import ArgumentParser
 from gettext import gettext as _
+from os import environ
 from subprocess import Popen
 from sys import argv
 
+from .apps.settings.config import create_default_config
 from . import VERSION_STRING
 
 
@@ -19,8 +21,12 @@ def build_parser():
     )
 
     # teamvault run
-    parser_apply = subparsers.add_parser("run")
-    parser_apply.set_defaults(func=run)
+    parser_run = subparsers.add_parser("run")
+    parser_run.set_defaults(func=run)
+
+    # teamvault setup
+    parser_setup = subparsers.add_parser("setup")
+    parser_setup.set_defaults(func=setup)
     return parser
 
 
@@ -45,3 +51,7 @@ def run(pargs):
         shell=True,
     )
     gunicorn.communicate()
+
+
+def setup(pargs):
+    create_default_config(environ['TEAMVAULT_CONFIG_FILE'])

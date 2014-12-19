@@ -1,8 +1,8 @@
 from os.path import dirname, join, realpath
 
-from ..apps.settings.config import CONFIG, configure_database, configure_django_secret_key
+from ..apps.settings.config import configure_database, configure_django_secret_key, get_config
 
-
+CONFIG = get_config()
 PROJECT_ROOT = realpath(dirname(dirname(__file__)))
 
 ### Django

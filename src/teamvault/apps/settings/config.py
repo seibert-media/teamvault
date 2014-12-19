@@ -1,13 +1,14 @@
 from base64 import decodestring, encodestring
 from configparser import SafeConfigParser
+from gettext import gettext as _
 from hashlib import sha1
 from os import environ, umask
+from os.path import exists, isfile
 from random import choice
 from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
-from django.utils.translation import ugettext as _
 
 
 DATABASE_ENGINES = {
@@ -16,9 +17,6 @@ DATABASE_ENGINES = {
     "postgres": 'django.db.backends.postgresql_psycopg2',
     "sqlite": 'django.db.backends.sqlite3',
 }
-
-CONFIG = SafeConfigParser()
-CONFIG.read(environ['TEAMVAULT_CONFIG_FILE'])
 
 
 def configure_base_url(config, settings):
@@ -118,18 +116,71 @@ def configure_teamvault_secret_key(config, settings):
 
 
 def create_default_config(filename):
+    if exists(filename):
+        raise RuntimeError("not overwriting existing path {}".format(filename))
     SECRET_KEY = "".join(choice(ascii_letters + digits + punctuation) for i in range(50))
-    config = SafeConfigParser()
-    config.add_section("django")
-    config.set("django", "secret_key", encodestring(SECRET_KEY.encode('utf-8')).decode('utf-8'))
-    config.add_section("teamvault")
-    config.set("teamvault", "fernet_key", Fernet.generate_key().decode('utf-8'))
+    config = """
+[teamvault]
+# Set this to the URL users use to reach the application
+base_url = https://example.com
+# This key has been generated for you, there is no need to change it
+fernet_key = {teamvault_key}
+
+[django]
+# This key has been generated for you, there is no need to change it
+secret_key = {django_key}
+
+[database]
+#engine = mysql
+#engine = oracle
+engine = postgres
+host = localhost
+name = teamvault
+user = teamvault
+password = teamvault
+
+#[auth_ldap]
+#server_uri = ldaps://ldap.example.com
+#bind_dn = cn=root,dc=example,dc=com
+#password = example
+#user_base_dn = ou=users,dc=example,dc=com
+##user_search_filter = (cn=%(user)s)
+#group_base_dn = ou=groups,dc=example,dc=com
+##group_search_filter = (objectClass=group)
+##require_group = cn=employees,ou=groups,dc=example,dc=com
+##attr_email = mail
+##attr_first_name = givenName
+##attr_last_name = sn
+#admin_group = cn=admins,ou=groups,dc=example,dc=com
+    """.format(
+        django_key=encodestring(SECRET_KEY.encode('utf-8')).decode('utf-8'),
+        teamvault_key=Fernet.generate_key().decode('utf-8'),
+    )
     old_umask = umask(7)
     try:
         with open(filename, 'wt') as f:
-            config.write(f)
+            f.write(config.strip())
     finally:
         umask(old_umask)
+
+
+def get_config():
+    if not isfile(environ['TEAMVAULT_CONFIG_FILE']):
+        raise RuntimeError(
+            _("missing config file at {} "
+              "(set env var TEAMVAULT_CONFIG_FILE to use a different path)").format(
+                environ['TEAMVAULT_CONFIG_FILE'],
+            )
+        )
+
+    with open(environ['TEAMVAULT_CONFIG_FILE']) as f:
+        # SafeConfigParser.read() will not complain if it can't read the
+        # file, so we need to read it once ourselves to get a proper IOError
+        f.read()
+
+    config = SafeConfigParser()
+    config.read(environ['TEAMVAULT_CONFIG_FILE'])
+    return config
 
 
 def get_from_config(config, section, option, default):
