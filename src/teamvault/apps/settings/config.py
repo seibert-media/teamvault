@@ -96,13 +96,6 @@ def configure_ldap_auth(config, settings):
     settings.AUTH_LDAP_GROUP_CACHE_TIMEOUT = 900
 
 
-def get_from_config(config, section, option, default):
-    if config.has_option(section, option):
-        return config.get(section, option)
-    else:
-        return default
-
-
 def configure_teamvault_secret_key(config, settings):
     from .models import Setting
 
@@ -137,3 +130,10 @@ def create_default_config(filename):
             config.write(f)
     finally:
         umask(old_umask)
+
+
+def get_from_config(config, section, option, default):
+    if config.has_option(section, option):
+        return config.get(section, option)
+    else:
+        return default
