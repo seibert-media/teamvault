@@ -4,6 +4,7 @@ except ImportError:
     from configparser import SafeConfigParser
 from os import environ
 from sys import argv
+from urllib.parse import urlparse
 
 from django.apps import AppConfig
 
@@ -38,7 +39,13 @@ class SettingsConfig(AppConfig):
 
         settings.TEAMVAULT_SECRET_KEY = get_secret(CONFIG)
 
+        configure_base_url(CONFIG, settings)
         configure_ldap_auth(CONFIG, settings)
+
+
+def configure_base_url(config, settings):
+    settings.BASE_URL = config.get("teamvault", "base_url")
+    settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
 
 
 def configure_database(config):
