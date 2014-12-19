@@ -19,12 +19,12 @@ if not exists(environ['TEAMVAULT_CONFIG_FILE']):
     SECRET_KEY = "".join(choice(ascii_letters + digits + punctuation) for i in range(50))
     config = SafeConfigParser()
     config.add_section("django")
-    config.set("django", "secret_key", encodestring(SECRET_KEY))
+    config.set("django", "secret_key", encodestring(SECRET_KEY.encode('utf-8')).decode('utf-8'))
     config.add_section("teamvault")
-    config.set("teamvault", "fernet_key", Fernet.generate_key())
+    config.set("teamvault", "fernet_key", Fernet.generate_key().decode('utf-8'))
     old_umask = umask(7)
     try:
-        with open(environ['TEAMVAULT_CONFIG_FILE'], 'wb') as f:
+        with open(environ['TEAMVAULT_CONFIG_FILE'], 'wt') as f:
             config.write(f)
     finally:
         umask(old_umask)
@@ -81,7 +81,7 @@ MIDDLEWARE_CLASSES = (
 
 ROOT_URLCONF = "teamvault.urls"
 
-SECRET_KEY = decodestring(config.get("django", "secret_key").encode('utf-8'))
+SECRET_KEY = decodestring(config.get("django", "secret_key").encode()).decode('utf-8')
 
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
