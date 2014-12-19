@@ -306,7 +306,7 @@ class Secret(models.Model):
             cls.objects.filter(access_policy=cls.ACCESS_POLICY_ANY) |
             cls.objects.filter(allowed_users=user) |
             cls.objects.filter(allowed_groups__in=user.groups.all())
-        ).exclude(status=cls.STATUS_DELETED)
+        ).exclude(status=cls.STATUS_DELETED).distinct()
 
     @classmethod
     def get_all_visible_to_user(cls, user):
@@ -316,7 +316,7 @@ class Secret(models.Model):
             cls.objects.filter(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_REQUEST)) |
             cls.objects.filter(allowed_users=user) |
             cls.objects.filter(allowed_groups__in=user.groups.all())
-        ).exclude(status=cls.STATUS_DELETED)
+        ).exclude(status=cls.STATUS_DELETED).distinct()
 
     @classmethod
     def get_search_results(cls, user, term):
