@@ -89,8 +89,6 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 SITE_ID = 1
 
-STATIC_ROOT = realpath(dirname(dirname(PROJECT_ROOT))) + "/static"
-
 # remember this is hardcoded in the error page templates (e.g. 500.html)
 STATIC_URL = "/static/"
 
