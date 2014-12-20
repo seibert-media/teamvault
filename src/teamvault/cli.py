@@ -60,6 +60,7 @@ def run(pargs):
 
 
 def setup(pargs):
+    environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
     create_default_config(environ['TEAMVAULT_CONFIG_FILE'])
 
 
