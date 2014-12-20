@@ -6,6 +6,8 @@ TeamVault is an open-source web-based shared password manager for behind-the-fir
 Installation
 ------------
 
+.. code-block::
+
 	pip install teamvault
 	pip install hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap
 	teamvault setup
@@ -14,6 +16,8 @@ Installation
 
 Update
 ------
+
+.. code-block::
 
 	pip install --upgrade teamvault
 	teamvault upgrade
