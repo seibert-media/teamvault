@@ -293,7 +293,7 @@ class Secret(models.Model):
         self.last_read = now()
         self.save()
 
-        plaintext_data = f.decrypt(self.current_revision.encrypted_data)
+        plaintext_data = f.decrypt(self.current_revision.encrypted_data.tobytes())
         if self.content_type != Secret.CONTENT_FILE:
             plaintext_data = plaintext_data.decode('utf-8')
         return plaintext_data
