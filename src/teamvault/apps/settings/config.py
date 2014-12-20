@@ -11,14 +11,6 @@ from urllib.parse import urlparse
 from cryptography.fernet import Fernet
 
 
-DATABASE_ENGINES = {
-    "mysql": 'django.db.backends.mysql',
-    "oracle": 'django.db.backends.oracle',
-    "postgres": 'django.db.backends.postgresql_psycopg2',
-    "sqlite": 'django.db.backends.sqlite3',
-}
-
-
 def configure_base_url(config, settings):
     settings.BASE_URL = config.get("teamvault", "base_url")
     settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
@@ -30,15 +22,14 @@ def configure_database(config):
     """
     DATABASES = {
         'default': {
-            'ENGINE': DATABASE_ENGINES[get_from_config(config, "database", "engine", "postgres")],
+            'ENGINE': 'django.db.backends.postgresql_psycopg2',
             'HOST': get_from_config(config, "database", "host", "localhost"),
             'NAME': get_from_config(config, "database", "name", "teamvault"),
             'PASSWORD': get_from_config(config, "database", "password", ""),
+            'PORT': get_from_config(config, "database", "port", "5432"),
             'USER': get_from_config(config, "database", "user", "teamvault"),
         },
     }
-    if config.has_option("database", "port"):
-        DATABASES['default']['PORT'] = config.get("database", "port")
     return DATABASES
 
 
@@ -132,9 +123,6 @@ fernet_key = {teamvault_key}
 secret_key = {django_key}
 
 [database]
-#engine = mysql
-#engine = oracle
-engine = postgres
 host = localhost
 name = teamvault
 user = teamvault

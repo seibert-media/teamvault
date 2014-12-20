@@ -37,7 +37,7 @@ setup(
         "django-gravatar2 == 1.1.4",
         "djangorestframework == 3.0.1",
         "gunicorn == 19.1.1",
-        #"psycopg2 == 2.5.4",
+        "psycopg2 == 2.5.4",
         "pytz == 2014.10",
         #"hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap",
     ],
