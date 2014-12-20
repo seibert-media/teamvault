@@ -30,20 +30,20 @@
 					<span class="sr-only">Toggle Dropdown</span>
 				</button>
 				<ul class="dropdown-menu" role="menu">
-					<li><a href="{% url 'secrets.secret-add' content_type='cc' %}"><i class="fa fa-credit-card"></i>&nbsp; Add Credit Card</a></li>
-					<li><a href="{% url 'secrets.secret-add' content_type='file' %}"><i class="fa fa-upload"></i>&nbsp; Upload File</a></li>
+					<li class="disabled"><a href="{# url 'secrets.secret-add' content_type='cc' #}"><i class="fa fa-credit-card"></i>&nbsp; Add Credit Card</a></li>
+					<li class="disabled"><a href="{# url 'secrets.secret-add' content_type='file' #}"><i class="fa fa-upload"></i>&nbsp; Upload File</a></li>
 				</ul>
 			</div>
 			<ul class="nav navbar-nav navbar-right">
 				{% if request.user.is_superuser %}
-				<li class="dropdown">
+				<!--<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i>&nbsp; {% trans "Administration" %} <span class="caret"></span></a>
 					<ul class="dropdown-menu" role="menu">
 						<li><a href="#"><i class="fa fa-users"></i> &nbsp; {% trans "Users and groups" %}</a></li>
 						<li><a href="#"><i class="fa fa-sitemap"></i> &nbsp; {% trans "Audit" %}</a></li>
 						<li><a href="#"><i class="fa fa-cogs"></i> &nbsp; {% trans "Settings" %}</a></li>
 					</ul>
-				</li>
+				</li>-->
 				{% endif %}
 				<li class="dropdown">
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown">
