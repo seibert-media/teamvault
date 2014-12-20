@@ -1,6 +1,6 @@
 0.1.0
 =====
 
-unreleased
+2014-12-20
 
 * first public release
