@@ -4,6 +4,8 @@ from os import environ
 from subprocess import Popen
 from sys import argv
 
+from django.core.management import execute_from_command_line
+
 from .apps.settings.config import create_default_config
 from . import VERSION_STRING
 
@@ -27,6 +29,10 @@ def build_parser():
     # teamvault setup
     parser_setup = subparsers.add_parser("setup")
     parser_setup.set_defaults(func=setup)
+
+    # teamvault upgrade
+    parser_upgrade = subparsers.add_parser("upgrade")
+    parser_upgrade.set_defaults(func=upgrade)
     return parser
 
 
@@ -55,3 +61,9 @@ def run(pargs):
 
 def setup(pargs):
     create_default_config(environ['TEAMVAULT_CONFIG_FILE'])
+
+
+def upgrade(pargs):
+    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings.prod'
+    environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
+    execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback"])
