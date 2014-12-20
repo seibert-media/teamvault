@@ -7,7 +7,7 @@ class SettingsConfig(AppConfig):
     name = 'teamvault.apps.settings'
 
     def ready(self):
-        if "makemigrations" in argv or "migrate" in argv:
+        if "makemigrations" in argv or "migrate" in argv or "upgrade" in argv:
             return
 
         from django.conf import settings
