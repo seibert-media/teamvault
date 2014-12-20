@@ -1,7 +1,7 @@
 TeamVault
 =========
 
-TeamVault is an open-source web-based shared password manager for behind-the-firewall installation.
+TeamVault is an open-source web-based shared password manager for behind-the-firewall installation. It requires Python 3.3+ and Postgres.
 
 Installation
 ------------
