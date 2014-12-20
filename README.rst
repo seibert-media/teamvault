@@ -6,8 +6,6 @@ TeamVault is an open-source web-based shared password manager for behind-the-fir
 Installation
 ------------
 
-.. hint:: You should use a virtualenv or at least a dedicated virtual machine for this.
-
 .. code-block::
 
 	pip install teamvault
