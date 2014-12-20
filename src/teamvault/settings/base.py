@@ -88,7 +88,7 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
 TIME_ZONE = None
 
-USE_I18N = True
+USE_I18N = False
 USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
 USE_TZ = True
