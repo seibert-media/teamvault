@@ -74,12 +74,10 @@ def configure_ldap_auth(config, settings):
         "first_name": get_from_config(config, "auth_ldap", "attr_first_name", "givenName"),
         "last_name": get_from_config(config, "auth_ldap", "attr_last_name", "sn"),
     }
-    # disabled for now because of
-    # https://bitbucket.org/kavanaugh_development/django-auth-ldap/issue/1/force-synchronous-operations
-    #settings.AUTH_LDAP_USER_FLAGS_BY_GROUP = {
-    #    "is_staff": config.get("auth_ldap", "admin_group"),
-    #    "is_superuser": config.get("auth_ldap", "admin_group"),
-    #}
+    settings.AUTH_LDAP_USER_FLAGS_BY_GROUP = {
+        "is_staff": config.get("auth_ldap", "admin_group"),
+        "is_superuser": config.get("auth_ldap", "admin_group"),
+    }
 
     settings.AUTH_LDAP_ALWAYS_UPDATE_USER = True
     settings.AUTH_LDAP_FIND_GROUP_PERMS = False
