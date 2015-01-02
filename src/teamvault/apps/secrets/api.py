@@ -122,13 +122,15 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     api_url = serializers.HyperlinkedIdentityField(
         view_name='api.secret-revision_detail',
     )
-    created_by = serializers.Field(
-        source='set_by.username',
-    )
+
     data_url = serializers.CharField(
         read_only=True,
         required=False,
         source='id',
+    )
+    set_by = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='username',
     )
 
     def to_representation(self, instance):
@@ -145,8 +147,8 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
         fields = (
             'api_url',
             'created',
-            'created_by',
             'secret_url',
+            'set_by',
         )
         read_only_fields = (
             'created',
