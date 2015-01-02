@@ -18,6 +18,13 @@ ACCESS_POLICY_REPR = {
 }
 REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
 
+CONTENT_TYPE_REPR = {
+    Secret.CONTENT_CC: "cc",
+    Secret.CONTENT_FILE: "file",
+    Secret.CONTENT_PASSWORD: "password",
+}
+REPR_CONTENT_TYPE = {v: k for k, v in CONTENT_TYPE_REPR.items()}
+
 STATUS_REPR = {
     Secret.STATUS_DELETED: "deleted",
     Secret.STATUS_NEEDS_CHANGING: "needs_changing",
@@ -243,6 +250,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'allowed_groups',
             'allowed_users',
             'api_url',
+            'content_type',
             'created',
             'created_by',
             'current_revision',
@@ -258,6 +266,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'username',
         )
         read_only_fields = (
+            'content_type',
             'created',
             'last_read',
         )
