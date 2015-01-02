@@ -160,10 +160,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     api_url = serializers.HyperlinkedIdentityField(
         view_name='api.secret_detail',
     )
-    created_by = serializers.CharField(
+    created_by = serializers.SlugRelatedField(
+        default=serializers.CurrentUserDefault(),
         read_only=True,
-        required=False,
-        source='created_by.username',
+        slug_field='username',
     )
     current_revision = serializers.HyperlinkedRelatedField(
         read_only=True,
@@ -297,7 +297,7 @@ class SecretList(generics.ListCreateAPIView):
         return Secret.get_all_visible_to_user(self.request.user)
 
     def perform_create(self, serializer):
-        instance = serializer.save(created_by=self.request.user)
+        instance = serializer.save()
         if hasattr(instance, '_data'):
             instance.set_data(self.request.user, instance._data)
             del instance._data
