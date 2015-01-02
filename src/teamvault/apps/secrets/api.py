@@ -183,11 +183,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         source='id',
     )
-    data_url = serializers.CharField(
-        read_only=True,
-        required=False,
-        source='id',
-    )
     password = serializers.CharField(
         required=False,
         write_only=True,
@@ -229,15 +224,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
         rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
-        if not instance.current_revision:
-            # password has not been set yet
-            rep['data_url'] = None
-        else:
-            rep['data_url'] = reverse(
-                'api.secret-revision_data',
-                kwargs={'pk': instance.current_revision.pk},
-                request=self.context['request'],
-            )
         rep['status'] = STATUS_REPR[rep['status']]
         return rep
 
@@ -260,7 +246,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'created_by',
             'current_revision',
             'data_readable',
-            'data_url',
             'description',
             'last_read',
             'name',
