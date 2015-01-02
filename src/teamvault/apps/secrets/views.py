@@ -153,7 +153,6 @@ class SecretAdd(CreateView):
 
         for attr in ('allowed_groups', 'allowed_users'):
             setattr(secret, attr, form.cleaned_data[attr])
-        secret.save()
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
             plaintext_data = form.cleaned_data['password']
@@ -199,7 +198,6 @@ class SecretEdit(UpdateView):
 
         for attr in ('allowed_groups', 'allowed_users'):
             setattr(secret, attr, form.cleaned_data[attr])
-        secret.save()
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
             secret.set_data(self.request.user, form.cleaned_data['password'])
