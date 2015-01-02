@@ -198,12 +198,14 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         allowed_users = validated_data.pop('allowed_users', [])
 
         if 'password' in validated_data:
+            content_type = Secret.CONTENT_PASSWORD
             data = validated_data.pop('password')
 
         instance = self.Meta.model.objects.create(**validated_data)
 
         instance.allowed_groups = allowed_groups
         instance.allowed_users = allowed_users
+        instance.content_type = content_type
         instance._data = data
         return instance
 
@@ -225,6 +227,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     def to_representation(self, instance):
         rep = super(SecretSerializer, self).to_representation(instance)
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
+        rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
         rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
         if not instance.current_revision:
             # password has not been set yet
