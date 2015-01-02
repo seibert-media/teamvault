@@ -59,12 +59,6 @@ class AddCCForm(forms.ModelForm):
     )
 
 
-class AddFileForm(forms.ModelForm):
-    file = forms.FileField(
-        allow_empty_file=False,
-    )
-
-
 class SecretForm(forms.ModelForm):
     allowed_groups = forms.ModelMultipleChoiceField(
         queryset=Group.objects.all(),
@@ -76,6 +70,21 @@ class SecretForm(forms.ModelForm):
         required=False,
         widget=Select2DataWidget,
     )
+
+
+class FileForm(SecretForm):
+    file = forms.FileField(
+        allow_empty_file=False,
+        required=False,
+    )
+
+    class Meta:
+        model = Secret
+        fields = (
+            GENERIC_FIELDS_HEADER +
+            ['file'] +
+            GENERIC_FIELDS_FOOTER
+        )
 
 
 class PasswordForm(SecretForm):

@@ -216,6 +216,11 @@ class Secret(models.Model):
         blank=True,
         null=True,
     )
+    filename = models.CharField(
+        blank=True,
+        max_length=255,
+        null=True,
+    )
     last_read = models.DateTimeField(
         default=now,
     )

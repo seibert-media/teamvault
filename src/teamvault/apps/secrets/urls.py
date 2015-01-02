@@ -41,6 +41,11 @@ urlpatterns = patterns('',
         name='secrets.secret-delete',
     ),
     url(
+        r'^secrets/(?P<pk>\d+)/download$',
+        views.secret_download,
+        name='secrets.secret-download',
+    ),
+    url(
         r'^secrets/(?P<pk>\d+)/edit$',
         login_required(views.SecretEdit.as_view()),
         name='secrets.secret-edit',

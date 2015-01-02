@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 from json import dumps
-from urllib.parse import urlencode
+from urllib.parse import quote, urlencode
 
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.models import Group, User
@@ -16,7 +16,7 @@ from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
 from ..audit.auditlog import log
-from .forms import AddCCForm, AddFileForm, PasswordForm
+from .forms import AddCCForm, FileForm, PasswordForm
 from .models import AccessRequest, Secret
 
 ACCESS_STR_IDS = {
@@ -26,7 +26,7 @@ ACCESS_STR_IDS = {
 }
 CONTENT_TYPE_FORMS = {
     'cc': AddCCForm,
-    'file': AddFileForm,
+    'file': FileForm,
     'password': PasswordForm,
 }
 CONTENT_TYPE_IDS = {
@@ -157,6 +157,10 @@ class SecretAdd(CreateView):
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
             plaintext_data = form.cleaned_data['password']
+        elif secret.content_type == Secret.CONTENT_FILE:
+            plaintext_data = form.cleaned_data['file'].read()
+            secret.filename = form.cleaned_data['file'].name
+            secret.save()
         secret.set_data(self.request.user, plaintext_data)
 
         return HttpResponseRedirect(secret.get_absolute_url())
@@ -199,6 +203,10 @@ class SecretEdit(UpdateView):
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
             secret.set_data(self.request.user, form.cleaned_data['password'])
+        elif secret.content_type == Secret.CONTENT_FILE and form.cleaned_data['file']:
+            plaintext_data = form.cleaned_data['file'].read()
+            secret.filename = form.cleaned_data['file'].name
+            secret.save()
 
         return HttpResponseRedirect(secret.get_absolute_url())
 
@@ -247,6 +255,21 @@ def secret_delete(request, pk):
         return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
     else:
         return render(request, "secrets/secret_delete.html", {'secret': secret})
+
+
+@login_required
+@require_http_methods(["GET"])
+def secret_download(request, pk):
+    secret = get_object_or_404(Secret, pk=pk)
+    if secret.content_type != Secret.CONTENT_FILE:
+        raise Http404
+    secret.check_access(request.user)
+
+    response = HttpResponse(secret.get_data(request.user))
+    response['Content-Disposition'] = \
+        "attachment; filename*=UTF-8''{}".format(quote(secret.filename))
+    response['Content-Type'] = "application/force-download"
+    return response
 
 
 class SecretDetail(DetailView):

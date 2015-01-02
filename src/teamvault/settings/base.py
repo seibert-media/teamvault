@@ -13,6 +13,10 @@ AUTHENTICATION_BACKENDS = (
 
 DATABASES = configure_database(CONFIG)
 
+FILE_UPLOAD_HANDLERS = (
+    "teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler",
+)
+
 FIXTURE_DIRS = (
     join(PROJECT_ROOT, "fixtures"),
 )

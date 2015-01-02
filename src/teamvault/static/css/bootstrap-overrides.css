@@ -143,3 +143,16 @@ input[type="color"]:focus,
 td {
 	vertical-align: middle !important;
 }
+.btn-file {
+	position: relative;
+	overflow: hidden;
+}
+.btn-file input[type=file] {
+	position: absolute;
+	top: 0;
+	right: 0;
+	filter: alpha(opacity=0);
+	opacity: 0;
+	display: block;
+}
+

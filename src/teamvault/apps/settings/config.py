@@ -86,6 +86,13 @@ def configure_ldap_auth(config, settings):
     settings.AUTH_LDAP_GROUP_CACHE_TIMEOUT = 900
 
 
+def configure_max_file_size(config, settings):
+    settings.TEAMVAULT_MAX_FILE_SIZE = int(
+        get_from_config(config, "teamvault", "max_file_size", "5242880")
+    )
+    settings.FILE_UPLOAD_MAX_MEMORY_SIZE = settings.TEAMVAULT_MAX_FILE_SIZE
+
+
 def configure_teamvault_secret_key(config, settings):
     from .models import Setting
 
@@ -117,6 +124,8 @@ def create_default_config(filename):
 base_url = https://example.com
 # This key has been generated for you, there is no need to change it
 fernet_key = {teamvault_key}
+# file uploads larger than this number of bytes will have their connection reset
+max_file_size = 5242880
 
 [django]
 # This key has been generated for you, there is no need to change it
