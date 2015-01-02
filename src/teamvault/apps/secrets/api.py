@@ -1,3 +1,5 @@
+from base64 import decodestring, encodestring
+
 from django.contrib.auth.models import Group, User
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
@@ -183,6 +185,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         source='id',
     )
+    file = serializers.CharField(
+        required=False,
+        write_only=True,
+    )
     password = serializers.CharField(
         required=False,
         write_only=True,
@@ -195,6 +201,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         if 'password' in validated_data:
             content_type = Secret.CONTENT_PASSWORD
             data = validated_data.pop('password')
+        elif 'file' in validated_data:
+            content_type = Secret.CONTENT_FILE
+            data = decodestring(validated_data.pop('file').encode('ascii'))
 
         instance = self.Meta.model.objects.create(**validated_data)
 
@@ -234,6 +243,12 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         instance._data = data
         return instance
 
+    def validate(self, data):
+        if 'file' in data or 'filename' in data:
+            if not ('file' in data and 'filename' in data):
+                raise serializers.ValidationError("must include both file and filename")
+        return data
+
     class Meta:
         model = Secret
         fields = (
@@ -247,6 +262,8 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'current_revision',
             'data_readable',
             'description',
+            'file',
+            'filename',
             'last_read',
             'name',
             'needs_changing_on_leave',
@@ -314,6 +331,10 @@ class SecretRevisionDetail(generics.RetrieveAPIView):
 
 @api_view(['GET'])
 def data_get(request, pk):
-    obj = get_object_or_404(SecretRevision, pk=pk)
-    obj.secret.check_access(request.user)
-    return Response({'password': obj.secret.get_data(request.user)})
+    secret_revision = get_object_or_404(SecretRevision, pk=pk)
+    secret_revision.secret.check_access(request.user)
+    data = secret_revision.secret.get_data(request.user)
+    if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:
+        return Response({'password': data})
+    elif secret_revision.secret.content_type == Secret.CONTENT_FILE:
+        return Response({'file': encodestring(data).decode('ascii')})
