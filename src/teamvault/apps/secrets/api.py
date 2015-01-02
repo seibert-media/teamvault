@@ -134,7 +134,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     )
 
     def to_representation(self, instance):
-        rep = super(SecretSerializer, self).to_representation(instance)
+        rep = super(SecretRevisionSerializer, self).to_representation(instance)
         rep['data_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'pk': instance.pk},
@@ -147,7 +147,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
         fields = (
             'api_url',
             'created',
-            'secret_url',
+            'data_url',
             'set_by',
         )
         read_only_fields = (
