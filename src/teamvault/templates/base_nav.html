@@ -30,7 +30,7 @@
 					<span class="sr-only">Toggle Dropdown</span>
 				</button>
 				<ul class="dropdown-menu" role="menu">
-					<li class="disabled"><a href="{# url 'secrets.secret-add' content_type='cc' #}"><i class="fa fa-credit-card"></i>&nbsp; Add Credit Card</a></li>
+					<li><a href="{% url 'secrets.secret-add' content_type='cc' %}"><i class="fa fa-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a></li>
 					<li><a href="{% url 'secrets.secret-add' content_type='file' %}"><i class="fa fa-upload"></i>&nbsp; {% trans "Upload File" %}</a></li>
 				</ul>
 			</div>

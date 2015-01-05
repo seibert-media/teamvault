@@ -35,30 +35,6 @@ class Select2DataWidget(SelectMultiple):
         return mark_safe(dumps(output))
 
 
-class AddCCForm(forms.ModelForm):
-    expiration_month = forms.IntegerField(
-        min_value=1,
-        max_value=12,
-    )
-    expiration_year = forms.IntegerField(
-        min_value=date.today().year,
-        max_value=date.today().year + 50,
-    )
-    holder = forms.CharField()
-    number = forms.IntegerField(
-        widget=forms.TextInput,
-    )
-    password = forms.CharField(
-        required=False,
-        widget=forms.PasswordInput,
-    )
-    security_code = forms.IntegerField(
-        required=False,
-        min_value=100,
-        max_value=9999,
-    )
-
-
 class SecretForm(forms.ModelForm):
     allowed_groups = forms.ModelMultipleChoiceField(
         queryset=Group.objects.all(),
@@ -70,6 +46,43 @@ class SecretForm(forms.ModelForm):
         required=False,
         widget=Select2DataWidget,
     )
+
+
+class CCForm(SecretForm):
+    expiration_month = forms.IntegerField(
+        min_value=1,
+        max_value=12,
+    )
+    expiration_year = forms.IntegerField(
+        min_value=date.today().year,
+        max_value=date.today().year + 50,
+    )
+    holder = forms.CharField()
+    number = forms.CharField()
+    password = forms.CharField(
+        required=False,
+        widget=forms.PasswordInput,
+    )
+    security_code = forms.IntegerField(
+        required=False,
+        min_value=100,
+        max_value=9999,
+    )
+
+    class Meta:
+        model = Secret
+        fields = (
+            GENERIC_FIELDS_HEADER +
+            [
+                'expiration_month',
+                'expiration_year',
+                'holder',
+                'number',
+                'password',
+                'security_code',
+            ] +
+            GENERIC_FIELDS_FOOTER
+        )
 
 
 class FileForm(SecretForm):

@@ -1,4 +1,5 @@
 from base64 import decodestring, encodestring
+from json import dumps, loads
 
 from django.contrib.auth.models import Group, User
 from django.shortcuts import get_object_or_404
@@ -33,6 +34,43 @@ STATUS_REPR = {
     Secret.STATUS_OK: "ok",
 }
 REPR_STATUS = {v: k for k, v in STATUS_REPR.items()}
+
+REQUIRED_CC_FIELDS = set((
+    'holder', 'expiration_month', 'expiration_year', 'number', 'security_code',
+))
+
+
+def _extract_data(validated_data):
+    if 'password' in validated_data and not \
+            REQUIRED_CC_FIELDS.intersection(set(validated_data.keys())):
+        return (
+            validated_data.pop('password'),
+            Secret.CONTENT_PASSWORD,
+        )
+    elif 'file' in validated_data:
+        return (
+            decodestring(validated_data.pop('file').encode('ascii')),
+            Secret.CONTENT_FILE,
+        )
+    elif REQUIRED_CC_FIELDS.intersection(set(validated_data.keys())):
+        data = {}
+        for cc_field in REQUIRED_CC_FIELDS:
+            try:
+                data[cc_field] = str(validated_data.pop(cc_field))
+            except KeyError:
+                raise serializers.ValidationError(
+                    "missing required CC field '{}'".format(cc_field)
+                )
+        if 'password' in validated_data:
+            data['password'] = validated_data.pop('password')
+        else:
+            data['password'] = ""
+        return (
+            dumps(data),
+            Secret.CONTENT_CC,
+        )
+    else:
+        return (None, None)
 
 
 class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
@@ -185,11 +223,31 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         source='id',
     )
+    expiration_month = serializers.CharField(
+        required=False,
+        write_only=True,
+    )
+    expiration_year = serializers.CharField(
+        required=False,
+        write_only=True,
+    )
     file = serializers.CharField(
         required=False,
         write_only=True,
     )
+    holder = serializers.CharField(
+        required=False,
+        write_only=True,
+    )
+    number = serializers.CharField(
+        required=False,
+        write_only=True,
+    )
     password = serializers.CharField(
+        required=False,
+        write_only=True,
+    )
+    security_code = serializers.CharField(
         required=False,
         write_only=True,
     )
@@ -198,12 +256,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         allowed_groups = validated_data.pop('allowed_groups', [])
         allowed_users = validated_data.pop('allowed_users', [])
 
-        if 'password' in validated_data:
-            content_type = Secret.CONTENT_PASSWORD
-            data = validated_data.pop('password')
-        elif 'file' in validated_data:
-            content_type = Secret.CONTENT_FILE
-            data = decodestring(validated_data.pop('file').encode('ascii'))
+        data, content_type = _extract_data(validated_data)
+        if not data:
+            raise serializers.ValidationError("missing secret field (e.g. 'password')")
 
         instance = self.Meta.model.objects.create(**validated_data)
 
@@ -237,10 +292,11 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         return rep
 
     def update(self, instance, validated_data):
-        data = None
-        if 'password' in validated_data:
-            data = validated_data.pop('password')
-        instance._data = data
+        data, content_type = _extract_data(validated_data)
+        if content_type and content_type != instance.content_type:
+            raise serializers.ValidationError("wrong secret content type")
+        if data:
+            instance._data = data
         return instance
 
     def validate(self, data):
@@ -262,12 +318,17 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'current_revision',
             'data_readable',
             'description',
+            'expiration_month',
+            'expiration_year',
             'file',
             'filename',
+            'holder',
             'last_read',
             'name',
             'needs_changing_on_leave',
+            'number',
             'password',
+            'security_code',
             'status',
             'url',
             'username',
@@ -338,3 +399,5 @@ def data_get(request, pk):
         return Response({'password': data})
     elif secret_revision.secret.content_type == Secret.CONTENT_FILE:
         return Response({'file': encodestring(data).decode('ascii')})
+    elif secret_revision.secret.content_type == Secret.CONTENT_CC:
+        return Response(loads(data))

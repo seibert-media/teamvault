@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals
 
-from json import dumps
+from json import dumps, loads
 from urllib.parse import quote, urlencode
 
 from django.contrib.auth.decorators import login_required
@@ -16,7 +16,7 @@ from django.views.generic import DetailView, ListView
 from django.views.generic.edit import CreateView, UpdateView
 
 from ..audit.auditlog import log
-from .forms import AddCCForm, FileForm, PasswordForm
+from .forms import CCForm, FileForm, PasswordForm
 from .models import AccessRequest, Secret
 
 ACCESS_STR_IDS = {
@@ -25,7 +25,7 @@ ACCESS_STR_IDS = {
     'ACCESS_POLICY_HIDDEN': str(Secret.ACCESS_POLICY_HIDDEN),
 }
 CONTENT_TYPE_FORMS = {
-    'cc': AddCCForm,
+    'cc': CCForm,
     'file': FileForm,
     'password': PasswordForm,
 }
@@ -160,6 +160,15 @@ class SecretAdd(CreateView):
             plaintext_data = form.cleaned_data['file'].read()
             secret.filename = form.cleaned_data['file'].name
             secret.save()
+        elif secret.content_type == Secret.CONTENT_CC:
+            plaintext_data = dumps({
+                'holder': form.cleaned_data['holder'],
+                'number': form.cleaned_data['number'],
+                'expiration_month': str(form.cleaned_data['expiration_month']),
+                'expiration_year': str(form.cleaned_data['expiration_year']),
+                'security_code': str(form.cleaned_data['security_code']),
+                'password': form.cleaned_data['password'],
+            })
         secret.set_data(self.request.user, plaintext_data)
 
         return HttpResponseRedirect(secret.get_absolute_url())
@@ -200,11 +209,22 @@ class SecretEdit(UpdateView):
             setattr(secret, attr, form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
-            secret.set_data(self.request.user, form.cleaned_data['password'])
+            plaintext_data = form.cleaned_data['password']
         elif secret.content_type == Secret.CONTENT_FILE and form.cleaned_data['file']:
             plaintext_data = form.cleaned_data['file'].read()
             secret.filename = form.cleaned_data['file'].name
             secret.save()
+        elif secret.content_type == Secret.CONTENT_CC:
+            plaintext_data = dumps({
+                'holder': form.cleaned_data['holder'],
+                'number': form.cleaned_data['number'],
+                'expiration_month': form.cleaned_data['expiration_month'],
+                'expiration_year': form.cleaned_data['expiration_year'],
+                'security_code': form.cleaned_data['security_code'],
+                'password': form.cleaned_data['password'],
+            })
+
+        secret.set_data(self.request.user, plaintext_data)
 
         return HttpResponseRedirect(secret.get_absolute_url())
 
@@ -216,6 +236,20 @@ class SecretEdit(UpdateView):
 
     def get_form_class(self):
         return CONTENT_TYPE_FORMS[CONTENT_TYPE_IDENTIFIERS[self.object.content_type]]
+
+    def get_initial(self):
+        if self.object.content_type == Secret.CONTENT_CC:
+            data = loads(self.object.get_data(self.request.user))
+            return {
+                'holder': data['holder'],
+                'number': data['number'],
+                'expiration_month': data['expiration_month'],
+                'expiration_year': data['expiration_year'],
+                'security_code': data['security_code'],
+                'password': data['password'],
+            }
+        else:
+            return {}
 
     def get_object(self, queryset=None):
         secret = get_object_or_404(Secret, pk=self.kwargs['pk'])
@@ -278,6 +312,7 @@ class SecretDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
+        context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['readable'] = secret.is_readable_by_user(self.request.user)
         context['secret_url'] = reverse(
             'api.secret-revision_data',
