@@ -32,7 +32,7 @@ setup(
     install_requires=[
         "cryptography == 0.6.1",
         "dj-static == 0.0.6",
-        "Django == 1.7.1",
+        "Django == 1.7.2",
         "django-filter == 0.7",
         "django-gravatar2 == 1.1.4",
         "djangorestframework == 3.0.2",
