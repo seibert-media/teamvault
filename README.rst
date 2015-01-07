@@ -8,6 +8,7 @@ Installation
 
 .. code-block::
 
+	apt-get install libffi-dev libpq-dev mercurial python3.4-dev
 	pip install teamvault
 	pip install hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap
 	teamvault setup
