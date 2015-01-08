@@ -37,4 +37,6 @@ Development VM
 Go to http://teamvault and log in with the username and password you set.
 To handle code changes, just interrupt the command and run:
 
+.. code-block::
+
 	vagrant ssh -c "sudo teamvault upgrade && sudo teamvault run"
