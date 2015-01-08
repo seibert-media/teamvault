@@ -22,6 +22,11 @@ def build_parser():
         help=_("use 'teamvault <subcommand> --help' for more info"),
     )
 
+    # teamvault plumbing
+    parser_plumbing = subparsers.add_parser("plumbing")
+    parser_plumbing.add_argument('plumbing_command', nargs='+')
+    parser_plumbing.set_defaults(func=plumbing)
+
     # teamvault run
     parser_run = subparsers.add_parser("run")
     parser_run.set_defaults(func=run)
@@ -49,6 +54,12 @@ def main(*args):
     pargs = parser.parse_args(args)
 
     pargs.func(pargs)
+
+
+def plumbing(pargs):
+    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings.prod'
+    environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
+    execute_from_command_line([""] + pargs.plumbing_command)
 
 
 def run(pargs):
