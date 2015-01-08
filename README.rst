@@ -12,6 +12,7 @@ Installation
 	pip install teamvault
 	pip install hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap
 	teamvault setup
+	vim /etc/teamvault.conf
 	teamvault upgrade
 	teamvault run
 
@@ -30,13 +31,8 @@ Development VM
 
 	pip install bundlewrap
 	vagrant up
-	vagrant ssh -c "sudo teamvault upgrade"
 	vagrant ssh -c "sudo teamvault plumbing createsuperuser"
-	vagrant ssh -c "sudo teamvault run"
+	vagrant ssh -c "sudo teamvault upgrade && sudo teamvault run"
 
 Go to http://teamvault and log in with the username and password you set.
-To handle code changes, just interrupt the command and run:
-
-.. code-block::
-
-	vagrant ssh -c "sudo teamvault upgrade && sudo teamvault run"
+To handle code changes, just interrupt the last command with CTRL+C and run it again.

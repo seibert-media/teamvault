@@ -3,16 +3,17 @@ pkg_apt = {
     "mercurial": {},
     "libpq-dev": {},
     "libffi-dev": {},
-    "python3.4-dev": {
+    "python3-pip": {
         'triggers': [
             "action:teamvault_install",
         ],
     },
+    "python3.4-dev": {},
 }
 
 actions = {
     "teamvault_install": {
-        'command': "cd /teamvault && python3.4 setup.py develop",
+        'command': "pip3 install -e /teamvault/",
         'needs': [
             "pkg_apt:",
         ],
@@ -30,6 +31,13 @@ actions = {
     },
     "teamvault_set_base_url": {
         'command': "sed -i 's/^base_url = .*$/base_url = http:\\/\\/teamvault/' /etc/teamvault.cfg",
+        'triggered': True,
+        'triggers': [
+            "action:teamvault_upgrade",
+        ],
+    },
+    "teamvault_upgrade": {
+        'command': "teamvault upgrade",
         'triggered': True,
     },
 }

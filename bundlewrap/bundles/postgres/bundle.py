@@ -6,7 +6,7 @@ pkg_apt = {
 
 actions = {
     "create_role": {
-        'command': "sudo -u postgres createuser -D -A teamvault",
+        'command': "sudo -u postgres psql -c \"CREATE USER teamvault WITH NOCREATEDB NOCREATEUSER ENCRYPTED PASSWORD E'teamvault'\"",
         'triggered': True,
         'triggers': ["action:create_database"],
     },
