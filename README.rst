@@ -22,3 +22,19 @@ Update
 
 	pip install --upgrade teamvault
 	teamvault upgrade
+
+Development VM
+--------------
+
+.. code-block::
+
+	pip install bundlewrap
+	vagrant up
+	vagrant ssh -c "sudo teamvault upgrade"
+	vagrant ssh -c "sudo teamvault plumbing createsuperuser"
+	vagrant ssh -c "sudo teamvault run"
+
+Go to http://teamvault and log in with the username and password you set.
+To handle code changes, just interrupt the command and run:
+
+	vagrant ssh -c "sudo teamvault upgrade && sudo teamvault run"

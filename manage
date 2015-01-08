@@ -1,4 +1,0 @@
-#!/bin/bash
-
-cd $(dirname $0)
-./devenv/bin/python src/manage_local.py $@

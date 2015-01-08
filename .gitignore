@@ -1,5 +1,1 @@
-/devdb.sqlite
-/devenv
-/teamvault.cfg
-/src/teamvault/locale/de/LC_MESSAGES/django.mo
-/uploads
+/src/teamvault/static_collected

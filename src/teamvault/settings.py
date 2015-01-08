@@ -1,9 +1,13 @@
 from os.path import dirname, join, realpath
 
-from ..apps.settings.config import configure_database, configure_django_secret_key, get_config
+from .apps.settings.config import (
+    configure_database,
+    configure_django_secret_key,
+    get_config,
+)
 
 CONFIG = get_config()
-PROJECT_ROOT = realpath(dirname(dirname(__file__)))
+PROJECT_ROOT = realpath(dirname(__file__))
 
 ### Django
 
@@ -12,6 +16,8 @@ AUTHENTICATION_BACKENDS = (
 )
 
 DATABASES = configure_database(CONFIG)
+
+DEBUG = False
 
 FILE_UPLOAD_HANDLERS = (
     "teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler",
@@ -64,8 +70,16 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 SITE_ID = 1
 
+STATIC_ROOT = join(PROJECT_ROOT, "static_collected")
+
 # remember this is hardcoded in the error page templates (e.g. 500.html)
 STATIC_URL = "/static/"
+
+STATICFILES_DIRS = (
+    join(PROJECT_ROOT, "static"),
+)
+
+TEMPLATE_DEBUG = DEBUG
 
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',

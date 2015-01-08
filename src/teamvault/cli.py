@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from gettext import gettext as _
-from os import environ
+from os import environ, mkdir
+from shutil import rmtree
 from subprocess import Popen
 from sys import argv
 
@@ -57,7 +58,7 @@ def main(*args):
 
 
 def plumbing(pargs):
-    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings.prod'
+    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
     environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
     execute_from_command_line([""] + pargs.plumbing_command)
 
@@ -76,6 +77,11 @@ def setup(pargs):
 
 
 def upgrade(pargs):
-    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings.prod'
+    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
     environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
     execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback"])
+
+    from django.conf import settings
+    rmtree(settings.STATIC_ROOT)
+    mkdir(settings.STATIC_ROOT)
+    execute_from_command_line(["", "collectstatic", "--noinput"])
