@@ -17,8 +17,6 @@ AUTHENTICATION_BACKENDS = (
 
 DATABASES = configure_database(CONFIG)
 
-DEBUG = False
-
 FILE_UPLOAD_HANDLERS = (
     "teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler",
 )
@@ -78,8 +76,6 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = (
     join(PROJECT_ROOT, "static"),
 )
-
-TEMPLATE_DEBUG = DEBUG
 
 TEMPLATE_LOADERS = (
     'django.template.loaders.filesystem.Loader',

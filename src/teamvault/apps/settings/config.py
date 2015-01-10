@@ -33,6 +33,16 @@ def configure_database(config):
     return DATABASES
 
 
+def configure_debugging(config, settings):
+    enabled = get_from_config(config, "teamvault", "insecure_debug_mode", "no")
+    if enabled.lower() in ("1", "enabled", "true", "yes"):
+        settings.DEBUG = True
+        settings.TEMPLATE_DEBUG = True
+    else:
+        settings.DEBUG = False
+        settings.TEMPLATE_DEBUG = False
+
+
 def configure_django_secret_key(config):
     """
     Called directly from the Django settings module.
@@ -126,6 +136,8 @@ base_url = https://example.com
 fernet_key = {teamvault_key}
 # file uploads larger than this number of bytes will have their connection reset
 max_file_size = 5242880
+# do not enable this in production
+insecure_debug_mode = disabled
 
 [django]
 # This key has been generated for you, there is no need to change it

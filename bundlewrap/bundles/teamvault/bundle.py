@@ -33,6 +33,13 @@ actions = {
         'command': "sed -i 's/^base_url = .*$/base_url = http:\\/\\/teamvault/' /etc/teamvault.cfg",
         'triggered': True,
         'triggers': [
+            "action:teamvault_enable_debugging",
+        ],
+    },
+    "teamvault_enable_debugging": {
+        'command': "sed -i 's/^insecure_debug_mode = .*$/insecure_debug_mode = enabled/' /etc/teamvault.cfg",
+        'triggered': True,
+        'triggers': [
             "action:teamvault_upgrade",
         ],
     },
