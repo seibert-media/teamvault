@@ -3,6 +3,7 @@ from os.path import dirname, join, realpath
 from .apps.settings.config import (
     configure_database,
     configure_django_secret_key,
+    configure_logging,
     get_config,
 )
 
@@ -48,6 +49,8 @@ LOCALE_PATHS = (PROJECT_ROOT + "/locale",)
 LOGIN_REDIRECT_URL = "/"
 LOGIN_URL = 'accounts.login'
 LOGOUT_URL = 'accounts.logout'
+
+LOGGING = configure_logging(CONFIG)
 
 MIDDLEWARE_CLASSES = (
     "django.middleware.common.CommonMiddleware",

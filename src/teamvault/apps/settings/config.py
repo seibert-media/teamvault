@@ -96,6 +96,49 @@ def configure_ldap_auth(config, settings):
     settings.AUTH_LDAP_GROUP_CACHE_TIMEOUT = 900
 
 
+def configure_logging(config):
+    LOGGING = {
+        'version': 1,
+        'disable_existing_loggers': True,
+        'formatters': {
+            'console': {
+                'format': "[%(asctime)s] %(levelname)s %(module)s: %(message)s",
+            },
+            'syslog': {
+                'format': "%(levelname)s %(module)s: %(message)s",
+            },
+        },
+        'handlers': {
+            'console': {
+                'formatter': 'console',
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+            },
+            'syslog':{
+                'level': 'DEBUG',
+                'class': 'logging.handlers.SysLogHandler',
+                'formatter': 'syslog',
+                'facility': get_from_config(config, "teamvault", "syslog_facility", "local1"),
+                'address': '/dev/log',
+            },
+        },
+        'loggers': {
+            'teamvault': {
+                'handlers': ['syslog'],
+                'level': 'DEBUG',
+            },
+        },
+    }
+    if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
+            ("1", "enabled", "true", "yes"):
+        LOGGING['loggers']['django'] = {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        }
+        LOGGING['loggers']['teamvault']['handlers'] = ['console']
+    return LOGGING
+
+
 def configure_max_file_size(config, settings):
     settings.TEAMVAULT_MAX_FILE_SIZE = int(
         get_from_config(config, "teamvault", "max_file_size", "5242880")
@@ -134,10 +177,11 @@ def create_default_config(filename):
 base_url = https://example.com
 # This key has been generated for you, there is no need to change it
 fernet_key = {teamvault_key}
-# file uploads larger than this number of bytes will have their connection reset
-max_file_size = 5242880
 # do not enable this in production
 insecure_debug_mode = disabled
+# file uploads larger than this number of bytes will have their connection reset
+max_file_size = 5242880
+syslog_facility = local1
 
 [django]
 # This key has been generated for you, there is no need to change it
