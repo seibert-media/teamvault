@@ -35,7 +35,7 @@ setup(
         "Django == 1.7.2",
         "django-filter == 0.7",
         "django-gravatar2 == 1.1.4",
-        "djangorestframework == 3.0.2",
+        "djangorestframework == 3.0.3",
         "gunicorn == 19.1.1",
         "psycopg2 == 2.5.4",
         "pytz == 2014.10",
