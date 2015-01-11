@@ -199,11 +199,13 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     allowed_groups = serializers.SlugRelatedField(
         many=True,
         queryset=Group.objects.all(),
+        required=False,
         slug_field='name',
     )
     allowed_users = serializers.SlugRelatedField(
         many=True,
         queryset=User.objects.exclude(is_active=False),
+        required=False,
         slug_field='username',
     )
     api_url = serializers.HyperlinkedIdentityField(
