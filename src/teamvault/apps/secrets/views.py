@@ -223,8 +223,11 @@ class SecretEdit(UpdateView):
                 'security_code': form.cleaned_data['security_code'],
                 'password': form.cleaned_data['password'],
             })
+        else:
+            plaintext_data = None
 
-        secret.set_data(self.request.user, plaintext_data)
+        if plaintext_data is not None:
+            secret.set_data(self.request.user, plaintext_data)
 
         return HttpResponseRedirect(secret.get_absolute_url())
 
