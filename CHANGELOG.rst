@@ -1,3 +1,12 @@
+0.2.1
+=====
+
+2015-01-20
+
+* fixed uploading of non-tiny files (#30)
+* fixed editing secrets without changing encrypted data (#30)
+
+
 0.2.0
 =====
 
