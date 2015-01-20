@@ -1,3 +1,4 @@
+from hashlib import sha256
 from random import sample
 
 from cryptography.fernet import Fernet
@@ -378,6 +379,11 @@ class Secret(models.Model):
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
         p.encrypted_data = encrypted_data
+        # the hash is needed for unique_together (see below)
+        # unique_together uses an index on its fields which is
+        # problematic with the largeish blobs we might store here (see
+        # issue #30)
+        p.encrypted_data_sha256 = sha256(encrypted_data).hexdigest()
         p.length = plaintext_length
         p.secret = self
         p.set_by = user
@@ -411,6 +417,9 @@ class SecretRevision(models.Model):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
+    encrypted_data_sha256 = models.CharField(
+        max_length=64,
+    )
     length = models.PositiveIntegerField(
         default=0,
     )
@@ -434,7 +443,7 @@ class SecretRevision(models.Model):
         # database object, retaining accessed_by. This way, when the
         # employee leaves, password 3 is correctly assumed known to
         # the employee.
-        unique_together = (('encrypted_data', 'secret'),)
+        unique_together = (('encrypted_data_sha256', 'secret'),)
 
     def __repr__(self):
         return "<SecretRevision '{name}' (#{id})>".format(id=self.id, name=self.secret.name)
