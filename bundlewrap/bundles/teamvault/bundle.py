@@ -47,4 +47,8 @@ actions = {
         'command': "teamvault upgrade",
         'triggered': True,
     },
+    "apt_update": {
+        'command': "apt-get update",
+        'needed_by': ["pkg_apt:"],
+    }
 }
