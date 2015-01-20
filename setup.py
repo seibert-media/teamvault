@@ -30,10 +30,10 @@ setup(
         "Topic :: Security",
     ],
     install_requires=[
-        "cryptography == 0.6.1",
+        "cryptography == 0.7.1",
         "dj-static == 0.0.6",
-        "Django == 1.7.2",
-        "django-filter == 0.7",
+        "Django == 1.7.3",
+        "django-filter == 0.9.1",
         "django-gravatar2 == 1.1.4",
         "djangorestframework == 3.0.3",
         "gunicorn == 19.1.1",
