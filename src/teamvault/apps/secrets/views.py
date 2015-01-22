@@ -343,12 +343,14 @@ class SecretDetail(DetailView):
 
 class SecretList(ListView):
     context_object_name = 'secrets'
+    paginate_by = 25
     template_name = "secrets/secret_list.html"
 
     def get_context_data(self, **kwargs):
         context = super(SecretList, self).get_context_data(**kwargs)
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
         context['search_term'] = self.request.GET.get('search', None)
+        context['search_term_url'] = quote(self.request.GET.get('search', ""))
         return context
 
     def get_queryset(self):
