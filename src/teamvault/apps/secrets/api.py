@@ -369,11 +369,17 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
 class SecretList(generics.ListCreateAPIView):
     model = Secret
-    paginate_by = 50
+    paginate_by = 25
     serializer_class = SecretSerializer
 
     def get_queryset(self):
-        return Secret.get_all_visible_to_user(self.request.user)
+        if 'search' in self.request.QUERY_PARAMS:
+            return Secret.get_search_results(
+                self.request.user,
+                self.request.QUERY_PARAMS['search'],
+            )
+        else:
+            return Secret.get_all_visible_to_user(self.request.user)
 
     def perform_create(self, serializer):
         instance = serializer.save()
