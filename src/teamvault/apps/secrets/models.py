@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from hashlib import sha256
 from random import sample
 
@@ -10,6 +11,8 @@ from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
+from djorm_pgfulltext.models import SearchManager
+from djorm_pgfulltext.fields import VectorField
 
 from ..audit.auditlog import log
 from .exceptions import PermissionError
@@ -243,8 +246,20 @@ class Secret(models.Model):
         null=True,
     )
 
+    search_index = VectorField()
+    objects = SearchManager(
+        fields = (
+            ('name', 'A'),
+            ('description', 'C'),
+            ('username', 'B'),
+            ('filename', 'D'),
+        ),
+        search_field='search_index',
+        auto_update_search_field=True,
+    )
+
     class Meta:
-        ordering = ('name',)
+        ordering = ('name', 'username')
 
     def __str__(self):
         return self.name
@@ -327,13 +342,17 @@ class Secret(models.Model):
         ).exclude(status=cls.STATUS_DELETED).distinct()
 
     @classmethod
-    def get_search_results(cls, user, term):
-        return cls.get_all_visible_to_user(user).filter(
-            models.Q(name__icontains=term) |
-            models.Q(username__icontains=term) |
-            models.Q(description__icontains=term) |
-            models.Q(url__icontains=term)
-        )
+    def get_search_results(cls, user, term, limit=None):
+        name_hits = cls.get_all_visible_to_user(user).filter(name__icontains=term)
+        fulltext_hits = cls.get_all_visible_to_user(user, queryset=cls.objects.search(term))
+        if limit:
+            name_hits = name_hits[:limit-1]
+            fulltext_hits = fulltext_hits[:limit-1]
+        result = list(OrderedDict.fromkeys(list(name_hits) + list(fulltext_hits)))
+        if limit:
+            return result[:limit-1]
+        else:
+            return result
 
     def is_readable_by_user(self, user):
         return (

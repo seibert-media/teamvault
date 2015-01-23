@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_gravatar',
+    'djorm_pgfulltext',
     'rest_framework',
     'teamvault.apps.accounts.AccountsConfig',
     'teamvault.apps.audit.AuditConfig',

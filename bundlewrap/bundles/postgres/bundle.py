@@ -2,6 +2,7 @@ pkg_apt = {
     "postgresql": {
         'triggers': ["action:create_role"],
     },
+    "postgresql-contrib": {},
 }
 
 actions = {

@@ -1,14 +1,14 @@
 TeamVault
 =========
 
-TeamVault is an open-source web-based shared password manager for behind-the-firewall installation. It requires Python 3.3+ and Postgres.
+TeamVault is an open-source web-based shared password manager for behind-the-firewall installation. It requires Python 3.3+ and Postgres (with the unaccent extension).
 
 Installation
 ------------
 
 .. code-block::
 
-	apt-get install libffi-dev libpq-dev mercurial python3.4-dev
+	apt-get install libffi-dev libpq-dev mercurial python3.4-dev postgresql-contrib
 	pip install teamvault
 	pip install hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap
 	teamvault setup

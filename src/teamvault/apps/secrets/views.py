@@ -412,8 +412,7 @@ def secret_share(request, pk):
 def secret_search(request):
     search_term = request.GET['q']
     search_result = []
-    all_secrets = Secret.get_all_visible_to_user(request.user)
-    filtered_secrets = list(all_secrets.filter(name__icontains=search_term)[:20])
+    filtered_secrets = Secret.get_search_results(request.user, search_term, limit=10)
     unreadable_secrets = filtered_secrets[:]
     sorted_secrets = []
 
