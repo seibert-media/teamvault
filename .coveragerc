@@ -1,0 +1,7 @@
+[run]
+branch = True
+source = teamvault
+
+[report]
+omit = */migrations/*
+

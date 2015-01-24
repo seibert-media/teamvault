@@ -1,4 +1,10 @@
+from os import environ
+
 from setuptools import setup, find_packages
+
+# included here for running tests
+environ.setdefault("DJANGO_SETTINGS_MODULE", "teamvault.settings")
+environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
 
 setup(
     name="teamvault",
@@ -11,6 +17,7 @@ setup(
     package_dir={'': "src"},
     packages=find_packages("src"),
     include_package_data=True,
+    test_suite="tests",
     entry_points={
         'console_scripts': [
             "teamvault=teamvault.cli:main",

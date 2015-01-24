@@ -1,0 +1,18 @@
+language: python
+python:
+  - "3.3"
+  - "3.4"
+addons:
+  postgresql: "9.3"
+before_script:
+  - psql -c "CREATE USER teamvault WITH SUPERUSER ENCRYPTED PASSWORD E'teamvault'" -U postgres
+  - psql -c 'CREATE DATABASE teamvault OWNER teamvault;' -U postgres
+install:
+  - pip install -e . --use-mirrors
+  - pip install -q coveralls --use-mirrors
+script:
+  - teamvault setup
+  - teamvault upgrade
+  - coverage run setup.py test
+after_success:
+  coveralls
