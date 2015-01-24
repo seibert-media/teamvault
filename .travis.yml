@@ -10,9 +10,9 @@ before_script:
 install:
   - pip install -e . --use-mirrors
   - pip install -q coveralls --use-mirrors
+env: TEAMVAULT_CONFIG_FILE=teamvault.cfg
 script:
-  - sudo teamvault setup
-  - sudo chmod 644 /etc/teamvault.cfg
+  - teamvault setup
   - teamvault upgrade
   - coverage run setup.py test
 after_success:
