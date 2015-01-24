@@ -83,6 +83,9 @@ def upgrade(pargs):
     execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback"])
 
     from django.conf import settings
-    rmtree(settings.STATIC_ROOT)
+    try:
+        rmtree(settings.STATIC_ROOT)
+    except FileNotFoundError:
+        pass
     mkdir(settings.STATIC_ROOT)
     execute_from_command_line(["", "collectstatic", "--noinput"])
