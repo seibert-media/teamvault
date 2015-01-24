@@ -11,7 +11,8 @@ install:
   - pip install -e . --use-mirrors
   - pip install -q coveralls --use-mirrors
 script:
-  - teamvault setup
+  - sudo teamvault setup
+  - sudo chmod 644 /etc/teamvault.cfg
   - teamvault upgrade
   - coverage run setup.py test
 after_success:
