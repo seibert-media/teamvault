@@ -8,6 +8,7 @@ before_script:
   - psql -c "CREATE USER teamvault WITH SUPERUSER ENCRYPTED PASSWORD E'teamvault'" -U postgres
   - psql -c 'CREATE DATABASE teamvault OWNER teamvault;' -U postgres
 install:
+  - pip install https://www.djangoproject.com/download/1.8a1/tarball/
   - pip install -e . --use-mirrors
   - pip install -q coveralls --use-mirrors
 env: TEAMVAULT_CONFIG_FILE=teamvault.cfg
