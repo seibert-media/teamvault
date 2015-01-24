@@ -80,10 +80,6 @@ def upgrade(pargs):
     environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
     environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
 
-    # https://travis-ci.org/trehn/teamvault/builds/48148564
-    execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback", "contenttypes"])
-    execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback", "auth"])
-
     execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback"])
 
     from django.conf import settings
