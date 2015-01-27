@@ -1,12 +1,14 @@
 from collections import OrderedDict
 from hashlib import sha256
 from random import sample
+import re
 
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
+from django.core.validators import URLValidator
 from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
@@ -16,6 +18,21 @@ from djorm_pgfulltext.fields import VectorField
 
 from ..audit.auditlog import log
 from .exceptions import PermissionError
+
+
+# yummy monkey patch to relax overzealous URL validation
+URLValidator.host_re = (
+    r'[a-z' + URLValidator.ul + r'0-9]' +
+    r'(?:[a-z' + URLValidator.ul + r'0-9-\.]*' +
+    r'[a-z' + URLValidator.ul + r'0-9])?'
+)
+URLValidator.regex = re.compile(
+    r'^(?:[a-z0-9\.\-]*)://'
+    r'(?:\S+(?::\S*)?@)?'
+    r'(?:' + URLValidator.ipv4_re + '|' + URLValidator.ipv6_re + '|' + URLValidator.host_re + ')'
+    r'(?::\d{2,5})?'
+    r'(?:[/?#][^\s]*)?'
+    r'$', re.IGNORECASE)
 
 
 class AccessRequest(models.Model):
