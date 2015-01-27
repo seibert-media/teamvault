@@ -1,3 +1,12 @@
+0.2.2
+=====
+
+2015-01-27
+
+* fixed overzealous URL validation
+* fixed access policy selection
+
+
 0.2.1
 =====
 

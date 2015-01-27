@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="teamvault",
-    version="0.2.1",
+    version="0.2.2",
     description="Keep your passwords behind the firewall",
     author="Torsten Rehn",
     author_email="torsten@rehn.email",
