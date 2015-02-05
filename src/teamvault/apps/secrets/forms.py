@@ -104,10 +104,12 @@ class PasswordForm(SecretForm):
     password = forms.CharField(
         required=False,
     )
-    url = forms.URLField(
+    url = forms.CharField(
+        max_length=255,
         required=False,
     )
     username = forms.CharField(
+        max_length=255,
         required=False,
     )
 

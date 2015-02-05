@@ -6,9 +6,8 @@ import re
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group, User
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
-from django.core.validators import URLValidator
 from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
@@ -20,19 +19,11 @@ from ..audit.auditlog import log
 from .exceptions import PermissionError
 
 
-# yummy monkey patch to relax overzealous URL validation
-URLValidator.host_re = (
-    r'[a-z' + URLValidator.ul + r'0-9]' +
-    r'(?:[a-z' + URLValidator.ul + r'0-9-\.]*' +
-    r'[a-z' + URLValidator.ul + r'0-9])?'
-)
-URLValidator.regex = re.compile(
-    r'^(?:[a-z0-9\.\-]*)://'
-    r'(?:\S+(?::\S*)?@)?'
-    r'(?:' + URLValidator.ipv4_re + '|' + URLValidator.ipv6_re + '|' + URLValidator.host_re + ')'
-    r'(?::\d{2,5})?'
-    r'(?:[/?#][^\s]*)?'
-    r'$', re.IGNORECASE)
+def validate_url(value):
+    if not "://" in value or \
+            value.startswith("javascript:") or \
+            value.startswith("data:"):
+        raise ValidationError(_("invalid URL"))
 
 
 class AccessRequest(models.Model):
@@ -253,9 +244,14 @@ class Secret(models.Model):
         choices=STATUS_CHOICES,
         default=STATUS_OK,
     )
-    url = models.URLField(
+    url = models.CharField(
         blank=True,
+        max_length=255,
         null=True,
+        # Django's builtin URL validation is pretty strict to the point
+        # of rejecting perfectly good URLs, thus we roll our own very
+        # liberal validation
+        validators=[validate_url],
     )
     username = models.CharField(
         blank=True,
