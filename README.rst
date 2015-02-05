@@ -13,6 +13,8 @@ Installation
 	pip install hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap
 	teamvault setup
 	vim /etc/teamvault.conf
+	# note that the teamvault database user will need SUPERUSER privileges
+	# during this step in order to activate the unaccent extension
 	teamvault upgrade
 	teamvault run
 
