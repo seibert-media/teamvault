@@ -1,3 +1,15 @@
+0.3.0
+=====
+
+2015-02-05
+
+* added full text search
+* added search API
+* improved secret list display
+* added pagination for secret lists
+* relaxed URL validation even further
+
+
 0.2.2
 =====
 
