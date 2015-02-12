@@ -1,0 +1,5 @@
+{
+  "analytics": false,
+  "directory": "src/teamvault/static/bundled",
+  "strict-ssl": true
+}
