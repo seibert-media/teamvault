@@ -11,6 +11,10 @@ pkg_apt = {
     "python3.4-dev": {},
 }
 
+pkg_pip = {
+    "coveralls": {},
+}
+
 actions = {
     "teamvault_install": {
         'command': "pip3 install -e /teamvault/",
