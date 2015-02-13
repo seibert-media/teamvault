@@ -39,7 +39,6 @@ setup(
     install_requires=[
         "cryptography == 0.7.1",
         "dj-static == 0.0.6",
-        "django-filter == 0.9.1",
         "Django >= 1.7.3",  # need 1.8 once released
         "django-gravatar2 == 1.1.4",
         "djangorestframework == 3.0.3",
