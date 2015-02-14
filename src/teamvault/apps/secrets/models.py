@@ -359,11 +359,11 @@ class Secret(models.Model):
         name_hits = cls.get_all_visible_to_user(user).filter(name__icontains=term)
         fulltext_hits = cls.get_all_visible_to_user(user, queryset=cls.objects.search(term))
         if limit:
-            name_hits = name_hits[:limit-1]
-            fulltext_hits = fulltext_hits[:limit-1]
+            name_hits = name_hits[:limit]
+            fulltext_hits = fulltext_hits[:limit]
         result = list(OrderedDict.fromkeys(list(name_hits) + list(fulltext_hits)))
         if limit:
-            return result[:limit-1]
+            return result[:limit]
         else:
             return result
 
