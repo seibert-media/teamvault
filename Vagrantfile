@@ -15,7 +15,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.define VM_NAME do |node|
     node.vm.network :private_network, ip: VM_IP
     node.vm.hostname = VM_NAME
-    node.vm.synced_folder ".", "/teamvault"
+    node.vm.synced_folder ".", "/teamvault", type: "nfs"
 
     node.vm.provision :bundlewrap do |bw|
       bw.node_name = VM_NAME
