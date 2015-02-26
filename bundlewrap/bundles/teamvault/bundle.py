@@ -12,7 +12,16 @@ pkg_apt = {
 }
 
 pkg_pip = {
-    "coveralls": {},
+    "coveralls": {
+        'needs': ["pkg_apt:python3-pip"],
+    },
+}
+
+symlinks = {
+    "/usr/bin/pip": {
+        'target': "/usr/bin/pip3",
+        'needed_by': ["pkg_pip:"],
+    }
 }
 
 actions = {
