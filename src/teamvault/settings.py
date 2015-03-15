@@ -69,8 +69,6 @@ SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
-SITE_ID = 1
-
 STATIC_ROOT = join(PROJECT_ROOT, "static_collected")
 
 # remember this is hardcoded in the error page templates (e.g. 500.html)
