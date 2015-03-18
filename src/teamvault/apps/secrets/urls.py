@@ -1,23 +1,21 @@
 from django.conf.urls import patterns, url
-from django.contrib.auth.decorators import login_required
-from django.views.generic import TemplateView
 
 from . import views
 
 urlpatterns = patterns('',
     url(
         r'^$',
-        login_required(TemplateView.as_view(template_name="secrets/dashboard.html")),
+        views.dashboard,
         name='dashboard',
     ),
     url(
         r'^access_requests/$',
-        login_required(views.AccessRequestList.as_view()),
+        views.access_request_list,
         name='secrets.access_request-list',
     ),
     url(
+        views.access_request_detail,
         r'^access_requests/(?P<pk>\d+)$',
-        login_required(views.AccessRequestDetail.as_view()),
         name='secrets.access_request-detail',
     ),
     url(
@@ -27,12 +25,12 @@ urlpatterns = patterns('',
     ),
     url(
         r'^secrets/$',
-        login_required(views.SecretList.as_view()),
+        views.secret_list,
         name='secrets.secret-list',
     ),
     url(
+        views.secret_detail,
         r'^secrets/(?P<pk>\d+)$',
-        login_required(views.SecretDetail.as_view()),
         name='secrets.secret-detail',
     ),
     url(
@@ -46,8 +44,8 @@ urlpatterns = patterns('',
         name='secrets.secret-download',
     ),
     url(
+        views.secret_edit,
         r'^secrets/(?P<pk>\d+)/edit$',
-        login_required(views.SecretEdit.as_view()),
         name='secrets.secret-edit',
     ),
     url(
@@ -62,7 +60,7 @@ urlpatterns = patterns('',
     ),
     url(
         r'^secrets/add/(?P<content_type>\w+)$',
-        login_required(views.SecretAdd.as_view()),
+        views.secret_edit,
         name='secrets.secret-add',
     ),
     url(

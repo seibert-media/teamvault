@@ -12,7 +12,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404, render
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.http import require_http_methods
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 
 from ..audit.auditlog import log
@@ -121,6 +121,7 @@ class AccessRequestDetail(DetailView):
                 reviewers=self.request.user,
                 status=AccessRequest.STATUS_PENDING,
             )
+access_request_detail = login_required(AccessRequestDetail.as_view())
 
 
 class AccessRequestList(ListView):
@@ -137,6 +138,10 @@ class AccessRequestList(ListView):
     def get_queryset(self):
         queryset = AccessRequest.get_all_readable_by_user(self.request.user)
         return queryset.filter(status=AccessRequest.STATUS_PENDING)
+access_request_list = login_required(AccessRequestList.as_view())
+
+
+dashboard = login_required(TemplateView.as_view(template_name="secrets/dashboard.html"))
 
 
 class SecretAdd(CreateView):
@@ -191,6 +196,7 @@ class SecretAdd(CreateView):
     def post(self, request, *args, **kwargs):
         request.POST = _patch_post_data(request.POST, ('allowed_groups', 'allowed_users'))
         return super(SecretAdd, self).post(request, *args, **kwargs)
+secret_add = login_required(SecretAdd.as_view())
 
 
 class SecretEdit(UpdateView):
@@ -265,6 +271,7 @@ class SecretEdit(UpdateView):
     def post(self, request, *args, **kwargs):
         request.POST = _patch_post_data(request.POST, ('allowed_groups', 'allowed_users'))
         return super(SecretEdit, self).post(request, *args, **kwargs)
+secret_edit = login_required(SecretEdit.as_view())
 
 
 @login_required
@@ -339,6 +346,7 @@ class SecretDetail(DetailView):
         if not object.is_visible_to_user(self.request.user):
             raise Http404
         return object
+secret_detail = login_required(SecretDetail.as_view())
 
 
 class SecretList(ListView):
@@ -358,6 +366,7 @@ class SecretList(ListView):
             return Secret.get_search_results(self.request.user, self.request.GET['search'])
         else:
             return Secret.get_all_visible_to_user(self.request.user)
+secret_list = login_required(SecretList.as_view())
 
 
 @login_required
@@ -434,4 +443,3 @@ def secret_search(request):
         })
 
     return HttpResponse(dumps(search_result), content_type="application/json")
-
