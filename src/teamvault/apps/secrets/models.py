@@ -261,7 +261,7 @@ class Secret(models.Model):
 
     search_index = VectorField()
     objects = SearchManager(
-        fields = (
+        fields=(
             ('name', 'A'),
             ('description', 'C'),
             ('username', 'B'),

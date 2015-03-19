@@ -114,7 +114,7 @@ def configure_logging(config):
                 'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
             },
-            'syslog':{
+            'syslog': {
                 'level': 'DEBUG',
                 'class': 'logging.handlers.SysLogHandler',
                 'formatter': 'syslog',
