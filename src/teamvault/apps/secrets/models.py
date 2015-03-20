@@ -1,7 +1,6 @@
 from collections import OrderedDict
 from hashlib import sha256
 from random import sample
-import re
 
 from cryptography.fernet import Fernet
 from django.conf import settings
