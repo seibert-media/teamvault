@@ -91,7 +91,7 @@ def access_request_review(request, pk, action):
         pk=pk,
         status=AccessRequest.STATUS_PENDING,
     )
-    if not request.user.is_superuser and not request.user in access_request.reviewers.all():
+    if not request.user.is_superuser and request.user not in access_request.reviewers.all():
         raise PermissionDenied()
 
     if action == 'allow':

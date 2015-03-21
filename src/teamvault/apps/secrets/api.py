@@ -117,8 +117,8 @@ class AccessRequestDetail(generics.RetrieveUpdateAPIView):
     def get_object(self):
         obj = get_object_or_404(AccessRequest, pk=self.kwargs['pk'])
         if (
-            not self.request.user == obj.requester and
-            not self.request.user in obj.reviewers and
+            self.request.user != obj.requester and
+            self.request.user not in obj.reviewers and
             not self.request.user.is_superuser
         ):
             self.permission_denied(self.request)

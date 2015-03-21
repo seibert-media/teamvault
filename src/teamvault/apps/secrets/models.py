@@ -19,7 +19,7 @@ from .exceptions import PermissionError
 
 
 def validate_url(value):
-    if not "://" in value or \
+    if "://" not in value or \
             value.startswith("javascript:") or \
             value.startswith("data:"):
         raise ValidationError(_("invalid URL"))
