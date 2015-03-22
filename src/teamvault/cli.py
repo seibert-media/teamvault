@@ -80,8 +80,10 @@ def upgrade(pargs):
     environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
     environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
 
+    print("\n### Running migrations...\n")
     execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback"])
 
+    print("\n### Gathering static files...\n")
     from django.conf import settings
     try:
         rmtree(settings.STATIC_ROOT)
@@ -89,3 +91,7 @@ def upgrade(pargs):
         pass
     mkdir(settings.STATIC_ROOT)
     execute_from_command_line(["", "collectstatic", "--noinput"])
+
+    # TODO: enable this once djorm_pgfulltext > 0.9.2 is released
+    #print("\n### Updating search index...\n")
+    #execute_from_command_line(["", "update_search_field", "secrets"])
