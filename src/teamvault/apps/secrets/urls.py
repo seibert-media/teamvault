@@ -60,7 +60,7 @@ urlpatterns = patterns('',
     ),
     url(
         r'^secrets/add/(?P<content_type>\w+)$',
-        views.secret_edit,
+        views.secret_add,
         name='secrets.secret-add',
     ),
     url(
