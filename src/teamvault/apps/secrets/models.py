@@ -12,6 +12,7 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from djorm_pgfulltext.models import SearchManager
 from djorm_pgfulltext.fields import VectorField
+from hashids import Hashids
 
 from ..audit.auditlog import log
 from .exceptions import PermissionError
@@ -24,7 +25,39 @@ def validate_url(value):
         raise ValidationError(_("invalid URL"))
 
 
-class AccessRequest(models.Model):
+class HashIDModel(models.Model):
+    hashid = models.CharField(
+        max_length=24,
+        null=True,
+        unique=True,
+    )
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self.pk:
+            # need to save once to get a primary key, then once again to
+            # save the hashid
+            super(HashIDModel, self).save(*args, **kwargs)
+        if not self.hashid:
+            # We cannot use the same salt for every model because
+            # 1. sequentially create lots of secrets
+            # 2. note the hashid of each secrets
+            # 3. you can now enumerate access requests by using the same
+            #    hashids
+            # it's not a huge deal, but let's avoid it anyway
+            hasher = Hashids(
+                min_length=settings.HASHID_MIN_LENGTH,
+                salt=self.HASHID_NAMESPACE + settings.HASHID_SALT,
+            )
+            self.hashid = hasher.encode(self.pk)
+        return super(HashIDModel, self).save(*args, **kwargs)
+
+
+class AccessRequest(HashIDModel):
+    HASHID_NAMESPACE = "AccessRequest"
+
     STATUS_PENDING = 1
     STATUS_REJECTED = 2
     STATUS_APPROVED = 3
@@ -157,7 +190,7 @@ class AccessRequest(models.Model):
         self.save()
 
     def get_absolute_url(self):
-        return reverse('secrets.access_request-detail', args=[str(self.id)])
+        return reverse('secrets.access_request-detail', args=[str(self.hashid)])
 
     def is_readable_by_user(self, user):
         return (
@@ -167,7 +200,9 @@ class AccessRequest(models.Model):
         )
 
 
-class Secret(models.Model):
+class Secret(HashIDModel):
+    HASHID_NAMESPACE = "Secret"
+
     ACCESS_POLICY_REQUEST = 1
     ACCESS_POLICY_ANY = 2
     ACCESS_POLICY_HIDDEN = 3
@@ -285,7 +320,7 @@ class Secret(models.Model):
             raise PermissionDenied()
 
     def get_absolute_url(self):
-        return reverse('secrets.secret-detail', args=[str(self.id)])
+        return reverse('secrets.secret-detail', args=[str(self.hashid)])
 
     def get_data(self, user):
         if not self.current_revision:
@@ -443,7 +478,9 @@ class Secret(models.Model):
         )
 
 
-class SecretRevision(models.Model):
+class SecretRevision(HashIDModel):
+    HASHID_NAMESPACE = "SecretRevision"
+
     accessed_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
     )

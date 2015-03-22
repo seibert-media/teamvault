@@ -50,6 +50,16 @@ def configure_django_secret_key(config):
     return decodestring(config.get("django", "secret_key").encode()).decode('utf-8')
 
 
+def configure_hashid(config):
+    """
+    Called directly from the Django settings module.
+    """
+    return(
+        int(get_from_config(config, "hashid", "min_length", "6")),
+        decodestring(config.get("hashid", "salt").encode()).decode('utf-8'),
+    )
+
+
 def configure_ldap_auth(config, settings):
     if not config.has_section("auth_ldap"):
         return
@@ -171,6 +181,7 @@ def create_default_config(filename):
     if exists(filename):
         raise RuntimeError("not overwriting existing path {}".format(filename))
     SECRET_KEY = "".join(choice(ascii_letters + digits + punctuation) for i in range(50))
+    HASHID_SALT = "".join(choice(ascii_letters + digits + punctuation) for i in range(50))
     config = """
 [teamvault]
 # Set this to the URL users use to reach the application
@@ -193,6 +204,11 @@ name = teamvault
 user = teamvault
 password = teamvault
 
+[hashid]
+min_length = 6
+# This salt has been generated for you, there is no need to change it
+salt = {hashid_salt}
+
 #[auth_ldap]
 #server_uri = ldaps://ldap.example.com
 #bind_dn = cn=root,dc=example,dc=com
@@ -208,6 +224,7 @@ password = teamvault
 #admin_group = cn=admins,ou=groups,dc=example,dc=com
     """.format(
         django_key=encodestring(SECRET_KEY.encode('utf-8')).decode('utf-8'),
+        hashid_salt=encodestring(HASHID_SALT.encode('utf-8')).decode('utf-8'),
         teamvault_key=Fernet.generate_key().decode('utf-8'),
     )
     old_umask = umask(7)

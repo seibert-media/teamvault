@@ -80,6 +80,7 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
         source='requester.username',
     )
     secret = serializers.HyperlinkedRelatedField(
+        lookup_field='hashid',
         queryset=Secret.objects.exclude(status=Secret.STATUS_DELETED),
         view_name='api.secret_detail',
     )
@@ -115,7 +116,7 @@ class AccessRequestDetail(generics.RetrieveUpdateAPIView):
     serializer_class = AccessRequestSerializer
 
     def get_object(self):
-        obj = get_object_or_404(AccessRequest, pk=self.kwargs['pk'])
+        obj = get_object_or_404(AccessRequest, hashid=self.kwargs['hashid'])
         if (
             self.request.user != obj.requester and
             self.request.user not in obj.reviewers and
@@ -125,7 +126,7 @@ class AccessRequestDetail(generics.RetrieveUpdateAPIView):
         return obj
 
     def pre_save(self, obj):
-        previous_state = AccessRequest.objects.get(pk=obj.pk)
+        previous_state = AccessRequest.objects.get(hashid=obj.hashid)
         if (
             previous_state.status != AccessRequest.STATUS_PENDING or
             obj.status == AccessRequest.STATUS_PENDING or
@@ -159,9 +160,9 @@ class AccessRequestList(generics.ListCreateAPIView):
 
 class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     api_url = serializers.HyperlinkedIdentityField(
+        lookup_field='hashid',
         view_name='api.secret-revision_detail',
     )
-
     data_url = serializers.CharField(
         read_only=True,
         required=False,
@@ -176,7 +177,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
         rep = super(SecretRevisionSerializer, self).to_representation(instance)
         rep['data_url'] = reverse(
             'api.secret-revision_data',
-            kwargs={'pk': instance.pk},
+            kwargs={'hashid': instance.hashid},
             request=self.context['request'],
         )
         return rep
@@ -208,6 +209,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         slug_field='username',
     )
     api_url = serializers.HyperlinkedIdentityField(
+        lookup_field='hashid',
         view_name='api.secret_detail',
     )
     created_by = serializers.SlugRelatedField(
@@ -216,6 +218,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         slug_field='username',
     )
     current_revision = serializers.HyperlinkedRelatedField(
+        lookup_field='hashid',
         read_only=True,
         view_name='api.secret-revision_detail',
     )
@@ -354,7 +357,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_object(self):
-        obj = get_object_or_404(Secret, pk=self.kwargs['pk'])
+        obj = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
         if not obj.is_visible_to_user(self.request.user):
             self.permission_denied(self.request)
         return obj
@@ -392,14 +395,14 @@ class SecretRevisionDetail(generics.RetrieveAPIView):
     serializer_class = SecretRevisionSerializer
 
     def get_object(self):
-        obj = get_object_or_404(SecretRevision, pk=self.kwargs['pk'])
+        obj = get_object_or_404(SecretRevision, hashid=self.kwargs['hashid'])
         obj.secret.check_access(self.request.user)
         return obj
 
 
 @api_view(['GET'])
-def data_get(request, pk):
-    secret_revision = get_object_or_404(SecretRevision, pk=pk)
+def data_get(request, hashid):
+    secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
     secret_revision.secret.check_access(request.user)
     data = secret_revision.secret.get_data(request.user)
     if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:

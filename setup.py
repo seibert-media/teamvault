@@ -44,6 +44,7 @@ setup(
         "djangorestframework == 3.0.3",
         "djorm-ext-pgfulltext == 0.9.2",
         "gunicorn == 19.1.1",
+        "hashids == 1.0.2",
         "psycopg2 == 2.5.4",
         "pytz == 2014.10",
         #"hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap",

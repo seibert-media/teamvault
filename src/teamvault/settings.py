@@ -3,6 +3,7 @@ from os.path import dirname, join, realpath
 from .apps.settings.config import (
     configure_database,
     configure_django_secret_key,
+    configure_hashid,
     configure_logging,
     get_config,
 )
@@ -108,6 +109,9 @@ USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
 USE_TZ = True
 
+### Hashid
+
+HASHID_MIN_LENGTH, HASHID_SALT = configure_hashid(CONFIG)
 
 ### REST Framework
 

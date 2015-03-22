@@ -62,8 +62,8 @@ def _patch_post_data(POST, fields):
 
 
 @login_required
-def access_request_create(request, pk):
-    secret = Secret.objects.get(pk=pk)
+def access_request_create(request, hashid):
+    secret = Secret.objects.get(hashid=hashid)
     if not secret.is_visible_to_user(request.user):
         raise Http404
     try:
@@ -85,10 +85,10 @@ def access_request_create(request, pk):
 
 @login_required
 @require_http_methods(["POST"])
-def access_request_review(request, pk, action):
+def access_request_review(request, hashid, action):
     access_request = get_object_or_404(
         AccessRequest,
-        pk=pk,
+        hashid=hashid,
         status=AccessRequest.STATUS_PENDING,
     )
     if not request.user.is_superuser and request.user not in access_request.reviewers.all():
@@ -105,19 +105,21 @@ def access_request_review(request, pk, action):
 class AccessRequestDetail(DetailView):
     context_object_name = 'access_request'
     model = AccessRequest
+    slug_field = 'hashid'
+    slug_url_kwarg = 'hashid'
     template_name = "secrets/accessrequest_detail.html"
 
     def get_object(self):
         if self.request.user.is_superuser:
             return get_object_or_404(
                 AccessRequest,
-                pk=self.kwargs['pk'],
+                hashid=self.kwargs['hashid'],
                 status=AccessRequest.STATUS_PENDING,
             )
         else:
             return get_object_or_404(
                 AccessRequest,
-                pk=self.kwargs['pk'],
+                hashid=self.kwargs['hashid'],
                 reviewers=self.request.user,
                 status=AccessRequest.STATUS_PENDING,
             )
@@ -145,6 +147,9 @@ dashboard = login_required(TemplateView.as_view(template_name="secrets/dashboard
 
 
 class SecretAdd(CreateView):
+    slug_field = 'hashid'
+    slug_url_kwarg = 'hashid'
+
     def form_valid(self, form):
         secret = Secret()
         secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
@@ -201,6 +206,8 @@ secret_add = login_required(SecretAdd.as_view())
 
 class SecretEdit(UpdateView):
     context_object_name = 'secret'
+    slug_field = 'hashid'
+    slug_url_kwarg = 'hashid'
 
     def form_valid(self, form):
         secret = self.object
@@ -261,7 +268,7 @@ class SecretEdit(UpdateView):
             return {}
 
     def get_object(self, queryset=None):
-        secret = get_object_or_404(Secret, pk=self.kwargs['pk'])
+        secret = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
         secret.check_access(self.request.user)
         return secret
 
@@ -275,8 +282,8 @@ secret_edit = login_required(SecretEdit.as_view())
 
 
 @login_required
-def secret_delete(request, pk):
-    secret = get_object_or_404(Secret, pk=pk)
+def secret_delete(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
     secret.check_access(request.user)
     if request.method == 'POST':
         log(_(
@@ -301,8 +308,8 @@ def secret_delete(request, pk):
 
 @login_required
 @require_http_methods(["GET"])
-def secret_download(request, pk):
-    secret = get_object_or_404(Secret, pk=pk)
+def secret_download(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
     if secret.content_type != Secret.CONTENT_FILE:
         raise Http404
     secret.check_access(request.user)
@@ -317,6 +324,8 @@ def secret_download(request, pk):
 class SecretDetail(DetailView):
     context_object_name = 'secret'
     model = Secret
+    slug_field = 'hashid'
+    slug_url_kwarg = 'hashid'
     template_name = "secrets/secret_detail.html"
 
     def get_context_data(self, **kwargs):
@@ -326,7 +335,7 @@ class SecretDetail(DetailView):
         context['readable'] = secret.is_readable_by_user(self.request.user)
         context['secret_url'] = reverse(
             'api.secret-revision_data',
-            kwargs={'pk': secret.current_revision.pk},
+            kwargs={'hashid': secret.current_revision.hashid},
         )
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
@@ -371,8 +380,8 @@ secret_list = login_required(SecretList.as_view())
 
 @login_required
 @require_http_methods(["POST"])
-def secret_share(request, pk):
-    secret = get_object_or_404(Secret, pk=pk)
+def secret_share(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
     secret.check_access(request.user)
 
     request.POST = _patch_post_data(request.POST, ('share_groups', 'share_users'))
@@ -438,7 +447,7 @@ def secret_search(request):
     for secret, icon in sorted_secrets:
         search_result.append({
             'name': secret.name,
-            'url': reverse('secrets.secret-detail', kwargs={'pk': secret.pk}),
+            'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
             'icon': icon,
         })
 
