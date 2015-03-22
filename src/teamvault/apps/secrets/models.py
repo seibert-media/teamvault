@@ -296,9 +296,8 @@ class Secret(HashIDModel):
     objects = SearchManager(
         fields=(
             ('name', 'A'),
-            ('description', 'C'),
-            ('username', 'B'),
-            ('filename', 'D'),
+            ('description', 'B'),
+            ('filename', 'C'),
         ),
         search_field='search_index',
         auto_update_search_field=True,
