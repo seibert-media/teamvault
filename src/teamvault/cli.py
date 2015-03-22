@@ -60,7 +60,7 @@ def main(*args):
 def plumbing(pargs):
     environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
     environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
-    execute_from_command_line([""] + pargs.plumbing_command)
+    execute_from_command_line([""] + pargs.plumbing_command[0].split(" "))
 
 
 def run(pargs):
