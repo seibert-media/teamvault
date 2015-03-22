@@ -90,7 +90,7 @@ class AccessRequest(models.Model):
         )
 
     def approve(self, reviewer):
-        if not self.status == self.STATUS_PENDING:
+        if self.status != self.STATUS_PENDING:
             raise PermissionDenied(_("Can't approve closed access request"))
 
         # make sure user is still allowed to handle secret, privileges might
