@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from hashlib import sha256
 from random import sample
 
@@ -360,7 +359,7 @@ class Secret(models.Model):
         if limit:
             name_hits = name_hits[:limit]
             fulltext_hits = fulltext_hits[:limit]
-        result = list(OrderedDict.fromkeys(list(name_hits) + list(fulltext_hits)))
+        result = sorted(list(name_hits) + list(fulltext_hits))
         if limit:
             return result[:limit]
         else:
