@@ -37,6 +37,7 @@ def configure_debugging(config, settings):
     enabled = get_from_config(config, "teamvault", "insecure_debug_mode", "no")
     if enabled.lower() in ("1", "enabled", "true", "yes"):
         settings.DEBUG = True
+        settings.EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
         settings.TEMPLATE_DEBUG = True
     else:
         settings.DEBUG = False
