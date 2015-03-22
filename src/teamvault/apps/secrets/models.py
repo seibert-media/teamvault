@@ -388,12 +388,19 @@ class Secret(HashIDModel):
 
     @classmethod
     def get_search_results(cls, user, term, limit=None):
-        name_hits = cls.get_all_visible_to_user(user).filter(name__icontains=term)
+        base_queryset = cls.get_all_visible_to_user(user)
+        name_hits = base_queryset.filter(name__icontains=term)
         fulltext_hits = cls.get_all_visible_to_user(user, queryset=cls.objects.search(term))
+        substr_hits = base_queryset.filter(
+            models.Q(filename__icontains=term) |
+            models.Q(url__icontains=term) |
+            models.Q(username__icontains=term)
+        )
         if limit:
             name_hits = name_hits[:limit]
             fulltext_hits = fulltext_hits[:limit]
-        result = sorted(list(name_hits) + list(fulltext_hits))
+            substr_hits = substr_hits[:limit]
+        result = list(name_hits) + list(fulltext_hits) + list(substr_hits)
         if limit:
             return result[:limit]
         else:
