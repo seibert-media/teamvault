@@ -37,15 +37,15 @@ setup(
         "Topic :: Security",
     ],
     install_requires=[
-        "cryptography == 0.7.1",
+        "cryptography == 0.8.1",
         "dj-static == 0.0.6",
-        "Django >= 1.7.3",  # need 1.8 once released
-        "django-gravatar2 == 1.1.4",
-        "djangorestframework == 3.0.3",
+        "Django >= 1.7.7",  # need 1.8 once released
+        "django-gravatar2 == 1.2.1",
+        "djangorestframework == 3.1.0",
         "djorm-ext-pgfulltext == 0.9.2",
-        "gunicorn == 19.1.1",
-        "hashids == 1.0.2",
-        "psycopg2 == 2.5.4",
+        "gunicorn == 19.3.0",
+        "hashids == 1.0.3",
+        "psycopg2 == 2.6",
         "pytz == 2014.10",
         #"hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap",
     ],
