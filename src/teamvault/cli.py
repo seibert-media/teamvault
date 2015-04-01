@@ -92,6 +92,5 @@ def upgrade(pargs):
     mkdir(settings.STATIC_ROOT)
     execute_from_command_line(["", "collectstatic", "--noinput"])
 
-    # TODO: enable this once djorm_pgfulltext > 0.9.2 is released
-    #print("\n### Updating search index...\n")
-    #execute_from_command_line(["", "update_search_field", "secrets"])
+    print("\n### Updating search index...\n")
+    execute_from_command_line(["", "update_search_field", "secrets"])
