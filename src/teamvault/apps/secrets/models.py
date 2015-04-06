@@ -14,6 +14,7 @@ from djorm_pgfulltext.models import SearchManager
 from djorm_pgfulltext.fields import VectorField
 from hashids import Hashids
 
+from ...utils import send_mail
 from ..audit.auditlog import log
 from .exceptions import PermissionError
 
@@ -150,6 +151,23 @@ class AccessRequest(HashIDModel):
 
         self.secret.allowed_users.add(self.requester)
 
+        other_reviewers = list(self.reviewers.all())
+        other_reviewers.remove(reviewer)
+
+        send_mail(
+            other_reviewers + [self.requester],
+            _("[TeamVault] Access request for '{}' approved").format(self.secret.name),
+            "secrets/mail_access_request_approved",
+            context={
+                'approved_by': reviewer.username,
+                'base_url': settings.BASE_URL,
+                'secret_name': self.secret.name,
+                'secret_url': self.secret.get_absolute_url(),
+                'username': self.requester.username,
+            },
+            user_from=reviewer,
+        )
+
     def assign_reviewers(self):
         candidates = list(self.secret.allowed_users.order_by('-last_login')[:10])
         for group in self.secret.allowed_groups.all():
@@ -161,6 +179,23 @@ class AccessRequest(HashIDModel):
         if not selected:
             raise RuntimeError(_("unable to find reviewers for {}").format(self))
         self.reviewers = selected
+
+        send_mail(
+            self.reviewers.all(),
+            _("[TeamVault] Review access request for '{}'").format(self.secret.name),
+            "secrets/mail_access_request_review",
+            context={
+                'access_request_url': reverse(
+                    'secrets.access_request-detail',
+                    kwargs={'hashid': self.hashid},
+                ),
+                'base_url': settings.BASE_URL,
+                'secret_name': self.secret.name,
+                'secret_url': self.secret.get_absolute_url(),
+                'username': self.requester.username,
+            },
+            user_from=self.requester,
+        )
 
     def reject(self, reviewer, reason=None):
         if self.status != self.STATUS_PENDING:
@@ -188,6 +223,24 @@ class AccessRequest(HashIDModel):
         self.reason_rejected = reason
         self.status = self.STATUS_REJECTED
         self.save()
+
+        other_reviewers = list(self.reviewers.all())
+        other_reviewers.remove(reviewer)
+
+        send_mail(
+            other_reviewers + [self.requester],
+            _("[TeamVault] Access request for '{}' denied").format(self.secret.name),
+            "secrets/mail_access_request_denied",
+            context={
+                'base_url': settings.BASE_URL,
+                'denied_by': reviewer.username,
+                'reason': reason,
+                'secret_name': self.secret.name,
+                'secret_url': self.secret.get_absolute_url(),
+                'username': self.requester.username,
+            },
+            user_from=reviewer,
+        )
 
     def get_absolute_url(self):
         return reverse('secrets.access_request-detail', args=[str(self.hashid)])
