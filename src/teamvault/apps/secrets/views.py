@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-from __future__ import unicode_literals
-
 from json import dumps, loads
 from urllib.parse import quote, urlencode
 
