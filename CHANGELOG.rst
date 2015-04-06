@@ -1,3 +1,14 @@
+0.4.0
+=====
+
+2015-04-06
+
+* changed URLs to use hashids
+* added substring search for filename, URL, and username
+* added notification emails for access requests
+* fixed display of allowed users/group in secret detail view
+
+
 0.3.0
 =====
 
