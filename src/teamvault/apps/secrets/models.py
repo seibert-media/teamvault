@@ -107,9 +107,9 @@ class AccessRequest(HashIDModel):
         ordering = ('-created',)
 
     def __repr__(self):
-        return "<AccessRequest {user}@'{name}' (#{id})>".format(
-            id=self.id,
-            name=self.password.name,
+        return "<AccessRequest {user}@'{name}' ({id})>".format(
+            id=self.hashid,
+            name=self.secret.name,
             user=self.requester,
         )
 
@@ -310,7 +310,7 @@ class Secret(HashIDModel):
         return self.name
 
     def __repr__(self):
-        return "<Password '{name}' (#{id})>".format(id=self.id, name=self.name)
+        return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
 
     def check_access(self, user):
         if not self.is_visible_to_user(user):
@@ -521,4 +521,4 @@ class SecretRevision(HashIDModel):
         unique_together = (('encrypted_data_sha256', 'secret'),)
 
     def __repr__(self):
-        return "<SecretRevision '{name}' (#{id})>".format(id=self.id, name=self.secret.name)
+        return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
