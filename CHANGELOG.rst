@@ -1,3 +1,14 @@
+0.4.1
+=====
+
+2015-04-15
+
+* fixed missing email templates in distribution
+* fixed Python 3 tag on wheel distribution
+* fixed exceptions not being logged
+* fixed exception when closing access request as non-reviewer
+
+
 0.4.0
 =====
 
