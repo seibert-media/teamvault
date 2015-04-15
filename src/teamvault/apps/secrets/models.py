@@ -152,7 +152,11 @@ class AccessRequest(HashIDModel):
         self.secret.allowed_users.add(self.requester)
 
         other_reviewers = list(self.reviewers.all())
-        other_reviewers.remove(reviewer)
+        try:
+            other_reviewers.remove(reviewer)
+        except ValueError:
+            # review by other superuser
+            pass
 
         send_mail(
             other_reviewers + [self.requester],
@@ -225,7 +229,11 @@ class AccessRequest(HashIDModel):
         self.save()
 
         other_reviewers = list(self.reviewers.all())
-        other_reviewers.remove(reviewer)
+        try:
+            other_reviewers.remove(reviewer)
+        except ValueError:
+            # review by other superuser
+            pass
 
         send_mail(
             other_reviewers + [self.requester],
