@@ -134,9 +134,13 @@ def configure_logging(config):
             },
         },
         'loggers': {
+            'django': {
+                'handlers': ['syslog'],
+                'level': 'INFO',
+            },
             'teamvault': {
                 'handlers': ['syslog'],
-                'level': 'DEBUG',
+                'level': 'INFO',
             },
         },
     }
@@ -146,7 +150,10 @@ def configure_logging(config):
             'handlers': ['console'],
             'level': 'DEBUG',
         }
-        LOGGING['loggers']['teamvault']['handlers'] = ['console']
+        LOGGING['loggers']['teamvault'] = {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+        }
     return LOGGING
 
 
