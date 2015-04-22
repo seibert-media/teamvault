@@ -53,6 +53,9 @@ class HashIDModel(models.Model):
                 salt=self.HASHID_NAMESPACE + settings.HASHID_SALT,
             )
             self.hashid = hasher.encode(self.pk)
+        # we cannot force insert anymore because we might already have
+        # created the object
+        kwargs['force_insert'] = False
         return super(HashIDModel, self).save(*args, **kwargs)
 
 
