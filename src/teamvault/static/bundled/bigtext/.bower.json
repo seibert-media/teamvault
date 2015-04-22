@@ -1,6 +1,6 @@
 {
   "name": "bigtext",
-  "version": "0.1.6",
+  "version": "0.1.8",
   "main": [
     "dist/bigtext.js"
   ],
@@ -8,18 +8,19 @@
     "**/.*"
   ],
   "dependencies": {
-    "jquery": ">=1.9.1 <2.0.0",
+    "jquery": ">=1.9.1"
+  },
+  "devDependencies": {
     "qunit": ">=1.12.0"
   },
   "homepage": "https://github.com/zachleat/BigText",
-  "_release": "0.1.6",
+  "_release": "0.1.8",
   "_resolution": {
     "type": "version",
-    "tag": "v0.1.6",
-    "commit": "55554c1f5d42b1ee6bc5a07b226f3cb730bc2a82"
+    "tag": "v0.1.8",
+    "commit": "d45e8a5b3c057b149f39717f4ee1291917d11f7d"
   },
   "_source": "git://github.com/zachleat/BigText.git",
   "_target": "~0.1.6",
-  "_originalSource": "bigtext",
-  "_direct": true
+  "_originalSource": "bigtext"
 }

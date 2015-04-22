@@ -1,6 +1,6 @@
-/*! BigText - v0.1.6 - 2014-04-21
+/*! BigText - v0.1.8 - 2015-02-28
  * https://github.com/zachleat/bigtext
- * Copyright (c) 2014 Zach Leatherman (@zachleat)
+ * Copyright (c) 2015 Zach Leatherman (@zachleat)
  * MIT License */
 
 (function(window, $) {
@@ -26,18 +26,20 @@
         }
         return BigText;
       },
-      test: {
-        noFractionalFontSize: (function() {
-          if( !( 'getComputedStyle' in window ) || !( 'body' in document ) ) {
+      supports: {
+        wholeNumberFontSizeOnly: (function() {
+          if( !( 'getComputedStyle' in window ) ) {
             return true;
           }
           var test = $('<div/>').css({
               position: 'absolute',
               'font-size': '14.1px'
-            }).appendTo(document.body).get(0),
-            computedStyle = window.getComputedStyle( test, null );
+            }).insertBefore( $('script').eq(0) ),
+            computedStyle = window.getComputedStyle( test[0], null );
 
-          return computedStyle ? computedStyle.getPropertyValue( 'font-size' ) === '14px' : true;
+          var ret = computedStyle && computedStyle.getPropertyValue( 'font-size' ) === '14px';
+          test.remove();
+          return ret;
         })()
       },
       init: function() {
@@ -47,16 +49,13 @@
         }
       },
       bindResize: function(eventName, resizeFunction) {
-        if($.throttle) {
-          // https://github.com/cowboy/jquery-throttle-debounce
-          $(window).unbind(eventName).bind(eventName, $.throttle(100, resizeFunction));
-        } else {
-          if($.fn.smartresize) {
-            // https://github.com/lrbabe/jquery-smartresize/
-            eventName = 'smartresize.' + eventName;
+        var timeoutId;
+        $(window).unbind(eventName).bind(eventName, function() {
+          if( timeoutId ) {
+            clearTimeout( timeoutId );
           }
-          $(window).unbind(eventName).bind(eventName, resizeFunction);
-        }
+          timeoutId = setTimeout( resizeFunction, 100 );
+        });
       },
       getStyleId: function(id)
       {
@@ -196,7 +195,7 @@
     $children.css('float', 'left').each(function() {
       var $line = $(this),
         // TODO replace 8, 4 with a proportional size to the calculated font-size.
-        intervals = BigText.test.noFractionalFontSize ? [8, 4, 1] : [8, 4, 1, 0.1],
+        intervals = BigText.supports.wholeNumberFontSizeOnly ? [8, 4, 1] : [8, 4, 1, 0.1],
         lineMax,
         newFontSize;
 
