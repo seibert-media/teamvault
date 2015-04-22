@@ -5,6 +5,7 @@ from .apps.settings.config import (
     configure_django_secret_key,
     configure_hashid,
     configure_logging,
+    configure_session,
     get_config,
 )
 
@@ -69,6 +70,8 @@ SECRET_KEY = configure_django_secret_key(CONFIG)
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+SESSION_COOKIE_AGE, SESSION_EXPIRE_AT_BROWSER_CLOSE, SESSION_COOKIE_SECURE = \
+    configure_session(CONFIG)
 
 STATIC_ROOT = join(PROJECT_ROOT, "static_collected")
 

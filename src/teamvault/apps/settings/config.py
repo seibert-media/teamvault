@@ -164,6 +164,22 @@ def configure_max_file_size(config, settings):
     settings.FILE_UPLOAD_MAX_MEMORY_SIZE = settings.TEAMVAULT_MAX_FILE_SIZE
 
 
+def configure_session(config):
+    """
+    Called directly from the Django settings module.
+    """
+    age = int(get_from_config(config, "teamvault", "session_cookie_age", "3600"))
+    expire = get_from_config(config, "teamvault", "session_expire_at_browser_close", "True")
+    secure = get_from_config(config, "teamvault", "session_cookie_secure", "False")
+
+    if age <= 0:
+        age = 3600
+    expire = expire.lower() in ("1", "enabled", "true", "yes")
+    secure = secure.lower() in ("1", "enabled", "true", "yes")
+
+    return age, expire, secure
+
+
 def configure_teamvault_secret_key(config, settings):
     from .models import Setting
 
@@ -201,6 +217,9 @@ insecure_debug_mode = disabled
 # file uploads larger than this number of bytes will have their connection reset
 max_file_size = 5242880
 syslog_facility = local1
+session_cookie_age = 3600
+session_expire_at_browser_close = True
+session_cookie_secure = False
 
 [django]
 # This key has been generated for you, there is no need to change it
