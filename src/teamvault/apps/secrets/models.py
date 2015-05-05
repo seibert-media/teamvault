@@ -1,3 +1,4 @@
+from collections import OrderedDict
 from hashlib import sha256
 from random import sample
 
@@ -464,7 +465,10 @@ class Secret(HashIDModel):
             name_hits = name_hits[:limit]
             fulltext_hits = fulltext_hits[:limit]
             substr_hits = substr_hits[:limit]
-        result = list(name_hits) + list(fulltext_hits) + list(substr_hits)
+        # concatenate and remove duplicates
+        result = list(OrderedDict.fromkeys(
+            list(name_hits) + list(fulltext_hits) + list(substr_hits)
+        ))
         if limit:
             return result[:limit]
         else:
