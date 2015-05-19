@@ -1,3 +1,14 @@
+0.4.2
+=====
+
+2015-05-19
+
+* added a password copy confirmation message
+* improved pagination
+* made session settings configurable
+* fixed duplicate search results
+
+
 0.4.1
 =====
 
