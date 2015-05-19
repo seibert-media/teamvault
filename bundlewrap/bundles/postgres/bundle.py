@@ -1,18 +1,17 @@
 pkg_apt = {
-    "postgresql": {
-        'triggers': ["action:create_role"],
-    },
+    "postgresql": {},
     "postgresql-contrib": {},
 }
 
-actions = {
-    "create_role": {
-        'command': "sudo -u postgres psql -c \"CREATE USER teamvault WITH SUPERUSER ENCRYPTED PASSWORD E'teamvault'\"",
-        'triggered': True,
-        'triggers': ["action:create_database"],
+postgres_dbs = {
+    "teamvault": {
+        'owner': "teamvault",
     },
-    "create_database": {
-        'command': "sudo -u postgres createdb -O teamvault teamvault",
-        'triggered': True,
+}
+
+postgres_roles = {
+    "teamvault": {
+        'superuser': True,
+        'password': "teamvault",
     },
 }
