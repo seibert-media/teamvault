@@ -42,7 +42,7 @@ setup(
         "Django == 1.8.1",
         "django-gravatar2 == 1.3.0",
         "djangorestframework == 3.1.2",
-        "djorm-ext-pgfulltext == 0.10",
+        "djorm-ext-pgfulltext == 0.9.3",
         "gunicorn == 19.3.0",
         "hashids == 1.1.0",
         "psycopg2 == 2.6",
