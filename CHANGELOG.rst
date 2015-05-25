@@ -1,3 +1,13 @@
+0.4.3
+=====
+
+2015-05-25
+
+* show username field by default when adding passwords
+* fixed `teamvault upgrade` missing update_search_field
+* fixed typing in secret sharing modal
+
+
 0.4.2
 =====
 
