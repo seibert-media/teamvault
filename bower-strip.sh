@@ -37,12 +37,6 @@ rm -rvf ${BUNDLED_DIR}/font-awesome/.npmignore
 # jquery
 rm -rvf ${BUNDLED_DIR}/jquery/src
 
-# jquery.hotkeys
-rm -rvf ${BUNDLED_DIR}/jquery.hotkeys/component.json
-rm -rvf ${BUNDLED_DIR}/jquery.hotkeys/jquery-*.js
-rm -rvf ${BUNDLED_DIR}/jquery.hotkeys/README.md
-rm -rvf ${BUNDLED_DIR}/jquery.hotkeys/*.html
-
 # select2
 rm -rvf ${BUNDLED_DIR}/select2/.gitignore
 rm -rvf ${BUNDLED_DIR}/select2/component.json
