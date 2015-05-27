@@ -4,6 +4,14 @@ from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils import translation
 
 
+def pick_constant(choices, chosen_description):
+    for constant, description in choices:
+        if description == chosen_description:
+            return constant
+
+    raise KeyError("Can't find {} in {}".format(chosen_description, choices))
+
+
 def send_mail(users_to, subject, template,
               user_from=None, context={}, lang="en",
               attachments=None):

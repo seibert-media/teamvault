@@ -44,6 +44,23 @@ def configure_debugging(config, settings):
         settings.TEMPLATE_DEBUG = False
 
 
+def configure_default_access_policy(config):
+    """
+    Called directly from the Django settings module.
+    """
+    factory_default = "request"
+
+    pol = get_from_config(config, "teamvault", "default_access_policy", factory_default)
+    pol = pol.lower().strip()
+
+    if pol == "everyone":
+        return pol
+    elif pol == "hidden":
+        return pol
+    else:
+        return factory_default
+
+
 def configure_django_secret_key(config):
     """
     Called directly from the Django settings module.
@@ -220,6 +237,9 @@ syslog_facility = local1
 session_cookie_age = 3600
 session_expire_at_browser_close = True
 session_cookie_secure = False
+
+# One of "request", "everyone" or "hidden"
+default_access_policy = request
 
 [django]
 # This key has been generated for you, there is no need to change it
