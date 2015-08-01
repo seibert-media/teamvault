@@ -35,6 +35,13 @@ img.avatar {
 h1 {
 	color: #505050;
 }
+h1>.badge {
+	vertical-align: top;
+}
+table tr td:last-child {
+	white-space: nowrap;
+	width: 1px;
+}
 footer {
 	color: #cccccc;
 	font-size: 10px;
