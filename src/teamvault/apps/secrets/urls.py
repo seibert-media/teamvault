@@ -39,6 +39,11 @@ urlpatterns = patterns('',
         name='secrets.secret-delete',
     ),
     url(
+        r'^secrets/(?P<hashid>\w+)/restore$',
+        views.secret_restore,
+        name='secrets.secret-restore',
+    ),
+    url(
         r'^secrets/(?P<hashid>\w+)/download$',
         views.secret_download,
         name='secrets.secret-download',
