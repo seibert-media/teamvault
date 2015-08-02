@@ -1,7 +1,7 @@
 from json import dumps, loads
 from urllib.parse import quote, urlencode
 
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
 from django.core.urlresolvers import reverse
@@ -301,6 +301,32 @@ def secret_delete(request, hashid):
         return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
     else:
         return render(request, "secrets/secret_delete.html", {'secret': secret})
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser)
+def secret_restore(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
+    secret.check_access(request.user)
+    if request.method == 'POST':
+        log(_(
+                "{user} restore '{name}' ({id}:{revision})"
+            ).format(
+                id=secret.id,
+                name=secret.name,
+                revision=secret.current_revision.id,
+                user=request.user.username,
+            ),
+            actor=request.user,
+            level='info',
+            secret=secret,
+            secret_revision=secret.current_revision,
+        )
+        secret.status = Secret.STATUS_OK
+        secret.save()
+        return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
+    else:
+        return render(request, "secrets/secret_restore.html", {'secret': secret})
 
 
 @login_required
