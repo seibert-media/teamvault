@@ -65,7 +65,7 @@ def plumbing(pargs):
 
 def run(pargs):
     gunicorn = Popen(
-        "gunicorn teamvault.wsgi:application",
+        "gunicorn --preload teamvault.wsgi:application",
         shell=True,
     )
     gunicorn.communicate()
