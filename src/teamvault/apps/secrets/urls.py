@@ -39,11 +39,6 @@ urlpatterns = patterns('',
         name='secrets.secret-delete',
     ),
     url(
-        r'^secrets/(?P<hashid>\w+)/restore$',
-        views.secret_restore,
-        name='secrets.secret-restore',
-    ),
-    url(
         r'^secrets/(?P<hashid>\w+)/download$',
         views.secret_download,
         name='secrets.secret-download',
@@ -57,6 +52,11 @@ urlpatterns = patterns('',
         r'^secrets/(?P<hashid>\w+)/request_access$',
         views.access_request_create,
         name='secrets.secret-request_access',
+    ),
+    url(
+        r'^secrets/(?P<hashid>\w+)/restore$',
+        views.secret_restore,
+        name='secrets.secret-restore',
     ),
     url(
         r'^secrets/(?P<hashid>\w+)/share$',
