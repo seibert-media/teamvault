@@ -11,11 +11,11 @@ pkg_apt = {
     "python3.4-dev": {},
 }
 
-pkg_pip = {
-    "coveralls": {
-        'needs': ["pkg_apt:python3-pip"],
-    },
-}
+#pkg_pip = {
+#    "coveralls": {
+#        'needs': ["pkg_apt:python3-pip"],
+#    },
+#}
 
 symlinks = {
     "/usr/bin/pip": {

@@ -3,6 +3,8 @@ from django.contrib import admin
 
 admin.autodiscover()
 
+handler404 = 'teamvault.views.handler404'
+
 urlpatterns = patterns('',
     url(r'^api/', include('teamvault.apps.secrets.api_urls'), name='api'),
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),

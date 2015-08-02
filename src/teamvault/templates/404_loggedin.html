@@ -2,17 +2,15 @@
 {% load staticfiles %}
 {% load i18n %}
 {% block "title" %}{% trans "Page not found" %}{% endblock %}
-{% block "css" %}
-<link href="{% static 'css/secrets.css' %}" rel="stylesheet">
-{% endblock %}
 {% block "nav_search" %}active{% endblock %}
 {% block "content" %}
 <div class="container">
 	<div class="row">
 		<div class="col-md-8 col-md-offset-2">
-			<h1>{% trans "Page not found" %}</h1>
+			<h1>{% trans "404 - Page Not Found" %}</h1>
 			<br>
-			<p>Sorry the page you requested couldn't be found. Please check the URL you're using to access the page. If you detect any problem feel free to contact your system administrator.</p>
+			<p>{% trans "Sorry, the page you requested couldn't be found." %}</p>
+			<p>{% trans "If you expected a secret here, you may need to ask someone to grant you access." %}</p>
 		</div>
 	</div>
 </div>

@@ -14,7 +14,6 @@
 			<a class="navbar-brand" href="{% url 'dashboard' %}">{% trans "TeamVault" %}</a>
 		</div>
 
-		{% if user.is_authenticated %}
 		<div class="collapse navbar-collapse" id="navbar-collapse">
 			<ul class="nav navbar-nav">
 				<li class="{% block "nav_search" %}{% endblock %}">
@@ -61,7 +60,6 @@
 				</li>
 			</ul>
 		</div>
-		{% endif %}
 	</div>
 </nav>
 {% block "content" %}{% endblock %}

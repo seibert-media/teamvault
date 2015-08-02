@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load staticfiles %}
+{% block "css" %}
+<link href="{% static 'css/login.css' %}" rel="stylesheet">
+{% endblock %}
+{% block "title" %}{% trans "Logout" %}{% endblock %}
+{% block "global_content" %}
+<div class="container">
+	<div class="background"></div>
+	<div class="login-wrapper">
+		<div class="logout">
+			<div class="login-icon">{% trans "404" %}</div>
+			{% trans "Page not found." %}&nbsp;
+			<a href="{% url 'accounts.login' %}">{% trans "Log in" %}</a>
+		</div>
+	</div>
+</div>
+{% endblock %}
