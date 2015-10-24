@@ -8,9 +8,8 @@ Installation
 
 .. code-block::
 
-	apt-get install libffi-dev libpq-dev mercurial python3.4-dev postgresql-contrib
+	apt-get install libffi-dev libldap2-dev libpq-dev libsasl2-dev python3.4-dev postgresql-contrib
 	pip install teamvault
-	pip install hg+https://bitbucket.org/kavanaugh_development/django-auth-ldap@python3-ldap
 	teamvault setup
 	vim /etc/teamvault.conf
 	# note that the teamvault database user will need SUPERUSER privileges
