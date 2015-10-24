@@ -1,3 +1,15 @@
+0.5.0
+=====
+
+2015-10-24
+
+* added rudimentary password generator and strength meter
+* added 404 error pages
+* added secret restoration for admins
+* fixed revealing credit card secrets
+* fixed display of deleted secrets
+
+
 0.4.3
 =====
 
