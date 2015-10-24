@@ -1,0 +1,57 @@
+{
+  "name": "password-generator",
+  "version": "2.0.2",
+  "description": "Memorable password generator. For the command line, Node.js and the browser.",
+  "author": "Bermi Ferrer <bermi@bermilabs.com>",
+  "keywords": [
+    "password",
+    "generator",
+    "pass",
+    "random",
+    "browser",
+    "crypto",
+    "security"
+  ],
+  "bugs": {
+    "web": "http://github.com/bermi/password-generator/issues"
+  },
+  "licenses": [
+    {
+      "type": "MIT",
+      "url": "http://opensource.org/licenses/mit-license.php"
+    }
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/bermi/password-generator.git"
+  },
+  "dependencies": {
+    "optimist": "0.6.1"
+  },
+  "devDependencies": {
+    "expect.js": "0.2.0",
+    "grunt": "0.3.17",
+    "mocha": "2.2.5"
+  },
+  "scripts": {
+    "test": "make test"
+  },
+  "testling": {
+    "browsers": [
+      "iexplore/9..latest",
+      "firefox/38..latest",
+      "chrome/40..latest",
+      "opera/30..latest",
+      "safari/7..latest",
+      "iphone/7..latest",
+      "ipad/7..latest"
+    ],
+    "harness": "mocha",
+    "files": "test/*.js"
+  },
+  "main": "index",
+  "bin": "./bin/password-generator",
+  "directories": {
+    "lib": "./lib"
+  }
+}

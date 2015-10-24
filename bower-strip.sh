@@ -37,6 +37,17 @@ rm -rvf ${BUNDLED_DIR}/font-awesome/.npmignore
 # jquery
 rm -rvf ${BUNDLED_DIR}/jquery/src
 
+# password-generator
+rm -rvf ${BUNDLED_DIR}/password-generator/*.html
+rm -rvf ${BUNDLED_DIR}/password-generator/*.js
+rm -rvf ${BUNDLED_DIR}/password-generator/*.yml
+rm -rvf ${BUNDLED_DIR}/password-generator/.gitignore
+rm -rvf ${BUNDLED_DIR}/password-generator/bin
+rm -rvf ${BUNDLED_DIR}/password-generator/dist/password-generator.js
+rm -rvf ${BUNDLED_DIR}/password-generator/lib
+rm -rvf ${BUNDLED_DIR}/password-generator/Makefile
+rm -rvf ${BUNDLED_DIR}/password-generator/test
+
 # select2
 rm -rvf ${BUNDLED_DIR}/select2/.gitignore
 rm -rvf ${BUNDLED_DIR}/select2/component.json
