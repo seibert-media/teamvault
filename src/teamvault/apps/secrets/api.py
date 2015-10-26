@@ -375,10 +375,10 @@ class SecretList(generics.ListCreateAPIView):
     serializer_class = SecretSerializer
 
     def get_queryset(self):
-        if 'search' in self.request.QUERY_PARAMS:
+        if 'search' in self.request.query_params:
             return Secret.get_search_results(
                 self.request.user,
-                self.request.QUERY_PARAMS['search'],
+                self.request.query_params['search'],
             )
         else:
             return Secret.get_all_visible_to_user(self.request.user)
