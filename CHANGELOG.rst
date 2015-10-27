@@ -1,3 +1,13 @@
+0.5.1
+=====
+
+2015-10-27
+
+* added more copy confirmation messages
+* used brighter colors for password strength indication
+* fix exception when searching via API
+
+
 0.5.0
 =====
 
