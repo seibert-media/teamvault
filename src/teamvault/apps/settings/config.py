@@ -241,7 +241,7 @@ salt = {hashid_salt}
 #bind_dn = cn=root,dc=example,dc=com
 #password = example
 #user_base_dn = ou=users,dc=example,dc=com
-##user_search_filter = (cn=%(user)s)
+##user_search_filter = (cn=%%(user)s)
 #group_base_dn = ou=groups,dc=example,dc=com
 ##group_search_filter = (objectClass=group)
 ##require_group = cn=employees,ou=groups,dc=example,dc=com
