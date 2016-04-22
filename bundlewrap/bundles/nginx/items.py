@@ -3,7 +3,9 @@ pkg_apt = {
 }
 
 svc_systemv = {
-    "nginx": {},
+    "nginx": {
+        'needs': ["pkg_apt:nginx"],
+    },
 }
 
 files = {

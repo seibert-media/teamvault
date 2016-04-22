@@ -1,5 +1,7 @@
 pkg_apt = {
-    "postgresql": {},
+    "postgresql": {
+        'needed_by': ["postgres_db:", "postgres_role:"],
+    },
     "postgresql-contrib": {},
 }
 

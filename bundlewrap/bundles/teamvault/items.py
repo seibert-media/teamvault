@@ -2,27 +2,24 @@ pkg_apt = {
     "python3-setuptools": {},
     "mercurial": {},
     "libpq-dev": {},
+    "libldap2-dev": {},
+    "libsasl2-dev": {},
+    "libssl-dev": {},
     "libffi-dev": {},
     "python3-pip": {
-        'triggers': [
-            "action:teamvault_install",
-        ],
+        #'triggers': [
+        #    "action:teamvault_install",
+        #],
     },
     "python3.4-dev": {},
 }
 
-#pkg_pip = {
-#    "coveralls": {
-#        'needs': ["pkg_apt:python3-pip"],
-#    },
+#symlinks = {
+#    "/usr/bin/pip": {
+#        'target': "/usr/bin/pip3",
+#        'needed_by': ["pkg_pip:"],
+#    }
 #}
-
-symlinks = {
-    "/usr/bin/pip": {
-        'target': "/usr/bin/pip3",
-        'needed_by': ["pkg_pip:"],
-    }
-}
 
 actions = {
     "teamvault_install": {
@@ -30,7 +27,7 @@ actions = {
         'needs': [
             "pkg_apt:",
         ],
-        'triggered': True,
+        #'triggered': True,
         'triggers': [
             "action:teamvault_setup",
         ],
