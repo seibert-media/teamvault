@@ -14,11 +14,12 @@ rm -rvf ${BUNDLED_DIR}/bigtext/package.json
 rm -rvf ${BUNDLED_DIR}/bigtext/README.md
 
 # bootstrap
+rm -rvf ${BUNDLED_DIR}/bootstrap/CHANGELOG.md
 rm -rvf ${BUNDLED_DIR}/bootstrap/fonts
 rm -rvf ${BUNDLED_DIR}/bootstrap/grunt
+rm -rvf ${BUNDLED_DIR}/bootstrap/Gruntfile.js
 rm -rvf ${BUNDLED_DIR}/bootstrap/js
 rm -rvf ${BUNDLED_DIR}/bootstrap/less
-rm -rvf ${BUNDLED_DIR}/bootstrap/Gruntfile.js
 rm -rvf ${BUNDLED_DIR}/bootstrap/package.json
 rm -rvf ${BUNDLED_DIR}/bootstrap/README.md
 
@@ -35,6 +36,9 @@ rm -rvf ${BUNDLED_DIR}/font-awesome/.gitignore
 rm -rvf ${BUNDLED_DIR}/font-awesome/.npmignore
 
 # jquery
+rm -rvf ${BUNDLED_DIR}/jquery/AUTHORS.txt
+rm -rvf ${BUNDLED_DIR}/jquery/LICENSE.txt
+rm -rvf ${BUNDLED_DIR}/jquery/README.md
 rm -rvf ${BUNDLED_DIR}/jquery/src
 
 # password-generator
