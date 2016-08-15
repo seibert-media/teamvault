@@ -15,6 +15,7 @@ Installation
 	# note that the teamvault database user will need SUPERUSER privileges
 	# during this step in order to activate the unaccent extension
 	teamvault upgrade
+	teamvault plumbing createsuperuser
 	teamvault run
 
 Update
