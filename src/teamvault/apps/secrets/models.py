@@ -178,11 +178,16 @@ class AccessRequest(HashIDModel):
         )
 
     def assign_reviewers(self):
-        candidates = list(self.secret.allowed_users.order_by('-last_login')[:10])
+        candidates = list(
+            self.secret.allowed_users.order_by('-last_login').filter(is_active=True)[:10]
+        )
         for group in self.secret.allowed_groups.all():
-            candidates += list(group.user_set.order_by('-last_login')[:3])
+            candidates += list(group.user_set.order_by('-last_login').filter(is_active=True)[:3])
         if len(candidates) < 3:
-            candidates += list(User.objects.filter(is_superuser=True).order_by('-last_login')[:3])
+            candidates += list(User.objects.filter(
+                is_active=True,
+                is_superuser=True,
+            ).order_by('-last_login')[:3])
         candidates = set(candidates)
         selected = sample(candidates, min(3, len(candidates)))
         if not selected:
