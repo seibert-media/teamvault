@@ -9,6 +9,8 @@ from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.http import Http404
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
@@ -488,15 +490,6 @@ class Secret(HashIDModel):
             )
        )
 
-    def save(self, *args, **kwargs):
-        self.search_index = (
-            SearchVector('name', weight='A') +
-            SearchVector('description', weight='B') +
-            SearchVector('username', weight='C') +
-            SearchVector('filename', weight='D')
-        )
-        return super(Secret, self).save(*args, **kwargs)
-
     def set_data(self, user, plaintext_data):
         if not self.is_readable_by_user(user):
             raise PermissionError(_(
@@ -592,3 +585,15 @@ class SecretRevision(HashIDModel):
 
     def __repr__(self):
         return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
+
+
+@receiver(post_save, sender=Secret)
+def update_search_index(sender, **kwargs):
+    Secret.objects.filter(id=kwargs['instance'].id).update(
+        search_index=(
+            SearchVector('name', weight='A') +
+            SearchVector('description', weight='B') +
+            SearchVector('username', weight='C') +
+            SearchVector('filename', weight='D')
+        ),
+    )
