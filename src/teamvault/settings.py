@@ -36,7 +36,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_gravatar',
-    'djorm_pgfulltext',
     'rest_framework',
     'teamvault.apps.accounts.AccountsConfig',
     'teamvault.apps.audit.AuditConfig',
@@ -82,26 +81,26 @@ STATICFILES_DIRS = (
     join(PROJECT_ROOT, "static"),
 )
 
-TEMPLATE_LOADERS = (
-    'django.template.loaders.filesystem.Loader',
-    'django.template.loaders.app_directories.Loader',
-)
-
-TEMPLATE_DIRS = (
-    join(PROJECT_ROOT, "templates"),
-)
-
-TEMPLATE_CONTEXT_PROCESSORS = (
-    'django.contrib.auth.context_processors.auth',
-    'django.core.context_processors.csrf',
-    'django.core.context_processors.debug',
-    'django.core.context_processors.i18n',
-    'django.core.context_processors.media',
-    'django.core.context_processors.request',
-    'django.core.context_processors.static',
-    'teamvault.apps.secrets.context_processors.access_request_count',
-    'teamvault.apps.secrets.context_processors.version',
-)
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [join(PROJECT_ROOT, "templates"),],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.contrib.auth.context_processors.auth',
+                'django.template.context_processors.csrf',
+                'django.template.context_processors.debug',
+                'django.template.context_processors.i18n',
+                'django.template.context_processors.media',
+                'django.template.context_processors.request',
+                'django.template.context_processors.static',
+                'teamvault.apps.secrets.context_processors.access_request_count',
+                'teamvault.apps.secrets.context_processors.version',
+            ],
+        },
+    },
+]
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 

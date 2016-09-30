@@ -1,4 +1,4 @@
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.auth.views import login, logout
 
@@ -6,8 +6,7 @@ from .views import search_groups, search_users
 
 admin.autodiscover()
 
-urlpatterns = patterns(
-    '',
+urlpatterns = (
     url(
         r'^login$',
         login,

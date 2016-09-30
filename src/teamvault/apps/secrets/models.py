@@ -5,14 +5,13 @@ from random import sample
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group, User
+from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.core.urlresolvers import reverse
 from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
-from djorm_pgfulltext.models import SearchManager
-from djorm_pgfulltext.fields import VectorField
 from hashids import Hashids
 
 from ...utils import send_mail
@@ -357,16 +356,7 @@ class Secret(HashIDModel):
         null=True,
     )
 
-    search_index = VectorField()
-    objects = SearchManager(
-        fields=(
-            ('name', 'A'),
-            ('description', 'B'),
-            ('filename', 'C'),
-        ),
-        search_field='search_index',
-        auto_update_search_field=True,
-    )
+    search_index = SearchVectorField(blank=True, null=True)
 
     class Meta:
         ordering = ('name', 'username')
@@ -455,7 +445,10 @@ class Secret(HashIDModel):
     def get_search_results(cls, user, term, limit=None):
         base_queryset = cls.get_all_visible_to_user(user)
         name_hits = base_queryset.filter(name__icontains=term)
-        fulltext_hits = cls.get_all_visible_to_user(user, queryset=cls.objects.search(term))
+        fulltext_hits = cls.get_all_visible_to_user(
+            user,
+            queryset=cls.objects.filter(search_index=term),
+        )
         substr_hits = base_queryset.filter(
             models.Q(filename__icontains=term) |
             models.Q(url__icontains=term) |
@@ -494,6 +487,15 @@ class Secret(HashIDModel):
                 ) and self.status != self.STATUS_DELETED
             )
        )
+
+    def save(self, *args, **kwargs):
+        self.search_index = (
+            SearchVector('name', weight='A') +
+            SearchVector('description', weight='B') +
+            SearchVector('username', weight='C') +
+            SearchVector('filename', weight='D')
+        )
+        return super(Secret, self).save(*args, **kwargs)
 
     def set_data(self, user, plaintext_data):
         if not self.is_readable_by_user(user):

@@ -1,11 +1,10 @@
-from django.conf.urls import patterns, url
+from django.conf.urls import url
 
 from .api import AccessRequestDetail, AccessRequestList, SecretDetail, SecretList, \
     SecretRevisionDetail, data_get
 
 
-urlpatterns = patterns(
-    '',
+urlpatterns = (
     url(
         r'^access-requests/$',
         AccessRequestList.as_view(),

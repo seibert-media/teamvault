@@ -93,4 +93,4 @@ def upgrade(pargs):
     execute_from_command_line(["", "collectstatic", "--noinput"])
 
     print("\n### Updating search index...\n")
-    execute_from_command_line(["", "update_search_field", "secrets"])
+    execute_from_command_line(["", "update_search_index"])
