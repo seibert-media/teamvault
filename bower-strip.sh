@@ -16,8 +16,11 @@ rm -rvf ${BUNDLED_DIR}/bigtext/README.md
 # bootstrap
 rm -rvf ${BUNDLED_DIR}/bootstrap/CHANGELOG.md
 rm -rvf ${BUNDLED_DIR}/bootstrap/fonts
+rm -rvf ${BUNDLED_DIR}/bootstrap/Gemfile
+rm -rvf ${BUNDLED_DIR}/bootstrap/Gemfile.lock
 rm -rvf ${BUNDLED_DIR}/bootstrap/grunt
 rm -rvf ${BUNDLED_DIR}/bootstrap/Gruntfile.js
+rm -rvf ${BUNDLED_DIR}/bootstrap/ISSUE_TEMPLATE.md
 rm -rvf ${BUNDLED_DIR}/bootstrap/js
 rm -rvf ${BUNDLED_DIR}/bootstrap/less
 rm -rvf ${BUNDLED_DIR}/bootstrap/package.json
