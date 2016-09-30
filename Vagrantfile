@@ -11,7 +11,7 @@ VM_NAME = 'teamvault'
 VM_IP = '192.168.47.47'
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
-  config.vm.box = "ubuntu/trusty64"
+  config.vm.box = "ubuntu/xenial64"
   config.vm.define VM_NAME do |node|
     node.vm.network :private_network, ip: VM_IP
     node.vm.hostname = VM_NAME

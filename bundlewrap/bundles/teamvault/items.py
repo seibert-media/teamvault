@@ -1,29 +1,19 @@
 pkg_apt = {
-    "python3-setuptools": {},
-    "mercurial": {},
-    "libpq-dev": {},
+    "build-essential": {},
+    "libffi-dev": {},
     "libldap2-dev": {},
+    "libpq-dev": {},
     "libsasl2-dev": {},
     "libssl-dev": {},
-    "libffi-dev": {},
-    "python3-pip": {
-        #'triggers': [
-        #    "action:teamvault_install",
-        #],
-    },
-    "python3.4-dev": {},
+    #"mercurial": {},
+    "python3-pip": {},
+    "python3-setuptools": {},
+    "python3.5-dev": {},
 }
-
-#symlinks = {
-#    "/usr/bin/pip": {
-#        'target': "/usr/bin/pip3",
-#        'needed_by': ["pkg_pip:"],
-#    }
-#}
 
 actions = {
     "teamvault_install": {
-        'command': "pip3 install -e /teamvault/",
+        'command': "pip3 install -U pip && pip3 install -e /teamvault/",
         'needs': [
             "pkg_apt:",
         ],
