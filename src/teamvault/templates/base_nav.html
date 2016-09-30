@@ -2,6 +2,46 @@
 {% load gravatar %}
 {% load i18n %}
 {% block "global_content" %}
+<script>
+	$(document).ready(function() {
+		typeahead_search = new Bloodhound({
+			datumTokenizer: function(d) {
+				return Bloodhound.tokenizers.whitespace(d.val);
+			},
+			queryTokenizer: Bloodhound.tokenizers.whitespace,
+			remote: '{% url 'secrets.secret-search' %}?q=%QUERY'
+		});
+		typeahead_search.initialize();
+
+		$('#search').typeahead(
+		{
+			minLength: 3,
+			highlight: true,
+		},
+		{
+			name: 'secrets',
+			displayKey: 'name',
+			source: typeahead_search.ttAdapter(),
+			templates: {
+				suggestion: function (datum) {
+					var output = '';
+					output += '<div class="search_result" onclick="document.location = \'' + datum.url + '\';">';
+					output += '<div class="search_result_icons"><i class="fa fa-' + datum.icon + '"></i></div>';
+					output += '<div class="search_result_name"><a href="' + datum.url + '">' + datum.name + '</a></div>';
+					output += '<div class="goto_icon"><i class="fa fa-arrow-right"></i></div>';
+					output += '<div class="clearfix"></div></div>';
+					return output;
+				}
+			}
+		});
+
+		$('#search').on('typeahead:selected', function(event, selection) {
+			window.location.href = selection.url;
+		});
+
+		$('#search').select();
+	});
+</script>
 <nav class="navbar navbar-default" role="navigation">
 	<div class="container">
 		<div class="navbar-header">
@@ -13,27 +53,20 @@
 			</button>
 			<a class="navbar-brand" href="{% url 'dashboard' %}">{% trans "TeamVault" %}</a>
 		</div>
-
 		<div class="collapse navbar-collapse" id="navbar-collapse">
-			<ul class="nav navbar-nav">
-				<li class="{% block "nav_search" %}{% endblock %}">
-					<a href="{% url 'dashboard' %}"><i class="fa fa-search"></i>&nbsp; {% trans "Search" %}</a>
-				</li>
-				<li class="{% block "nav_browse" %}{% endblock %}">
-					<a href="{% url 'secrets.secret-list' %}"><i class="fa fa-folder-o"></i>&nbsp; {% trans "Browse" %}</a>
-				</li>
+			<ul class="nav navbar-nav navbar-left">
+				<div class="btn-group">
+					<a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-nav"><i class="fa fa-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
+					<button type="button" class="btn btn-nav dropdown-toggle" data-toggle="dropdown">
+						<span class="caret"></span>
+						<span class="sr-only">Toggle Dropdown</span>
+					</button>
+					<ul class="dropdown-menu" role="menu">
+						<li><a href="{% url 'secrets.secret-add' content_type='cc' %}"><i class="fa fa-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a></li>
+						<li><a href="{% url 'secrets.secret-add' content_type='file' %}"><i class="fa fa-upload"></i>&nbsp; {% trans "Upload File" %}</a></li>
+					</ul>
+				</div>
 			</ul>
-			<div class="btn-group">
-				<a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-nav"><i class="fa fa-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
-				<button type="button" class="btn btn-nav dropdown-toggle" data-toggle="dropdown">
-					<span class="caret"></span>
-					<span class="sr-only">Toggle Dropdown</span>
-				</button>
-				<ul class="dropdown-menu" role="menu">
-					<li><a href="{% url 'secrets.secret-add' content_type='cc' %}"><i class="fa fa-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a></li>
-					<li><a href="{% url 'secrets.secret-add' content_type='file' %}"><i class="fa fa-upload"></i>&nbsp; {% trans "Upload File" %}</a></li>
-				</ul>
-			</div>
 			<ul class="nav navbar-nav navbar-right">
 				{% if request.user.is_superuser %}
 				<!--<li class="dropdown">
@@ -62,8 +95,22 @@
 		</div>
 	</div>
 </nav>
+<div class="container container-opaque">
+	<div class="row">
+		<div class="col-md-12">
+			<form action="{% url 'secrets.secret-list' %}" role="search" method="GET">
+				<div class="input-group input-group-lg search-group">
+					<input id="search" name="search" placeholder="{% trans "Search..." %}" value="{{ search_term }}" type="text" class="form-control">
+					<span class="input-group-btn">
+						<button class="btn btn-default" type="submit"><i class="fa fa-search"></i></button>
+					</span>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
 {% block "content" %}{% endblock %}
-<div class="container ">
+<div class="container">
 	<div class="row">
 		<div class="col-md-12">
 			<footer>

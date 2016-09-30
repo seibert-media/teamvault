@@ -13,10 +13,12 @@
 	<link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
 	<link href="{% static 'css/typeaheadjs.css' %}" rel="stylesheet">
 	<link href="{% static 'css/base.css' %}" rel="stylesheet">
+	<link href="{% static 'css/secrets.css' %}" rel="stylesheet">
 	{% block "css" %}{% endblock %}
 
 	<script src="{% static 'bundled/jquery/dist/jquery.min.js' %}"></script>
 	<script src="{% static 'bundled/bootstrap/dist/js/bootstrap.min.js' %}"></script>
+	<script src="{% static 'bundled/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
 	{% block "js" %}{% endblock %}
 </head>
 <body>
