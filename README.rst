@@ -32,6 +32,7 @@ Development VM
 .. code-block::
 
 	pip install bundlewrap
+	gem install vagrant-bundlewrap
 	vagrant up
 	vagrant ssh -c "sudo teamvault plumbing createsuperuser"
 	vagrant ssh -c "sudo teamvault upgrade && sudo teamvault run"
