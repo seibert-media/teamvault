@@ -7,6 +7,7 @@ BUNDLED_DIR="${BASE_DIR}/src/teamvault/static/bundled"
 rm -rvf ${BUNDLED_DIR}/*/*.gemspec
 rm -rvf ${BUNDLED_DIR}/*/*.html
 rm -rvf ${BUNDLED_DIR}/*/*.map
+rm -rvf ${BUNDLED_DIR}/*/*.sh
 rm -rvf ${BUNDLED_DIR}/*/*.yml
 rm -rvf ${BUNDLED_DIR}/*/.*.yml
 rm -rvf ${BUNDLED_DIR}/*/.editorconfig
@@ -51,16 +52,11 @@ rm -rvf ${BUNDLED_DIR}/bootstrap/less
 # card
 rm -rvf ${BUNDLED_DIR}/card/webpack.config.js
 
-# jquery
-
 # password-generator
 rm -rvf ${BUNDLED_DIR}/password-generator/*.js
 rm -rvf ${BUNDLED_DIR}/password-generator/bin
 rm -rvf ${BUNDLED_DIR}/password-generator/dist/password-generator.js
 rm -rvf ${BUNDLED_DIR}/password-generator/lib
-
-# select2
-rm -rvf ${BUNDLED_DIR}/select2/docs
 
 # font-awesome
 rm -rvf ${BUNDLED_DIR}/font-awesome/HELP-US-OUT.txt
