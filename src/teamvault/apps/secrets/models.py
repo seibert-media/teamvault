@@ -1,5 +1,7 @@
 from collections import OrderedDict
+from datetime import timedelta
 from hashlib import sha256
+from operator import itemgetter
 from random import sample
 
 from cryptography.fernet import Fernet
@@ -18,6 +20,7 @@ from hashids import Hashids
 
 from ...utils import send_mail
 from ..audit.auditlog import log
+from ..audit.models import LogEntry
 from .exceptions import PermissionError
 
 
@@ -447,6 +450,39 @@ class Secret(HashIDModel):
             queryset.filter(allowed_users=user) |
             queryset.filter(allowed_groups__in=user.groups.all())
         ).exclude(status=cls.STATUS_DELETED).distinct()
+
+    @classmethod
+    def get_most_used_for_user(cls, user, limit=5):
+        since = now() - timedelta(days=90)
+        accessed_secrets = LogEntry.objects.filter(
+            actor=user,
+            secret__isnull=False,
+            time__gte=since,
+        ).order_by(
+            'secret'
+        ).values(
+            'secret'
+        ).annotate(
+            access_count=models.Count('secret'),
+        )
+        ordered_secrets = sorted(accessed_secrets, key=itemgetter('access_count'), reverse=True)
+        return [cls.objects.get(id=item['secret']) for item in ordered_secrets[:limit]]
+
+    @classmethod
+    def get_most_recently_used_for_user(cls, user, limit=5):
+        secrets = []
+        log_entries = LogEntry.objects.filter(
+            actor=user,
+            secret__isnull=False,
+        )
+        number_of_log_entries = len(log_entries)
+        offset = limit
+        while len(secrets) < limit and (offset < number_of_log_entries or offset == limit):
+            for log_entry in log_entries[offset - limit:offset]:
+                if log_entry.secret not in secrets and len(secrets) < limit:
+                    secrets.append(log_entry.secret)
+            offset += limit
+        return secrets
 
     @classmethod
     def get_search_results(cls, user, term, limit=None):

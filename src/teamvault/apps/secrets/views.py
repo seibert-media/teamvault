@@ -140,7 +140,17 @@ class AccessRequestList(ListView):
 access_request_list = login_required(AccessRequestList.as_view())
 
 
-dashboard = login_required(TemplateView.as_view(template_name="secrets/dashboard.html"))
+class Dashboard(TemplateView):
+    template_name = "secrets/dashboard.html"
+
+    def get_context_data(self, **kwargs):
+        context = super(Dashboard, self).get_context_data(**kwargs)
+        context['search_term'] = ""
+        context['most_used_secrets'] = Secret.get_most_used_for_user(self.request.user)
+        context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
+        context['recently_used_secrets'] = Secret.get_most_recently_used_for_user(self.request.user)
+        return context
+dashboard = login_required(Dashboard.as_view())
 
 
 class SecretAdd(CreateView):
