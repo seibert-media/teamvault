@@ -1,16 +1,16 @@
 .input-group span.twitter-typeahead {
 	display: block !important;
 }
-.input-group span.twitter-typeahead .tt-dropdown-menu {
+.input-group span.twitter-typeahead .tt-menu {
 	top: 32px !important;
 }
-.input-group.input-group-sm .tt-dropdown-menu {
+.input-group.input-group-sm .tt-menu {
 	top: 28px !important;
 }
-.input-group.input-group-lg .tt-dropdown-menu {
+.input-group.input-group-lg .tt-menu {
 	top: 44px !important;
 }
-.tt-dropdown-menu {
+.tt-menu {
 	background-clip: padding-box;
 	background-color: #ffffff;
 	border-radius: 4px;
