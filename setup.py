@@ -39,10 +39,10 @@ setup(
     install_requires=[
         "cryptography == 1.5.2",
         "dj-static == 0.0.6",
-        "Django == 1.10.1",
+        "Django == 1.10.2",
         "django-auth-ldap == 1.2.8",
         "django-gravatar2 == 1.4.0",
-        "djangorestframework == 3.4.1",
+        "djangorestframework == 3.5.0",
         "gunicorn == 19.6.0",
         "hashids == 1.1.0",
         "psycopg2 == 2.6.2",
