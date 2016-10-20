@@ -475,10 +475,10 @@ class Secret(HashIDModel):
             actor=user,
             secret__isnull=False,
         )
-        number_of_log_entries = len(log_entries)
+        number_of_log_entries = log_entries.count()
         offset = limit
         while len(secrets) < limit and (offset < number_of_log_entries or offset == limit):
-            for log_entry in log_entries[offset - limit:offset]:
+            for log_entry in log_entries[:offset].select_related('secret'):
                 if log_entry.secret not in secrets and len(secrets) < limit:
                     secrets.append(log_entry.secret)
             offset += limit
