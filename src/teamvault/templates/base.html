@@ -9,18 +9,25 @@
 	<link href="https://fonts.googleapis.com/css?family=Lato:100,300,400" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
 
-	<link rel="stylesheet" href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}">
-	<link rel="stylesheet" href="{% static 'bundled/bootstrap/dist/css/bootstrap.min.css' %}">
+	<link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
+	<link href="{% static 'bundled/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet">
 	<link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
 	<link href="{% static 'css/typeaheadjs.css' %}" rel="stylesheet">
 	<link href="{% static 'css/base.css' %}" rel="stylesheet">
+	<link href="{% static 'css/login.css' %}" rel="stylesheet">
 	<link href="{% static 'css/secrets.css' %}" rel="stylesheet">
-	{% block "css" %}{% endblock %}
+	<link href="{% static 'bundled/select2/dist/css/select2.css' %}" rel="stylesheet">
+	<link href="{% static 'bundled/select2-bootstrap/select2-bootstrap.css' %}" rel="stylesheet">
 
 	<script src="{% static 'bundled/jquery/dist/jquery.min.js' %}"></script>
+	<script src="{% static 'bundled/underscore/underscore-min.js' %}"></script>
 	<script src="{% static 'bundled/bootstrap/dist/js/bootstrap.min.js' %}"></script>
+	<script src="{% static 'bundled/card/dist/jquery.card.js' %}"></script>
+	<script src="{% static 'bundled/password-generator/dist/password-generator.min.js' %}"></script>
+	<script src="{% static 'bundled/select2/dist/js/select2.min.js' %}"></script>
 	<script src="{% static 'bundled/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
-	{% block "js" %}{% endblock %}
+	<script src="{% static 'bundled/zeroclipboard/dist/ZeroClipboard.min.js' %}"></script>
+	<script src="{% static 'bundled/zxcvbn/dist/zxcvbn.js' %}"></script>
 </head>
 <body>
 	<div class="background"></div>
