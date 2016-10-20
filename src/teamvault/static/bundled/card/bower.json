@@ -6,7 +6,7 @@
   ],
   "description": "Card let's you add an interactive, CSS3 credit card animation to your credit card form to help your users through the process.",
   "main": [
-    "lib/js/card.js"
+    "dist/card.js"
   ],
   "keywords": [
     "card",
@@ -24,5 +24,6 @@
     "example",
     "test",
     "tests"
-  ]
+  ],
+  "version": "2.0.2"
 }

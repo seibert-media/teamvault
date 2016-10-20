@@ -1,0 +1,24 @@
+{
+  "name": "teamvault",
+  "version": "0.0.1",
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "card": "^2.0.3",
+    "jquery": "^3.1.1",
+    "underscore": "^1.8.3",
+    "bigtext": "^0.1.8",
+    "font-awesome": "^4.6.3",
+    "password-generator": "^2.0.2",
+    "select2": "^4.0.3",
+    "select2-bootstrap": "^1.3.0",
+    "typeahead.js": "^0.11.1",
+    "zeroclipboard": "^2.2.0",
+    "zxcvbn": "^4.4.0"
+  },
+  "private": true,
+  "resolutions": {
+    "font-awesome": "^4.6.3",
+    "typeahead.js": "^0.11.1",
+    "zxcvbn": "^4.4.0"
+  }
+}

@@ -6,7 +6,7 @@
   ],
   "description": "Card let's you add an interactive, CSS3 credit card animation to your credit card form to help your users through the process.",
   "main": [
-    "lib/js/card.js"
+    "dist/card.js"
   ],
   "keywords": [
     "card",
@@ -25,14 +25,14 @@
     "test",
     "tests"
   ],
-  "version": "1.0.2",
-  "_release": "1.0.2",
+  "version": "2.0.3",
+  "_release": "2.0.3",
   "_resolution": {
     "type": "version",
-    "tag": "v1.0.2",
-    "commit": "887636894c7c145452d6e8f23934909179aea526"
+    "tag": "v2.0.3",
+    "commit": "f98506b81535271ea3320d0b1e97577b3344ea52"
   },
-  "_source": "git://github.com/jessepollak/card.git",
-  "_target": "~1.0.0",
+  "_source": "https://github.com/jessepollak/card.git",
+  "_target": "^2.0.3",
   "_originalSource": "card"
 }

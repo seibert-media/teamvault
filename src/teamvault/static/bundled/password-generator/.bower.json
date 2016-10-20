@@ -27,7 +27,7 @@
     "tag": "2.0.2",
     "commit": "bda69de1a18cc4848c8c50278568559139129a60"
   },
-  "_source": "git://github.com/bermi/password-generator.git",
-  "_target": "~2.0.1",
+  "_source": "https://github.com/bermi/password-generator.git",
+  "_target": "^2.0.2",
   "_originalSource": "password-generator"
 }
