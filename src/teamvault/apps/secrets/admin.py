@@ -55,6 +55,8 @@ class SecretAdmin(admin.ModelAdmin):
                 'needs_changing_on_leave',
                 'allowed_groups',
                 'allowed_users',
+                'owner_groups',
+                'owner_users',
             ),
         }),
     )

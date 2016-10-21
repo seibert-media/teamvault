@@ -168,7 +168,7 @@ class SecretAdd(CreateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
 
-        for attr in ('allowed_groups', 'allowed_users'):
+        for attr in ('allowed_groups', 'allowed_users', 'owner_groups', 'owner_users'):
             setattr(secret, attr, form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
@@ -206,7 +206,15 @@ class SecretAdd(CreateView):
         return "secrets/secret_addedit_{}.html".format(self.kwargs['content_type'])
 
     def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(request.POST, ('allowed_groups', 'allowed_users'))
+        request.POST = _patch_post_data(
+            request.POST,
+            (
+                'allowed_groups',
+                'allowed_users',
+                'owner_groups',
+                'owner_users',
+            ),
+        )
         return super(SecretAdd, self).post(request, *args, **kwargs)
 secret_add = login_required(SecretAdd.as_view())
 
@@ -225,7 +233,7 @@ class SecretEdit(UpdateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
 
-        for attr in ('allowed_groups', 'allowed_users'):
+        for attr in ('allowed_groups', 'allowed_users', 'owner_groups', 'owner_users'):
             setattr(secret, attr, form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
@@ -283,7 +291,15 @@ class SecretEdit(UpdateView):
         return "secrets/secret_addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
 
     def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(request.POST, ('allowed_groups', 'allowed_users'))
+        request.POST = _patch_post_data(
+            request.POST,
+            (
+                'allowed_groups',
+                'allowed_users',
+                'owner_groups',
+                'owner_users',
+            ),
+        )
         return super(SecretEdit, self).post(request, *args, **kwargs)
 secret_edit = login_required(SecretEdit.as_view())
 

@@ -17,6 +17,8 @@ GENERIC_FIELDS_FOOTER = [
     'needs_changing_on_leave',
     'allowed_groups',
     'allowed_users',
+    'owner_groups',
+    'owner_users',
 ]
 
 
@@ -42,6 +44,16 @@ class SecretForm(forms.ModelForm):
         widget=Select2DataWidget,
     )
     allowed_users = forms.ModelMultipleChoiceField(
+        queryset=User.objects.filter(is_active=True),
+        required=False,
+        widget=Select2DataWidget,
+    )
+    owner_groups = forms.ModelMultipleChoiceField(
+        queryset=Group.objects.all(),
+        required=False,
+        widget=Select2DataWidget,
+    )
+    owner_users = forms.ModelMultipleChoiceField(
         queryset=User.objects.filter(is_active=True),
         required=False,
         widget=Select2DataWidget,
