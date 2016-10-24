@@ -30,6 +30,7 @@ rm -rvf ${BUNDLED_DIR}/*/gulpfile.coffee
 rm -rvf ${BUNDLED_DIR}/*/ISSUE_TEMPLATE.*
 rm -rvf ${BUNDLED_DIR}/*/less
 rm -rvf ${BUNDLED_DIR}/*/Makefile
+rm -rvf ${BUNDLED_DIR}/*/package.js
 rm -rvf ${BUNDLED_DIR}/*/package.json
 rm -rvf ${BUNDLED_DIR}/*/PULL_REQUEST_TEMPLATE.*
 rm -rvf ${BUNDLED_DIR}/*/README.*
@@ -51,6 +52,9 @@ rm -rvf ${BUNDLED_DIR}/bootstrap/less
 
 # card
 rm -rvf ${BUNDLED_DIR}/card/webpack.config.js
+
+# clipboard
+rm -rvf ${BUNDLED_DIR}/clipboard/contributing.md
 
 # password-generator
 rm -rvf ${BUNDLED_DIR}/password-generator/*.js
