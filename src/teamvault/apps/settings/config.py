@@ -66,7 +66,7 @@ def configure_ldap_auth(config, settings):
         return
 
     from django_auth_ldap.config import LDAPSearch, MemberDNGroupType
-    from ldap3 import SEARCH_SCOPE_WHOLE_SUBTREE
+    from ldap import SCOPE_SUBTREE
 
     settings.AUTHENTICATION_BACKENDS = (
         'django_auth_ldap.backend.LDAPBackend',
@@ -78,12 +78,12 @@ def configure_ldap_auth(config, settings):
 
     settings.AUTH_LDAP_USER_SEARCH = LDAPSearch(
         config.get("auth_ldap", "user_base_dn"),
-        SEARCH_SCOPE_WHOLE_SUBTREE,
+        SCOPE_SUBTREE,
         get_from_config(config, "auth_ldap", "user_search_filter", "(cn=%(user)s)"),
     )
     settings.AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
         config.get("auth_ldap", "group_base_dn"),
-        SEARCH_SCOPE_WHOLE_SUBTREE,
+        SCOPE_SUBTREE,
         get_from_config(config, "auth_ldap", "group_search_filter", "(objectClass=group)"),
     )
 
