@@ -37,9 +37,9 @@ setup(
         "Topic :: Security",
     ],
     install_requires=[
-        "cryptography == 1.5.2",
+        "cryptography == 1.5.3",
         "dj-static == 0.0.6",
-        "Django == 1.10.2",
+        "Django == 1.10.3",
         "django-auth-ldap == 1.2.8",
         "django-gravatar2 == 1.4.0",
         "djangorestframework == 3.5.0",
