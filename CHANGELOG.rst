@@ -1,3 +1,17 @@
+0.6.0
+=====
+
+2016-11-06
+
+* added search bar to every page
+* added secret details in access request view
+* added most used and recently used secrets to dashboard
+* added secret owners
+* new fonts
+* removed broken hotkey copy feature
+* fixed assignment of deactivated users as reviewers
+
+
 0.5.1
 =====
 
