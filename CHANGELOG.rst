@@ -1,3 +1,11 @@
+0.6.1
+=====
+
+2016-11-07
+
+* fixed an issue that prevented adding oneself to owners and allowed users
+
+
 0.6.0
 =====
 
