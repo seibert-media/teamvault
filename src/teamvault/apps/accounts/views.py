@@ -22,8 +22,6 @@ def search_users(request):
     users = User.objects.filter(
         is_active=True,
         username__icontains=search_term,
-    ).exclude(
-        pk=request.user.pk,
     )
     for user in users:
         search_result['results'].append({'id': user.id, 'text': user.username})
