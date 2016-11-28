@@ -55,7 +55,7 @@ def configure_hashid(config):
     """
     Called directly from the Django settings module.
     """
-    return(
+    return (
         int(get_from_config(config, "hashid", "min_length", "6")),
         decodestring(config.get("hashid", "salt").encode()).decode('utf-8'),
     )
@@ -108,52 +108,57 @@ def configure_ldap_auth(config, settings):
 
 
 def configure_logging(config):
+    logger = 'console'
+    level = 'INFO'
+
+    if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
+        ("1", "enabled", "true", "yes"):
+        logger = 'console'
+        level = 'DEBUG'
+
+    if get_from_config(config, "teamvault", "syslog", "enabled").lower() in \
+        ("1", "enabled", "true", "yes"):
+        logger = 'syslog'
+
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': True,
-        'formatters': {
-            'console': {
-                'format': "[%(asctime)s] %(levelname)s %(module)s: %(message)s",
-            },
-            'syslog': {
-                'format': "%(levelname)s %(module)s: %(message)s",
-            },
-        },
-        'handlers': {
-            'console': {
-                'formatter': 'console',
-                'level': 'DEBUG',
-                'class': 'logging.StreamHandler',
-            },
-            'syslog': {
-                'level': 'DEBUG',
-                'class': 'logging.handlers.SysLogHandler',
-                'formatter': 'syslog',
-                'facility': get_from_config(config, "teamvault", "syslog_facility", "local1"),
-                'address': '/dev/log',
-            },
-        },
+        'formatters': {},
+        'handlers': {},
         'loggers': {
             'django': {
-                'handlers': ['syslog'],
-                'level': 'INFO',
+                'handlers': [logger],
+                'level': level,
             },
             'teamvault': {
-                'handlers': ['syslog'],
-                'level': 'INFO',
+                'handlers': [logger],
+                'level': level,
             },
         },
     }
-    if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
-            ("1", "enabled", "true", "yes"):
-        LOGGING['loggers']['django'] = {
-            'handlers': ['console'],
-            'level': 'DEBUG',
+
+    if logger == 'console':
+        LOGGING['formatters']['console'] = {
+            'format': "[%(asctime)s] %(levelname)s %(module)s: %(message)s",
         }
-        LOGGING['loggers']['teamvault'] = {
-            'handlers': ['console'],
+        LOGGING['handlers']['console'] = {
+            'formatter': 'console',
             'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
         }
+
+    if logger == 'syslog':
+        LOGGING['formatters']['syslog'] = {
+            'format': "%(levelname)s %(module)s: %(message)s",
+        }
+        LOGGING['handlers']['syslog'] = {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.SysLogHandler',
+            'formatter': 'syslog',
+            'facility': get_from_config(config, "teamvault", "syslog_facility", "local1"),
+            'address': '/dev/log',
+        }
+
     return LOGGING
 
 
