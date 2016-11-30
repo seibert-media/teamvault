@@ -30,6 +30,7 @@ def build_parser():
 
     # teamvault run
     parser_run = subparsers.add_parser("run")
+    parser_run.add_argument('--bind', nargs='?', help='define bind, default is 127.0.0.1:8000')
     parser_run.set_defaults(func=run)
 
     # teamvault setup
@@ -64,8 +65,12 @@ def plumbing(pargs):
 
 
 def run(pargs):
+    cmd = "gunicorn --preload teamvault.wsgi:application"
+    if pargs.bind:
+        cmd += ' -b ' + pargs.bind
+
     gunicorn = Popen(
-        "gunicorn --preload teamvault.wsgi:application",
+        cmd,
         shell=True,
     )
     gunicorn.communicate()
