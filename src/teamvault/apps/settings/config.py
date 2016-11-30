@@ -108,56 +108,38 @@ def configure_ldap_auth(config, settings):
 
 
 def configure_logging(config):
-    logger = 'console'
     level = 'INFO'
 
     if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
         ("1", "enabled", "true", "yes"):
-        logger = 'console'
         level = 'DEBUG'
-
-    if get_from_config(config, "teamvault", "syslog", "enabled").lower() in \
-        ("1", "enabled", "true", "yes"):
-        logger = 'syslog'
 
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': True,
-        'formatters': {},
-        'handlers': {},
+        'formatters': {
+            'console': {
+                'format': "[%(asctime)s] %(levelname)s %(module)s: %(message)s",
+            },
+        },
+        'handlers': {
+            'console': {
+                'formatter': 'console',
+                'level': 'DEBUG',
+                'class': 'logging.StreamHandler',
+            },
+        },
         'loggers': {
             'django': {
-                'handlers': [logger],
+                'handlers': ['console'],
                 'level': level,
             },
             'teamvault': {
-                'handlers': [logger],
+                'handlers': ['console'],
                 'level': level,
             },
         },
     }
-
-    if logger == 'console':
-        LOGGING['formatters']['console'] = {
-            'format': "[%(asctime)s] %(levelname)s %(module)s: %(message)s",
-        }
-        LOGGING['handlers']['console'] = {
-            'formatter': 'console',
-            'level': 'DEBUG',
-            'class': 'logging.StreamHandler',
-        }
-
-    if logger == 'syslog':
-        LOGGING['formatters']['syslog'] = {
-            'format': "%(levelname)s %(module)s: %(message)s",
-        }
-        LOGGING['handlers']['syslog'] = {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.SysLogHandler',
-            'formatter': 'syslog',
-            'facility': get_from_config(config, "teamvault", "syslog_facility", "local1"),
-            'address': '/dev/log',
-        }
 
     return LOGGING
 
@@ -221,7 +203,6 @@ fernet_key = {teamvault_key}
 insecure_debug_mode = disabled
 # file uploads larger than this number of bytes will have their connection reset
 max_file_size = 5242880
-syslog_facility = local1
 session_cookie_age = 3600
 session_expire_at_browser_close = True
 session_cookie_secure = False
