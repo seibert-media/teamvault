@@ -55,7 +55,7 @@ def configure_hashid(config):
     """
     Called directly from the Django settings module.
     """
-    return(
+    return (
         int(get_from_config(config, "hashid", "min_length", "6")),
         decodestring(config.get("hashid", "salt").encode()).decode('utf-8'),
     )
@@ -108,15 +108,18 @@ def configure_ldap_auth(config, settings):
 
 
 def configure_logging(config):
+    level = 'INFO'
+
+    if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
+        ("1", "enabled", "true", "yes"):
+        level = 'DEBUG'
+
     LOGGING = {
         'version': 1,
         'disable_existing_loggers': True,
         'formatters': {
             'console': {
                 'format': "[%(asctime)s] %(levelname)s %(module)s: %(message)s",
-            },
-            'syslog': {
-                'format': "%(levelname)s %(module)s: %(message)s",
             },
         },
         'handlers': {
@@ -125,35 +128,19 @@ def configure_logging(config):
                 'level': 'DEBUG',
                 'class': 'logging.StreamHandler',
             },
-            'syslog': {
-                'level': 'DEBUG',
-                'class': 'logging.handlers.SysLogHandler',
-                'formatter': 'syslog',
-                'facility': get_from_config(config, "teamvault", "syslog_facility", "local1"),
-                'address': '/dev/log',
-            },
         },
         'loggers': {
             'django': {
-                'handlers': ['syslog'],
-                'level': 'INFO',
+                'handlers': ['console'],
+                'level': level,
             },
             'teamvault': {
-                'handlers': ['syslog'],
-                'level': 'INFO',
+                'handlers': ['console'],
+                'level': level,
             },
         },
     }
-    if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
-            ("1", "enabled", "true", "yes"):
-        LOGGING['loggers']['django'] = {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-        }
-        LOGGING['loggers']['teamvault'] = {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-        }
+
     return LOGGING
 
 
@@ -216,7 +203,6 @@ fernet_key = {teamvault_key}
 insecure_debug_mode = disabled
 # file uploads larger than this number of bytes will have their connection reset
 max_file_size = 5242880
-syslog_facility = local1
 session_cookie_age = 3600
 session_expire_at_browser_close = True
 session_cookie_secure = False
