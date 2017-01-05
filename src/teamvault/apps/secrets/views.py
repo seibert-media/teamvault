@@ -1,6 +1,7 @@
 from json import dumps, loads
 from urllib.parse import quote, urlencode
 
+from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
@@ -151,6 +152,17 @@ class Dashboard(TemplateView):
         context['recently_used_secrets'] = Secret.get_most_recently_used_for_user(self.request.user)
         return context
 dashboard = login_required(Dashboard.as_view())
+
+
+class OpenSearch(TemplateView):
+    content_type = "application/xml"
+    template_name = "opensearch.xml"
+
+    def get_context_data(self, **kwargs):
+        context = super(OpenSearch, self).get_context_data(**kwargs)
+        context['base_url'] = settings.BASE_URL
+        return context
+opensearch = OpenSearch.as_view()
 
 
 class SecretAdd(CreateView):

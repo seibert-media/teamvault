@@ -24,6 +24,11 @@ urlpatterns = (
         name='secrets.access_request-review',
     ),
     url(
+        r'^opensearch.xml$',
+        views.opensearch,
+        name='opensearch',
+    ),
+    url(
         r'^secrets/$',
         views.secret_list,
         name='secrets.secret-list',
