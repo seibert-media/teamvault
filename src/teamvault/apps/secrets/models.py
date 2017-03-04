@@ -269,6 +269,10 @@ class AccessRequest(HashIDModel):
             user_from=reviewer,
         )
 
+    @property
+    def full_url(self):
+        return settings.BASE_URL.rstrip("/") + self.get_absolute_url()
+
     def get_absolute_url(self):
         return reverse('secrets.access_request-detail', args=[str(self.hashid)])
 
@@ -398,6 +402,10 @@ class Secret(HashIDModel):
             raise Http404
         elif not self.is_readable_by_user(user):
             raise PermissionDenied()
+
+    @property
+    def full_url(self):
+        return settings.BASE_URL.rstrip("/") + self.get_absolute_url()
 
     def get_absolute_url(self):
         return reverse('secrets.secret-detail', args=[str(self.hashid)])

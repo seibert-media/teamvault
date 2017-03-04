@@ -89,6 +89,15 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
         queryset=User.objects.exclude(is_active=False),
         slug_field='username',
     )
+    web_url = serializers.CharField(
+        required=False,
+        read_only=True,
+    )
+
+    def to_representation(self, instance):
+        rep = super(AccessRequestSerializer, self).to_representation(instance)
+        rep['web_url'] = instance.full_url
+        return rep
 
     class Meta:
         model = AccessRequest
@@ -103,6 +112,7 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
             'requester',
             'reviewers',
             'status',
+            'web_url',
         )
         read_only_fields = (
             'closed',
@@ -254,6 +264,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         write_only=True,
     )
+    web_url = serializers.CharField(
+        required=False,
+        read_only=True,
+    )
 
     def create(self, validated_data):
         allowed_groups = validated_data.pop('allowed_groups', [])
@@ -292,6 +306,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
         rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
         rep['status'] = STATUS_REPR[rep['status']]
+        rep['web_url'] = instance.full_url
         return rep
 
     def update(self, instance, validated_data):
@@ -335,6 +350,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'status',
             'url',
             'username',
+            'web_url',
         )
         read_only_fields = (
             'content_type',
