@@ -74,10 +74,13 @@ def _extract_data(validated_data):
 
 class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
     api_url = serializers.HyperlinkedIdentityField(
+        lookup_field='hashid',
         view_name='api.access-request_detail',
     )
-    requester = serializers.Field(
-        source='requester.username',
+    requester = serializers.SlugRelatedField(
+        default=serializers.CurrentUserDefault(),
+        read_only=True,
+        slug_field='username',
     )
     secret = serializers.HyperlinkedRelatedField(
         lookup_field='hashid',
