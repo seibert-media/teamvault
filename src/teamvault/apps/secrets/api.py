@@ -142,7 +142,6 @@ class AccessRequestDetail(generics.RetrieveUpdateAPIView):
 
 class AccessRequestList(generics.ListCreateAPIView):
     model = AccessRequest
-    paginate_by = 50
     serializer_class = AccessRequestSerializer
 
     def get_queryset(self):
@@ -371,7 +370,6 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
 class SecretList(generics.ListCreateAPIView):
     model = Secret
-    paginate_by = 25
     serializer_class = SecretSerializer
 
     def get_queryset(self):
