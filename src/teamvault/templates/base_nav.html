@@ -74,6 +74,7 @@
 					<a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i>&nbsp; {% trans "Administration" %} <span class="caret"></span></a>
 					<ul class="dropdown-menu" role="menu">
 						<li><a href="{% url 'audit.log' %}"><i class="fa fa-address-card-o" aria-hidden="true"></i> &nbsp; {% trans "Audit log" %}</a></li>
+						<li><a href="{% url 'accounts.user-list' %}"><i class="fa fa-users" aria-hidden="true"></i> &nbsp; {% trans "Users" %}</a></li>
 					</ul>
 				</li>
 				{% endif %}

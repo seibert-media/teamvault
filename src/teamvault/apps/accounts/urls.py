@@ -2,7 +2,7 @@ from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.auth.views import login, logout
 
-from .views import search_groups, search_users
+from . import views
 
 admin.autodiscover()
 
@@ -21,12 +21,17 @@ urlpatterns = (
     ),
     url(
         r'^search/groups$',
-        search_groups,
+        views.search_groups,
         name='accounts.search-groups',
     ),
     url(
         r'^search/users$',
-        search_users,
+        views.search_users,
         name='accounts.search-users',
+    ),
+    url(
+        r'^users$',
+        views.users,
+        name='accounts.user-list',
     ),
 )
