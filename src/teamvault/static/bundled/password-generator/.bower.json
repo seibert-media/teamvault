@@ -1,7 +1,7 @@
 {
   "name": "password-generator",
   "description": "Memorable password generator. For the command line, Node.js and browsers.",
-  "version": "2.0.2",
+  "version": "2.1.0",
   "main": "lib/password-generator.js",
   "license": "MIT",
   "keywords": [
@@ -21,11 +21,11 @@
     "url": "git@github.com:bermi/password-generator.git"
   },
   "homepage": "https://github.com/bermi/password-generator",
-  "_release": "2.0.2",
+  "_release": "2.1.0",
   "_resolution": {
     "type": "version",
-    "tag": "2.0.2",
-    "commit": "bda69de1a18cc4848c8c50278568559139129a60"
+    "tag": "2.1.0",
+    "commit": "987f841236db8a4e61159cbc7fb9717fb52e4bd5"
   },
   "_source": "https://github.com/bermi/password-generator.git",
   "_target": "^2.0.2",
