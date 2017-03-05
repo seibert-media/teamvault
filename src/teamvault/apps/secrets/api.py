@@ -20,6 +20,13 @@ ACCESS_POLICY_REPR = {
 }
 REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
 
+ACCESS_REQUEST_STATUS_REPR = {
+    AccessRequest.STATUS_PENDING: "pending",
+    AccessRequest.STATUS_REJECTED: "rejected",
+    AccessRequest.STATUS_APPROVED: "approved",
+}
+ACCESS_REQUEST_REPR_STATUS = {v: k for k, v in ACCESS_REQUEST_STATUS_REPR.items()}
+
 CONTENT_TYPE_REPR = {
     Secret.CONTENT_CC: "cc",
     Secret.CONTENT_FILE: "file",
@@ -27,12 +34,12 @@ CONTENT_TYPE_REPR = {
 }
 REPR_CONTENT_TYPE = {v: k for k, v in CONTENT_TYPE_REPR.items()}
 
-STATUS_REPR = {
+SECRET_STATUS_REPR = {
     Secret.STATUS_DELETED: "deleted",
     Secret.STATUS_NEEDS_CHANGING: "needs_changing",
     Secret.STATUS_OK: "ok",
 }
-REPR_STATUS = {v: k for k, v in STATUS_REPR.items()}
+SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
 REQUIRED_CC_FIELDS = set((
     'holder', 'expiration_month', 'expiration_year', 'number', 'security_code',
@@ -100,6 +107,7 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
     def to_representation(self, instance):
         rep = super(AccessRequestSerializer, self).to_representation(instance)
         rep['web_url'] = instance.full_url
+        rep['status'] = ACCESS_REQUEST_STATUS_REPR[rep['status']]
         return rep
 
     class Meta:
@@ -296,7 +304,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             pass
 
         try:
-            data['status'] = REPR_STATUS[data.get('status', None)]
+            data['status'] = SECRET_REPR_STATUS[data.get('status', None)]
         except KeyError:
             # Validation will catch it
             pass
@@ -308,7 +316,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
         rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
-        rep['status'] = STATUS_REPR[rep['status']]
+        rep['status'] = SECRET_STATUS_REPR[rep['status']]
         rep['web_url'] = instance.full_url
         return rep
 
