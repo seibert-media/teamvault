@@ -84,6 +84,11 @@ class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
         lookup_field='hashid',
         view_name='api.access-request_detail',
     )
+    closed_by = serializers.SlugRelatedField(
+        default=serializers.CurrentUserDefault(),
+        read_only=True,
+        slug_field='username',
+    )
     requester = serializers.SlugRelatedField(
         default=serializers.CurrentUserDefault(),
         read_only=True,
