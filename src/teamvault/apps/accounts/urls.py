@@ -39,4 +39,15 @@ urlpatterns = (
         views.user_detail,
         name='accounts.user-detail',
     ),
+    url(
+        r'^users/(?P<uid>\w+)/reactivate$',
+        views.user_activate,
+        name='accounts.user-reactivate',
+    ),
+    url(
+        r'^users/(?P<uid>\w+)/deactivate$',
+        views.user_activate,
+        {'deactivate': True},
+        name='accounts.user-deactivate',
+    ),
 )

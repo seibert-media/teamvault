@@ -596,6 +596,8 @@ class Secret(HashIDModel):
             previous_revision_id = _("none")
         self.current_revision = p
         self.last_read = now()
+        if self.status == self.STATUS_NEEDS_CHANGING:
+            self.status = self.STATUS_OK
         self.save()
         log(_(
                 "{user} set a new secret for '{name}' ({oldrev}->{newrev})"
@@ -650,6 +652,10 @@ class SecretRevision(HashIDModel):
 
     def __repr__(self):
         return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
+
+    @property
+    def is_current_revision(self):
+        return self.secret.current_revision == self
 
 
 @receiver(post_save, sender=Secret)
