@@ -1,0 +1,52 @@
+{% extends "base_nav.html" %}
+{% load i18n %}
+{% block "title" %}{% trans "Manage user" %}{% endblock %}
+{% block "content" %}
+<div class="container">
+	<div class="row">
+		<div class="col-md-12">
+			<h1>
+				{% trans "Manage user" %}
+			</h1>
+			<br><br>
+		</div>
+	</div>
+	<div class="row">
+		<div class="col-md-8">
+			<div class="panel panel-default">
+				<table class="table table-hover">
+					<tr>
+						<td>{% trans "Username" %}</td>
+						<td>{{ user.username }}</td>
+					</tr>
+					<tr>
+						<td>{% trans "Email" %}</td>
+						<td>{{ user.email }}</td>
+					</tr>
+					<tr>
+						<td>{% trans "Created" %}</td>
+						<td>{{ user.date_joined|date:"Y-m-d H:i:s" }}</td>
+					</tr>
+					<tr>
+						<td>{% trans "Last login" %}</td>
+						<td>{{ user.last_login|date:"Y-m-d H:i:s" }}</td>
+					</tr>
+					<tr>
+						<td>{% trans "Groups" %}</td>
+						<td>
+							{% for group in user.groups.all %}
+							{{ group.name }}<br>
+							{% endfor %}
+						</td>
+					</tr>
+				</table>
+			</div>
+		</div>
+		<div class="col-md-4">
+			<a href="{% url 'audit.log' %}?user={{ user.username }}" class="btn btn-lg btn-default">
+				<i class="fa fa-address-card-o" aria-hidden="true"></i>&nbsp; {% trans "View audit log" %}
+			</a><br><br>
+		</div>
+	</div>
+</div>
+{% endblock %}

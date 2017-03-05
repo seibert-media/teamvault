@@ -3,8 +3,11 @@ from json import dumps
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User, Group
-from django.http import HttpResponse
-from django.views.generic import ListView
+from django.core.urlresolvers import reverse
+from django.http import HttpResponse, HttpResponseRedirect
+from django.shortcuts import get_object_or_404, render
+from django.views.decorators.http import require_http_methods
+from django.views.generic import DetailView, ListView
 
 
 @login_required
@@ -38,3 +41,15 @@ class UserList(ListView):
     def get_queryset(self):
         return User.objects.order_by('username')
 users = user_passes_test(lambda u: u.is_superuser)(UserList.as_view())
+
+
+class UserDetail(DetailView):
+    context_object_name = 'user'
+    template_name = "accounts/user_detail.html"
+
+    def get_object(self):
+        return get_object_or_404(
+            User,
+            id=self.kwargs['uid'],
+        )
+user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())

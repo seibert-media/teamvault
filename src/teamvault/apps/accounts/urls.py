@@ -34,4 +34,9 @@ urlpatterns = (
         views.users,
         name='accounts.user-list',
     ),
+    url(
+        r'^users/(?P<uid>\w+)$',
+        views.user_detail,
+        name='accounts.user-detail',
+    ),
 )

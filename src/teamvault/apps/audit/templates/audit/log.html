@@ -10,7 +10,9 @@
 		<div class="col-md-12">
 			<h1>
 			{% if secret %}
-			{% blocktrans with name=secret.name %}Audit log for '{{ name }}'...{% endblocktrans %}
+			{% blocktrans with name=secret.name %}Audit log for secret '{{ name }}'{% endblocktrans %}
+			{% elif user %}
+			{% blocktrans with name=user.username %}Audit log for user '{{ name }}'{% endblocktrans %}
 			{% else %}
 			{% trans "Audit log" %}
 			{% endif %}

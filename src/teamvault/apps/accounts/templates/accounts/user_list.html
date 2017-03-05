@@ -18,12 +18,11 @@
 				<th>{% trans "Active" %}</th>
 				<th>{% trans "Admin" %}</th>
 				<th>{% trans "Last login" %}</th>
-				<th>{% trans "Actions" %}</th>
 				</tr>
 					{% for user in users %}
 					<tr>
-					<td>{{ user.username }}</td>
-					<td>{{ user.email }}</td>
+					<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.username }}</a></td>
+					<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.email }}</a></td>
 					<td>
 						{% if user.is_active %}
 						<span class="text-success-bright"><i class="fa fa-check"></i></span>
@@ -39,7 +38,6 @@
 						{% endif %}
 					</td>
 					<td>{{ user.last_login|date:"Y-m-d H:i:s" }}</td>
-					<td></td>
 					</tr>
 					{% endfor %}
 				</table>
