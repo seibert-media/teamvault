@@ -1,3 +1,19 @@
+0.7.0
+=====
+
+2017-03-05
+
+* added `teamvault run --bind`
+* added audit log
+* added OpenSearch
+* added user management
+* added user-friendly URLs to API output
+* removed syslog logging in favor of stdout
+* improved secret status diplay
+* fixed access request API
+* fixed API pagination
+
+
 0.6.1
 =====
 
