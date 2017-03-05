@@ -79,7 +79,7 @@
 					<tr>
 						<td>{% trans "Groups" %}</td>
 						<td>
-							{% for group in user.groups.all %}
+							{% for group in user.groups.all|dictsort:"name" %}
 							{{ group.name }}<br>
 							{% endfor %}
 						</td>
