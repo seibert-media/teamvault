@@ -1,3 +1,12 @@
+0.7.1
+=====
+
+2017-03-06
+
+* fixed "needs changing on leave" option
+* include actions on user in user audit log
+
+
 0.7.0
 =====
 
