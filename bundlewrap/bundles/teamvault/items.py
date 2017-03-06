@@ -5,7 +5,6 @@ pkg_apt = {
     "libpq-dev": {},
     "libsasl2-dev": {},
     "libssl-dev": {},
-    #"mercurial": {},
     "python3-pip": {},
     "python3-setuptools": {},
     "python3.5-dev": {},
@@ -17,7 +16,6 @@ actions = {
         'needs': [
             "pkg_apt:",
         ],
-        #'triggered': True,
         'triggers': [
             "action:teamvault_setup",
         ],
