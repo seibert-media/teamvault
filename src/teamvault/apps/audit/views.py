@@ -2,6 +2,7 @@ from urllib.parse import quote
 
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.views.generic import ListView
 
@@ -32,7 +33,7 @@ class LogEntryList(ListView):
             return LogEntry.objects.filter(secret=secret)
         elif "user" in self.request.GET:
             user = get_object_or_404(User, username=self.request.GET['user'])
-            return LogEntry.objects.filter(actor=user)
+            return LogEntry.objects.filter(Q(actor=user) | Q(user=user))
         elif "search" in self.request.GET:
             raise NotImplementedError
         else:
