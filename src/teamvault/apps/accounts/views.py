@@ -74,6 +74,8 @@ def user_activate(request, uid, deactivate=False):
         accessed_revs = SecretRevision.objects.filter(
             accessed_by=user,
         ).exclude(
+            secret__needs_changing_on_leave=False,
+        ).exclude(
             secret__status=Secret.STATUS_NEEDS_CHANGING,
         ).select_related(
             'secret',
@@ -86,6 +88,13 @@ def user_activate(request, uid, deactivate=False):
             for secret in secrets:
                 secret.status = Secret.STATUS_NEEDS_CHANGING
                 secret.save()
+                msg = _(
+                    "secret '{secret}' needs changing because user '{user}' was deactivated"
+                ).format(
+                    secret=secret.name,
+                    user=user.username,
+                )
+                log(msg, actor=request.user, secret=secret, user=user)
         log(
             _("{actor} deactivated {user}, {secrets} secrets marked for changing").format(
                 actor=request.user.username,
