@@ -1,3 +1,12 @@
+0.7.2
+=====
+
+2017-03-13
+
+* fixed missing opensearch.xml
+* improved database integrity protection
+
+
 0.7.1
 =====
 
