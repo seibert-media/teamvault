@@ -38,10 +38,8 @@ def configure_debugging(config, settings):
     if enabled.lower() in ("1", "enabled", "true", "yes"):
         settings.DEBUG = True
         settings.EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-        settings.TEMPLATE_DEBUG = True
     else:
         settings.DEBUG = False
-        settings.TEMPLATE_DEBUG = False
 
 
 def configure_django_secret_key(config):
