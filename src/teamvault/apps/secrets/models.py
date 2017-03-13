@@ -82,6 +82,7 @@ class AccessRequest(HashIDModel):
     )
     closed_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        models.PROTECT,
         blank=True,
         null=True,
         related_name='access_requests_closed',
@@ -97,6 +98,7 @@ class AccessRequest(HashIDModel):
     )
     requester = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        models.PROTECT,
         related_name='access_requests_created',
     )
     reviewers = models.ManyToManyField(
@@ -105,6 +107,7 @@ class AccessRequest(HashIDModel):
     )
     secret = models.ForeignKey(
         'Secret',
+        models.PROTECT,
         related_name='access_requests',
     )
     status = models.PositiveSmallIntegerField(
@@ -333,10 +336,12 @@ class Secret(HashIDModel):
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        models.PROTECT,
         related_name='passwords_created',
     )
     current_revision = models.ForeignKey(
         'SecretRevision',
+        models.PROTECT,
         blank=True,
         null=True,
         related_name='_password_current_revision',
@@ -630,9 +635,11 @@ class SecretRevision(HashIDModel):
     )
     secret = models.ForeignKey(
         Secret,
+        models.PROTECT,
     )
     set_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
+        models.PROTECT,
         related_name='password_revisions_set',
     )
 
