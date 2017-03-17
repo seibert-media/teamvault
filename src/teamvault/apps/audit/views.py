@@ -1,5 +1,3 @@
-from urllib.parse import quote
-
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib.auth.models import User
 from django.db.models import Q
@@ -23,8 +21,6 @@ class LogEntryList(ListView):
             context['secret'] = get_object_or_404(Secret, hashid=self.request.GET['secret'])
         elif "user" in self.request.GET:
             context['user'] = get_object_or_404(User, username=self.request.GET['user'])
-        context['audit_search_term'] = self.request.GET.get('search', None)
-        context['audit_search_term_url'] = quote(self.request.GET.get('search', ""))
         return context
 
     def get_queryset(self):
