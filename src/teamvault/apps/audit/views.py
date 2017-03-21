@@ -12,6 +12,8 @@ class LogEntryList(ListView):
     context_object_name = 'log_entries'
     paginate_by = 100
     template_name = "audit/log.html"
+    if "user" in self.request.GET:
+        user_query_param = self.request.GET['user']
 
     def get_context_data(self, **kwargs):
         context = super(LogEntryList, self).get_context_data(**kwargs)
