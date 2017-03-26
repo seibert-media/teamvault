@@ -1,3 +1,11 @@
+0.7.3
+=====
+
+2017-03-26
+
+* fixed pagination with GET parameters
+
+
 0.7.2
 =====
 
