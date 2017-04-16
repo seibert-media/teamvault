@@ -18,7 +18,7 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from hashids import Hashids
 
-from ...utils import send_mail
+from ...utils import send_mail, pick_constant
 from ..audit.auditlog import log
 from ..audit.models import LogEntry
 from .exceptions import PermissionError
@@ -317,7 +317,7 @@ class Secret(HashIDModel):
 
     access_policy = models.PositiveSmallIntegerField(
         choices=ACCESS_POLICY_CHOICES,
-        default=ACCESS_POLICY_REQUEST,
+        default=pick_constant(ACCESS_POLICY_CHOICES, settings.DEFAULT_ACCESS_POLICY),
     )
     allowed_groups = models.ManyToManyField(
         Group,
