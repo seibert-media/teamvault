@@ -25,12 +25,12 @@
     "test",
     "tests"
   ],
-  "version": "2.2.1",
-  "_release": "2.2.1",
+  "version": "2.4.0",
+  "_release": "2.4.0",
   "_resolution": {
     "type": "version",
-    "tag": "v2.2.1",
-    "commit": "e2dfaa23ed912999e61c9cfdddd33a83c8e9c645"
+    "tag": "v2.4.0",
+    "commit": "7f5088b70fd2bfa99d5fc4acf5bdbd7391dc6dce"
   },
   "_source": "https://github.com/jessepollak/card.git",
   "_target": "^2.0.3",

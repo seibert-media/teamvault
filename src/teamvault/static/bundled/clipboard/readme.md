@@ -21,13 +21,7 @@ You can get it on npm.
 npm install clipboard --save
 ```
 
-Or bower, too.
-
-```
-bower install clipboard --save
-```
-
-If you're not into package management, just [download a ZIP](https://github.com/zenorocha/clipboard.js/archive/master.zip) file.
+Or if you're not into package management, just [download a ZIP](https://github.com/zenorocha/clipboard.js/archive/master.zip) file.
 
 ## Setup
 
@@ -151,6 +145,14 @@ new Clipboard('.btn', {
 });
 ```
 
+For use in Bootstrap Modals or with any other library that changes the focus you'll want to set the focused element as the `container` value.
+
+```js
+new Clipboard('.btn', {
+    container: document.getElementById('#modal')
+});
+```
+
 Also, if you are working with single page apps, you may want to manage the lifecycle of the DOM more precisely. Here's how you clean up the events and objects that we create.
 
 ```js
@@ -169,6 +171,12 @@ This library relies on both [Selection](https://developer.mozilla.org/en-US/docs
 The good news is that clipboard.js gracefully degrades if you need to support older browsers. All you have to do is show a tooltip saying `Copied!` when `success` event is called and `Press Ctrl+C to copy` when `error` event is called because the text is already selected.
 
 You can also check if clipboard.js is supported or not by running `Clipboard.isSupported()`, that way you can hide copy/cut buttons from the UI.
+
+## Bonus
+
+A browser extension that adds a "copy to clipboard" button to every code block on *GitHub, MDN, Gist, StackOverflow, StackExchange, npm, and even Medium.*
+
+Install for [Chrome](https://chrome.google.com/webstore/detail/codecopy/fkbfebkcoelajmhanocgppanfoojcdmg) and [Firefox](https://addons.mozilla.org/en-US/firefox/addon/codecopy/).
 
 ## License
 
