@@ -9,11 +9,11 @@ from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.core.urlresolvers import reverse
 from django.db import models
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
+from django.urls import reverse
 from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from hashids import Hashids

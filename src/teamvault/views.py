@@ -1,7 +1,7 @@
 from django.shortcuts import render
 
 
-def handler404(request):
+def handler404(request, **kwargs):
     if request.user.is_authenticated:
         return render(request, "404_loggedin.html", status=404)
     else:

@@ -23,8 +23,8 @@ class Migration(migrations.Migration):
                 ('reason_request', models.TextField(null=True, blank=True)),
                 ('reason_rejected', models.TextField(null=True, blank=True)),
                 ('status', models.PositiveSmallIntegerField(default=1, choices=[(1, 'pending'), (2, 'rejected'), (3, 'approved')])),
-                ('closed_by', models.ForeignKey(null=True, blank=True, related_name='access_requests_closed', to=settings.AUTH_USER_MODEL)),
-                ('requester', models.ForeignKey(to=settings.AUTH_USER_MODEL, related_name='access_requests_created')),
+                ('closed_by', models.ForeignKey(null=True, blank=True, on_delete=models.CASCADE, related_name='access_requests_closed', to=settings.AUTH_USER_MODEL)),
+                ('requester', models.ForeignKey(on_delete=models.CASCADE, to=settings.AUTH_USER_MODEL, related_name='access_requests_created')),
                 ('reviewers', models.ManyToManyField(to=settings.AUTH_USER_MODEL, related_name='access_requests_reviewed')),
             ],
             options={
@@ -48,7 +48,7 @@ class Migration(migrations.Migration):
                 ('username', models.CharField(null=True, max_length=255, blank=True)),
                 ('allowed_groups', models.ManyToManyField(to='auth.Group', blank=True, related_name='allowed_passwords')),
                 ('allowed_users', models.ManyToManyField(to=settings.AUTH_USER_MODEL, blank=True, related_name='allowed_passwords')),
-                ('created_by', models.ForeignKey(to=settings.AUTH_USER_MODEL, related_name='passwords_created')),
+                ('created_by', models.ForeignKey(on_delete=models.CASCADE, to=settings.AUTH_USER_MODEL, related_name='passwords_created')),
             ],
             options={
                 'ordering': ('name',),
@@ -63,8 +63,8 @@ class Migration(migrations.Migration):
                 ('encrypted_data', models.BinaryField()),
                 ('length', models.PositiveIntegerField(default=0)),
                 ('accessed_by', models.ManyToManyField(to=settings.AUTH_USER_MODEL)),
-                ('secret', models.ForeignKey(to='secrets.Secret')),
-                ('set_by', models.ForeignKey(to=settings.AUTH_USER_MODEL, related_name='password_revisions_set')),
+                ('secret', models.ForeignKey(on_delete=models.CASCADE, to='secrets.Secret')),
+                ('set_by', models.ForeignKey(on_delete=models.CASCADE, to=settings.AUTH_USER_MODEL, related_name='password_revisions_set')),
             ],
             options={
                 'ordering': ('-created',),
@@ -78,13 +78,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='secret',
             name='current_revision',
-            field=models.ForeignKey(null=True, blank=True, related_name='_password_current_revision', to='secrets.SecretRevision'),
+            field=models.ForeignKey(null=True, blank=True, on_delete=models.CASCADE, related_name='_password_current_revision', to='secrets.SecretRevision'),
             preserve_default=True,
         ),
         migrations.AddField(
             model_name='accessrequest',
             name='secret',
-            field=models.ForeignKey(to='secrets.Secret', related_name='access_requests'),
+            field=models.ForeignKey(on_delete=models.CASCADE, to='secrets.Secret', related_name='access_requests'),
             preserve_default=True,
         ),
     ]

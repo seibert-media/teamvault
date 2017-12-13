@@ -54,7 +54,9 @@ def main(*args):
 
     parser = build_parser()
     pargs = parser.parse_args(args)
-
+    if not hasattr(pargs, 'func'):
+        parser.print_help()
+        exit(2)
     pargs.func(pargs)
 
 

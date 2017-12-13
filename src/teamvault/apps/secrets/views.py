@@ -5,9 +5,9 @@ from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import PermissionDenied
-from django.core.urlresolvers import reverse
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
@@ -181,7 +181,7 @@ class SecretAdd(CreateView):
         secret.save()
 
         for attr in ('allowed_groups', 'allowed_users', 'owner_groups', 'owner_users'):
-            setattr(secret, attr, form.cleaned_data[attr])
+            getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
             plaintext_data = form.cleaned_data['password']
@@ -246,7 +246,7 @@ class SecretEdit(UpdateView):
         secret.save()
 
         for attr in ('allowed_groups', 'allowed_users', 'owner_groups', 'owner_users'):
-            setattr(secret, attr, form.cleaned_data[attr])
+            getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
             plaintext_data = form.cleaned_data['password']

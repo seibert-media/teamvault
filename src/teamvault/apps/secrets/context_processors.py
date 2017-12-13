@@ -3,14 +3,15 @@ from .models import AccessRequest
 
 
 def access_request_count(request):
-    if request.user.is_anonymous():
+    if request.user.is_authenticated:
+        return {
+            'access_request_count': AccessRequest.objects.filter(
+                reviewers=request.user,
+                status=AccessRequest.STATUS_PENDING,
+            ).count(),
+        }
+    else:
         return {}
-    return {
-        'access_request_count': AccessRequest.objects.filter(
-            reviewers=request.user,
-            status=AccessRequest.STATUS_PENDING,
-        ).count(),
-    }
 
 
 def version(request):
