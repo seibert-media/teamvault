@@ -16,7 +16,7 @@ Installation
 	# during this step in order to activate the unaccent extension
 	teamvault upgrade
 	teamvault plumbing createsuperuser
-	teamvault run
+	teamvault run [--bind=127.0.0.1:8042]
 
 Update
 ------
