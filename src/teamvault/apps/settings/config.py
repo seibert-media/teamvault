@@ -10,10 +10,17 @@ from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
 
+def safely_split_list(list_string):
+    if len(list_string) == 0:
+        return []
+
+    unfiltered = [item.strip() for item in list_string.split(',')]
+    return list(filter(None, unfiltered))
 
 def configure_base_url(config, settings):
     settings.BASE_URL = config.get("teamvault", "base_url")
-    settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
+    additional_allowed_hosts = safely_split_list(config.get("teamvault", "allowed_hosts"))
+    settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname] + additional_allowed_hosts
 
 
 def configure_database(config):
