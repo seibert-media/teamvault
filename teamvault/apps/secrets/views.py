@@ -198,7 +198,7 @@ class SecretAdd(CreateView):
                 'security_code': str(form.cleaned_data['security_code']),
                 'password': form.cleaned_data['password'],
             })
-        secret.set_data(self.request.user, plaintext_data)
+        secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
 
         return HttpResponseRedirect(secret.get_absolute_url())
 

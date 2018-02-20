@@ -560,8 +560,11 @@ class Secret(HashIDModel):
             )
        )
 
-    def set_data(self, user, plaintext_data):
-        if not self.is_readable_by_user(user):
+    def set_data(self, user, plaintext_data, skip_access_check=False):
+        # skip_access_check is used when initially creating a secret
+        # and makes it possible to create secrets you don't have access
+        # to
+        if not skip_access_check and not self.is_readable_by_user(user):
             raise PermissionError(_(
                 "{user} not allowed access to '{name}' ({id})"
             ).format(

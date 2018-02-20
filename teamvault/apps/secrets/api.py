@@ -416,7 +416,7 @@ class SecretList(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         instance = serializer.save()
         if hasattr(instance, '_data'):
-            instance.set_data(self.request.user, instance._data)
+            instance.set_data(self.request.user, instance._data, skip_access_check=True)
             del instance._data
 
 
