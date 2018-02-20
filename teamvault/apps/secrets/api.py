@@ -268,6 +268,12 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         write_only=True,
     )
+    notify_on_access_request = serializers.SlugRelatedField(
+        many=True,
+        queryset=User.objects.exclude(is_active=False),
+        required=False,
+        slug_field='username',
+    )
     number = serializers.CharField(
         required=False,
         write_only=True,
@@ -288,6 +294,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         allowed_groups = validated_data.pop('allowed_groups', [])
         allowed_users = validated_data.pop('allowed_users', [])
+        notify_on_access_request = validated_data.pop('notify_on_access_request', [])
 
         data, content_type = _extract_data(validated_data)
         if not data:
@@ -298,6 +305,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         instance.allowed_groups = allowed_groups
         instance.allowed_users = allowed_users
         instance.content_type = content_type
+        instance.notify_on_access_request = notify_on_access_request
         instance._data = data
         return instance
 
@@ -360,6 +368,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'last_read',
             'name',
             'needs_changing_on_leave',
+            'notify_on_access_request',
             'number',
             'password',
             'security_code',

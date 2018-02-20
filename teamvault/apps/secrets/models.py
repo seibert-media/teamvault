@@ -184,11 +184,7 @@ class AccessRequest(HashIDModel):
         )
 
     def assign_reviewers(self):
-        candidates = list(
-            self.secret.owner_users.order_by('-last_login').filter(is_active=True)[:10]
-        )
-        for group in self.secret.owner_groups.all():
-            candidates += list(group.user_set.order_by('-last_login').filter(is_active=True)[:3])
+        candidates = list(self.secret.notify_on_access_request.filter(is_active=True))
         if len(candidates) < 3:
             candidates += list(
                 self.secret.allowed_users.order_by('-last_login').filter(is_active=True)[:10]
@@ -362,15 +358,10 @@ class Secret(HashIDModel):
     needs_changing_on_leave = models.BooleanField(
         default=True,
     )
-    owner_groups = models.ManyToManyField(
-        Group,
-        blank=True,
-        related_name='owned_passwords',
-    )
-    owner_users = models.ManyToManyField(
+    notify_on_access_request = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
-        related_name='owned_passwords',
+        related_name='notify_on_access_requests_for',
     )
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,

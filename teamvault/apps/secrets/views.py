@@ -180,7 +180,13 @@ class SecretAdd(CreateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
 
-        for attr in ('allowed_groups', 'allowed_users', 'owner_groups', 'owner_users'):
+        for attr in ('notify_on_access_request',):
+            if form.cleaned_data[attr]:
+                getattr(secret, attr).add(self.request.user)
+            else:
+                getattr(secret, attr).remove(self.request.user)
+
+        for attr in ('allowed_groups', 'allowed_users'):
             getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
@@ -223,8 +229,6 @@ class SecretAdd(CreateView):
             (
                 'allowed_groups',
                 'allowed_users',
-                'owner_groups',
-                'owner_users',
             ),
         )
         return super(SecretAdd, self).post(request, *args, **kwargs)
@@ -245,7 +249,13 @@ class SecretEdit(UpdateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
 
-        for attr in ('allowed_groups', 'allowed_users', 'owner_groups', 'owner_users'):
+        for attr in ('notify_on_access_request',):
+            if form.cleaned_data[attr]:
+                getattr(secret, attr).add(self.request.user)
+            else:
+                getattr(secret, attr).remove(self.request.user)
+
+        for attr in ('allowed_groups', 'allowed_users'):
             getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
@@ -308,8 +318,6 @@ class SecretEdit(UpdateView):
             (
                 'allowed_groups',
                 'allowed_users',
-                'owner_groups',
-                'owner_users',
             ),
         )
         return super(SecretEdit, self).post(request, *args, **kwargs)

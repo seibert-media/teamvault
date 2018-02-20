@@ -15,10 +15,9 @@ GENERIC_FIELDS_FOOTER = [
     'description',
     'access_policy',
     'needs_changing_on_leave',
+    'notify_on_access_request',
     'allowed_groups',
     'allowed_users',
-    'owner_groups',
-    'owner_users',
 ]
 
 
@@ -48,15 +47,9 @@ class SecretForm(forms.ModelForm):
         required=False,
         widget=Select2DataWidget,
     )
-    owner_groups = forms.ModelMultipleChoiceField(
-        queryset=Group.objects.all(),
+    notify_on_access_request = forms.BooleanField(
+        initial=True,
         required=False,
-        widget=Select2DataWidget,
-    )
-    owner_users = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True),
-        required=False,
-        widget=Select2DataWidget,
     )
 
 
