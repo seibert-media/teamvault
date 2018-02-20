@@ -1,13 +1,11 @@
-0.7.3
-=====
+# 0.7.3
 
 2017-03-26
 
 * fixed pagination with GET parameters
 
 
-0.7.2
-=====
+# 0.7.2
 
 2017-03-13
 
@@ -15,8 +13,7 @@
 * improved database integrity protection
 
 
-0.7.1
-=====
+# 0.7.1
 
 2017-03-06
 
@@ -24,8 +21,7 @@
 * include actions on user in user audit log
 
 
-0.7.0
-=====
+# 0.7.0
 
 2017-03-05
 
@@ -40,16 +36,14 @@
 * fixed API pagination
 
 
-0.6.1
-=====
+# 0.6.1
 
 2016-11-07
 
 * fixed an issue that prevented adding oneself to owners and allowed users
 
 
-0.6.0
-=====
+# 0.6.0
 
 2016-11-06
 
@@ -62,8 +56,7 @@
 * fixed assignment of deactivated users as reviewers
 
 
-0.5.1
-=====
+# 0.5.1
 
 2015-10-27
 
@@ -72,8 +65,7 @@
 * fix exception when searching via API
 
 
-0.5.0
-=====
+# 0.5.0
 
 2015-10-24
 
@@ -84,8 +76,7 @@
 * fixed display of deleted secrets
 
 
-0.4.3
-=====
+# 0.4.3
 
 2015-05-25
 
@@ -94,8 +85,7 @@
 * fixed typing in secret sharing modal
 
 
-0.4.2
-=====
+# 0.4.2
 
 2015-05-19
 
@@ -105,8 +95,7 @@
 * fixed duplicate search results
 
 
-0.4.1
-=====
+# 0.4.1
 
 2015-04-15
 
@@ -116,8 +105,7 @@
 * fixed exception when closing access request as non-reviewer
 
 
-0.4.0
-=====
+# 0.4.0
 
 2015-04-06
 
@@ -127,8 +115,7 @@
 * fixed display of allowed users/group in secret detail view
 
 
-0.3.0
-=====
+# 0.3.0
 
 2015-02-05
 
@@ -139,8 +126,7 @@
 * relaxed URL validation even further
 
 
-0.2.2
-=====
+# 0.2.2
 
 2015-01-27
 
@@ -148,8 +134,7 @@
 * fixed access policy selection
 
 
-0.2.1
-=====
+# 0.2.1
 
 2015-01-20
 
@@ -157,8 +142,7 @@
 * fixed editing secrets without changing encrypted data (#30)
 
 
-0.2.0
-=====
+# 0.2.0
 
 2015-01-11
 
@@ -169,8 +153,7 @@
 * fixed login with some WebKit-based browsers
 
 
-0.1.0
-=====
+# 0.1.0
 
 2014-12-20
 
