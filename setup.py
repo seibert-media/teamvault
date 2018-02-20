@@ -14,8 +14,7 @@ setup(
     author_email="torsten@rehn.email",
     license="GPLv3",
     url="https://github.com/trehn/teamvault",
-    package_dir={'': "src"},
-    packages=find_packages("src"),
+    packages=find_packages(),
     include_package_data=True,
     test_suite="tests",
     entry_points={
