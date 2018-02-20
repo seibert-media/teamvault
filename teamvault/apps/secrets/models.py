@@ -574,23 +574,24 @@ class Secret(HashIDModel):
         plaintext_length = len(plaintext_data)
         if isinstance(plaintext_data, str):
             plaintext_data = plaintext_data.encode('utf-8')
+        plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         encrypted_data = f.encrypt(plaintext_data)
         try:
             # see the comment on unique_together for SecretRevision
             p = SecretRevision.objects.get(
-                encrypted_data=encrypted_data,
+                plaintext_data_sha256=plaintext_data_sha256,
                 secret=self,
             )
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
         p.encrypted_data = encrypted_data
+        p.length = plaintext_length
         # the hash is needed for unique_together (see below)
         # unique_together uses an index on its fields which is
         # problematic with the largeish blobs we might store here (see
         # issue #30)
-        p.encrypted_data_sha256 = sha256(encrypted_data).hexdigest()
-        p.length = plaintext_length
+        p.plaintext_data_sha256 = plaintext_data_sha256
         p.secret = self
         p.set_by = user
         p.save()
@@ -627,11 +628,11 @@ class SecretRevision(HashIDModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
-    encrypted_data_sha256 = models.CharField(
-        max_length=64,
-    )
     length = models.PositiveIntegerField(
         default=0,
+    )
+    plaintext_data_sha256 = models.CharField(
+        max_length=64,
     )
     secret = models.ForeignKey(
         Secret,
@@ -655,7 +656,7 @@ class SecretRevision(HashIDModel):
         # database object, retaining accessed_by. This way, when the
         # employee leaves, password 3 is correctly assumed known to
         # the employee.
-        unique_together = (('encrypted_data_sha256', 'secret'),)
+        unique_together = (('plaintext_data_sha256', 'secret'),)
 
     def __repr__(self):
         return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
