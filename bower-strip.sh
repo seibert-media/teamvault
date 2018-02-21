@@ -2,7 +2,7 @@
 # Removes useless clutter from our bower dependencies :(
 
 BASE_DIR=$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )
-BUNDLED_DIR="${BASE_DIR}/src/teamvault/static/bundled"
+BUNDLED_DIR="${BASE_DIR}/teamvault/static/bundled"
 
 rm -rvf ${BUNDLED_DIR}/*/*.gemspec
 rm -rvf ${BUNDLED_DIR}/*/*.html
