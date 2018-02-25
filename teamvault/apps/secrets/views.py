@@ -495,7 +495,7 @@ def secret_share(request, hashid):
 @login_required
 @require_http_methods(["GET"])
 def secret_search(request):
-    search_term = request.GET['q']
+    search_term = request.GET['term']
     search_result = []
     filtered_secrets = Secret.get_search_results(request.user, search_term, limit=10)
     unreadable_secrets = filtered_secrets[:]

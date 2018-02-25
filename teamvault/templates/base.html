@@ -4,35 +4,33 @@
 <html lang="en">
 <head>
 	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 	<title>{% trans "TeamVault" %} &middot; {% block "title" %}{% endblock %}</title>
 
 	<link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
 
-	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet">
-	<link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
+	<link rel="stylesheet" href="{% static 'bundled/materialize/css/materialize.min.css' %}">
+	<link rel="stylesheet" href="{% static 'bundled/jqueryui/jquery-ui.theme.min.css' %}">
 
-	<link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet">
-	<link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
-	<link href="{% static 'css/typeaheadjs.css' %}" rel="stylesheet">
-	<link href="{% static 'css/base.css' %}" rel="stylesheet">
-	<link href="{% static 'css/login.css' %}" rel="stylesheet">
-	<link href="{% static 'css/secrets.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/select2/select2.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/select2-bootstrap/select2-bootstrap.css' %}" rel="stylesheet">
+	<script type="text/javascript" src="{% static 'bundled/jquery/jquery.min.js' %}"></script>
+	<script type="text/javascript" src="{% static 'bundled/jqueryui/jquery-ui.js' %}"></script>
+	<script type="text/javascript" src="{% static 'bundled/font-awesome/js/fontawesome-all.js' %}"></script>
+	<script type="text/javascript" src="{% static 'bundled/materialize/js/materialize.min.js' %}"></script>
 
-	<script src="{% static 'bundled/jquery/dist/jquery.min.js' %}"></script>
-	<script src="{% static 'bundled/underscore/underscore-min.js' %}"></script>
-	<script src="{% static 'bundled/bootstrap/dist/js/bootstrap.min.js' %}"></script>
-	<script src="{% static 'bundled/card/dist/jquery.card.js' %}"></script>
-	<script src="{% static 'bundled/password-generator/dist/password-generator.min.js' %}"></script>
-	<script src="{% static 'bundled/select2/select2.min.js' %}"></script>
-	<script src="{% static 'bundled/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
-	<script src="{% static 'bundled/clipboard/dist/clipboard.min.js' %}"></script>
-	<script src="{% static 'bundled/zxcvbn/dist/zxcvbn.js' %}"></script>
+	<style>
+	html {
+		background: #e6edf2;
+		background: linear-gradient(to bottom,  #e6edf2 0%, #ffffff 100%);
+		height: 100%;
+	}
+	a {
+		color: #455a64; /* blue-grey darken-2 */
+	}
+	</style>
+
+{% block "head" %}{% endblock %}
 </head>
 <body>
-	<div class="background"></div>
-	{% block "global_content" %}{% endblock %}
+	{% block "body" %}{% endblock %}
 </body>
 </html>

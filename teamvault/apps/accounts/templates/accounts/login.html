@@ -2,25 +2,46 @@
 {% load i18n %}
 {% load staticfiles %}
 {% block "title" %}{% trans "Login" %}{% endblock %}
-{% block "global_content" %}
-<div class="container">
-	<div class="background"></div>
-	<div class="login-wrapper">
-		<form id="loginform" class="login" role="form" method="POST">
-			<div class="login-icon">{% trans "TeamVault" %}</div>
-			{% if form.errors %}
-			<p>{% trans "Your username and password didn't match. Please try again." %}</p>
-			{% endif %}
-			<input type="text" name="username" class="form-control" placeholder="{% trans "Username" %}" required autofocus>
-
-			<div class="input-group">
-				<input type="password" name="password" class="form-control" placeholder="{% trans "Password" %}" required>
-				<span class="input-group-btn">
-					<button form="loginform" class="btn btn-default" type="submit"><i class="fa fa-chevron-right"></i></button>
-				</span>
+{% block "body" %}
+<div class="section"></div>
+<main>
+	<center>
+		<h1 class="blue-grey-text" style="font-weight: 100;">TeamVault</h1>
+		<div class="section"></div>
+		<div class="container">
+			<div class="row">
+				<div class="col s12 m6 offset-m3 card" style="padding: 32px 48px 32px 48px;">
+					{% if form.errors %}
+					<p class="red-text">{% trans "Your username and password didn't match.<br>Please try again." %}</p>
+					{% endif %}
+					<form class="col s12" method="post">
+						<div class="row">
+							<div class="col s12">
+							</div>
+						</div>
+						<div class="row">
+							<div class="input-field col s12">
+								<input type="text" name="username" id="username" required autofocus>
+								<label for="username">{% trans "Username" %}</label>
+							</div>
+						</div>
+						<div class="row">
+							<div class="input-field col s12">
+								<input type="password" name="password" id="password" required>
+								<label for="password">{% trans "Password" %}</label>
+							</div>
+						</div>
+						<br>
+						<center>
+							<div class="row">
+								<button type="submit" name="btn_login" class="col s12 btn btn-large waves-effect blue-grey darken-1">Login</button>
+							</div>
+						</center>
+						{% csrf_token %}
+					</form>
+				</div>
 			</div>
-			{% csrf_token %}
-		</form>
-	</div>
-</div>
+		</div>
+	</center>
+</main>
 {% endblock %}
