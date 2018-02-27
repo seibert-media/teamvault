@@ -62,7 +62,7 @@ nav img {
 	<div class="nav-wrapper">
 		<ul class="left">
 			<li><a class="hide-on-med-and-down waves-effect" href="{% url 'dashboard' %}" style="font-size: 24px; font-weight: 100;">&nbsp; TeamVault</a></li>
-			<li><a class="waves-effect waves-light btn grey lighten-2 black-text hide-on-med-and-down"><i class="fas fa-plus"></i> &nbsp;{% trans "Add secret" %}</a></li>
+			<li><a href="{% url 'secrets.secret-add' content_type="password" %}" class="waves-effect waves-light btn grey lighten-2 black-text hide-on-med-and-down"><i class="fas fa-plus"></i> &nbsp;{% trans "Add secret" %}</a></li>
 			<li><a class="btn-floating waves-effect waves-light grey lighten-2 black-text center-align hide-on-large-only"><i class="fas fa-plus"></i></a></li>
 		</ul>
 		<ul class="right">
