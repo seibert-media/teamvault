@@ -53,7 +53,7 @@ nav img {
 </ul>
 {% endif %}
 <ul id="dropdown_user" class="dropdown-content">
-	<li><a href="{% url 'secrets.access_request-list' %}"><i class="far fa-check-square"></i>&nbsp; {% trans "Access Requests" %} &nbsp; <span class="chip">{{ access_request_count }}</span></a></li>
+	<li><a href="{% url 'secrets.access_request-list' %}"><i class="far fa-check-square"></i>&nbsp; {% trans "Access Requests" %} &nbsp; <span class="badge">{{ access_request_count }}</span></a></li>
 	<li class="divider"></li>
 	<li><a href="{% url 'accounts.logout' %}"><i class="fas fa-sign-out-alt"></i>&nbsp; {% trans "Logout" %}</a></li>
 </ul>
