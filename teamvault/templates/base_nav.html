@@ -2,103 +2,69 @@
 {% load gravatar %}
 {% load i18n %}
 {% block "body" %}
+<div class="ui large inverted borderless stackable menu" style="border-radius: 0; background-color: #385565;">
+	<a href="{% url 'dashboard' %}" class="item">
+		<i class="home icon"></i>
+		<!-- TeamVault -->
+	</a>
+	<div class="horizontally fitted item">
+		<a class="ui labeled icon button" href="{% url 'secrets.secret-add' content_type="password" %}">
+			<i class="plus icon"></i>
+			{% trans "Add secret" %}
+		</a>
+	</div>
+	<div class="item" style="{% block "nav_search_enable" %}display: none;{% endblock %}">
+		<div class="ui search" id="nav_secret_search">
+			<div class="ui icon input">
+				<input class="prompt" type="text" placeholder="{% trans "Search..." %}">
+				<i class="search icon"></i>
+			</div>
+			<div class="results"></div>
+		</div>
+	</div>
+	<div class="right menu">
+		{% if request.user.is_superuser %}
+		<div class="ui dropdown item">
+			<i class="cog icon"></i>
+			{% trans "Administration" %}
+			<i class="dropdown icon"></i>
+			<div class="menu">
+				<a class="item" href="{% url 'audit.log' %}"><i class="address card outline icon"></i> {% trans "Audit log" %}</a>
+				<a class="item" href="{% url 'accounts.user-list' %}"><i class="users icon"></i> {% trans "Users" %}</a>
+			</div>
+		</div>
+		{% endif %}
+		<div class="ui dropdown item">
+			<img class="ui avatar image" src="{% gravatar_url request.user.email 60 %}"> &nbsp;
+			{{ request.user.username }}
+			<i class="dropdown icon"></i>
+
+			<div class="menu">
+				<a class="item" href="{% url 'secrets.access_request-list' %}"><i class="check square outline icon"></i> {% trans "Access Requests" %} &nbsp; <span class="ui circular label">{{ access_request_count }}</span></a>
+				<div class="divider"></div>
+				<a class="item" href="{% url 'accounts.logout' %}"><i class="sign out icon"></i> {% trans "Logout" %}</a>
+			</div>
+		</div>
+	</div>
+</div>
 <script>
 	$(document).ready(function() {
-		$(".dropdown-button").dropdown();
-
-		$("#search").autocomplete({
-			source: "http://localhost:8000{% url 'secrets.secret-search' %}",
-			minLength: 3,
-			autoFocus: true,
-			select: function(event, ui) {
-				window.location.href = ui.item.url;
+		$('.ui.dropdown').dropdown();
+		$('#nav_secret_search').search({
+			apiSettings: {
+				url: '{% url "secrets.secret-search" %}?term={query}'
 			},
-			focus: function(event, ui) { console.log(event); }
-		}).autocomplete( "instance" )._renderItem = function( ul, item ) {
-			return $( "<li>" )
-			.append( "<div class='search-suggestion'><a href='" + item.url + "'>" + item.name + "</a></div>" )
-			.appendTo( ul );
-		};
+		});
 	});
 </script>
-<style>
-nav img {
-	height: 40px;
-	width: 40px;
-	margin-top: 12px;
-	margin-bottom: -15px;
-}
-@media (max-width: 600px) {
-	nav img {
-		margin-top: 8px;
-	}
-}
-.ui-widget-content .ui-state-active {
-	border: 0;
-	background: #455a64; /* blue-grey darken-2 */
-}
-.ui-helper-hidden-accessible {
-	display: none;
-}
-.search-suggestion {
-	border: 1px solid #e0e0e0;
-	padding: 10px;
-}
-</style>
-
-{% if request.user.is_superuser %}
-<ul id="dropdown_admin" class="dropdown-content">
-	<li><a href="{% url 'audit.log' %}"><i class="fas fa-address-card" aria-hidden="true"></i> &nbsp; {% trans "Audit log" %}</a></li>
-	<li><a href="{% url 'accounts.user-list' %}"><i class="fas fa-users" aria-hidden="true"></i> &nbsp; {% trans "Users" %}</a></li>
-</ul>
-{% endif %}
-<ul id="dropdown_user" class="dropdown-content">
-	<li><a href="{% url 'secrets.access_request-list' %}"><i class="far fa-check-square"></i>&nbsp; {% trans "Access Requests" %} &nbsp; <span class="badge">{{ access_request_count }}</span></a></li>
-	<li class="divider"></li>
-	<li><a href="{% url 'accounts.logout' %}"><i class="fas fa-sign-out-alt"></i>&nbsp; {% trans "Logout" %}</a></li>
-</ul>
-
-<nav class="blue-grey darken-2">
-	<div class="nav-wrapper">
-		<ul class="left">
-			<li><a class="hide-on-med-and-down waves-effect" href="{% url 'dashboard' %}" style="font-size: 24px; font-weight: 100;">&nbsp; TeamVault</a></li>
-			<li><a href="{% url 'secrets.secret-add' content_type="password" %}" class="waves-effect waves-light btn grey lighten-2 black-text hide-on-med-and-down"><i class="fas fa-plus"></i> &nbsp;{% trans "Add secret" %}</a></li>
-			<li><a class="btn-floating waves-effect waves-light grey lighten-2 black-text center-align hide-on-large-only"><i class="fas fa-plus"></i></a></li>
-		</ul>
-		<ul class="right">
-			{% if request.user.is_superuser %}
-			<li class="hide-on-small-only">
-				<a class="dropdown-button" href="#!" data-beloworigin="true" data-constrainwidth="false" data-activates="dropdown_admin">
-					<i class="fas fa-cog"></i> Administration
-				</a>
-			</li>
-			{% endif %}
-			<li>
-				<a class="dropdown-button" href="#!" data-beloworigin="true" data-constrainwidth="false" data-activates="dropdown_user">
-					<img class="circle" src="{% gravatar_url request.user.email 80 %}"> &nbsp;
-					{{ request.user.username }}
-					<i class="fas fa-angle-down"></i>
-				</a>
-			</li>
-		</ul>
-	</div>
-</nav>
-<nav class="grey darken-3">
-	<div class="nav-wrapper">
-		<form action="{% url 'secrets.secret-list' %}" role="search" method="GET">
-			<div class="input-field">
-				<input id="search" type="search" placeholder="Search secrets...">
-				<label class="label-icon" for="search" style="line-height: 40px;"><i class="fas fa-search"></i></label>
-				<!-- <i class="fas fa-times"></i> -->
-			</div>
-		</form>
-	</div>
-</nav>
 {% block "content" %}{% endblock %}
 <footer>
-	<br><br><br>
-	<div class="container center-align grey-text text-lighten-1" style="font-weight: 100;">
-		TeamVault {{ version }} &nbsp; &nbsp; &copy; 2014 - 2018 Torsten Rehn
+	<br><br><br><br>
+	<div class="ui container">
+		<div class="ui divider"></div>
+	</div>
+	<div class="ui container">
+		<center style="color: #d1d6d9;">TeamVault {{ version }} &nbsp; &nbsp; &copy; 2014 - 2018 Torsten Rehn</center>
 	</div>
 	<br>
 </footer>

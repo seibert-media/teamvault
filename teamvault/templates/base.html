@@ -9,22 +9,31 @@
 
 	<link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
 
-	<link rel="stylesheet" href="{% static 'bundled/materialize/css/materialize.min.css' %}">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu+Mono">
+	<link rel="stylesheet" href="{% static 'bundled/semantic-ui/semantic.min.css' %}">
 	<link rel="stylesheet" href="{% static 'bundled/jqueryui/jquery-ui.theme.min.css' %}">
 
 	<script type="text/javascript" src="{% static 'bundled/jquery/jquery.min.js' %}"></script>
-	<script type="text/javascript" src="{% static 'bundled/jqueryui/jquery-ui.js' %}"></script>
-	<script type="text/javascript" src="{% static 'bundled/font-awesome/js/fontawesome-all.js' %}"></script>
-	<script type="text/javascript" src="{% static 'bundled/materialize/js/materialize.min.js' %}"></script>
+	<script type="text/javascript" src="{% static 'bundled/semantic-ui/semantic.min.js' %}"></script>
+	<script type="text/javascript" src="{% static 'bundled/zxcvbn/zxcvbn.js' %}"></script>
 
 	<style>
-	html {
-		background: #e6edf2;
-		background: linear-gradient(to bottom,  #e6edf2 0%, #ffffff 100%);
+	body {
+		background: #f2f9ff;
+		background: linear-gradient(to bottom, #f2f9ff 0%, #ffffff 100%) fixed;
 		height: 100%;
 	}
-	a {
-		color: #455a64; /* blue-grey darken-2 */
+	.ui.toggle.checkbox input:checked~.box:before, .ui.toggle.checkbox input:checked~label:before {
+		background-color: #385565 !important;
+	}
+	.ui.toggle.checkbox input:focus:checked~.box:before, .ui.toggle.checkbox input:focus:checked~label:before {
+		background-color: #385565 !important;
+	}
+	.ui.primary.button, .ui.primary.buttons .button {
+		background-color: #385565;
+	}
+	.ui.primary.button:hover, .ui.primary.buttons .button:hover {
+		background-color: #3d799a;
 	}
 	</style>
 

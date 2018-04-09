@@ -496,7 +496,7 @@ def secret_share(request, hashid):
 @require_http_methods(["GET"])
 def secret_search(request):
     search_term = request.GET['term']
-    search_result = []
+    search_result = {'results': []}
     filtered_secrets = Secret.get_search_results(request.user, search_term, limit=10)
     unreadable_secrets = filtered_secrets[:]
     sorted_secrets = []
@@ -512,8 +512,8 @@ def secret_search(request):
         sorted_secrets.append((secret, "lock"))
 
     for secret, icon in sorted_secrets:
-        search_result.append({
-            'name': secret.name,
+        search_result['results'].append({
+            'title': secret.name,
             'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
             'icon': icon,
         })

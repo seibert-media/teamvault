@@ -342,6 +342,9 @@ class Secret(HashIDModel):
         null=True,
         related_name='_password_current_revision',
     )
+    #deleted = models.BooleanField(
+    #    default=False,
+    #)
     description = models.TextField(
         blank=True,
         null=True,
@@ -358,6 +361,10 @@ class Secret(HashIDModel):
     needs_changing_on_leave = models.BooleanField(
         default=True,
     )
+    #needs_changing_since = models.DateTimeField(
+    #    blank=True,
+    #    null=True,
+    #)
     notify_on_access_request = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,

@@ -3,19 +3,23 @@
 {% load staticfiles %}
 {% block "title" %}{% trans "Logout" %}{% endblock %}
 {% block "body" %}
-<div class="section"></div>
-<main>
-	<center>
-		<h1 class="teal-text text-lighten-1" style="font-weight: 100;">TeamVault</h1>
-		<div class="section"></div>
-		<div class="container">
-			<div class="row">
-				<div class="col s12 m6 offset-m3 card" style="padding: 32px 48px 32px 48px;">
-					{% trans "Logged out." %}&nbsp;
-					<a href="{% url 'accounts.login' %}">{% trans "Log in again?" %}</a>
-				</div>
-			</div>
+<style>
+body > .grid {
+	height: 100%;
+}
+.column {
+	max-width: 450px;
+}
+</style>
+<div class="ui middle aligned center aligned grid">
+	<div class="column">
+		<h2 class="ui black header">
+			<div class="content">TeamVault</div>
+		</h2>
+		<div class="ui segment">
+			{% trans "Logged out." %}&nbsp;
+			<a href="{% url 'accounts.login' %}">{% trans "Log in again?" %}</a>
 		</div>
-	</center>
-</main>
+	</div>
+</div>
 {% endblock %}

@@ -3,67 +3,69 @@
 {% load smart_pagination %}
 {% block "title" %}{% trans "Users" %}{% endblock %}
 {% block "content" %}
-<div class="container">
-	<div class="row">
-		<div class="col-md-12">
-			<h1>
-			{% trans "Users" %}
-			</h1>
-			<br><br>
-			<div class="panel panel-default">
-				<table class="table table-hover">
-				<tr>
+<div class="ui container">
+	<h1>
+		{% trans "Users" %}
+	</h1>
+	<table class="ui celled striped selectable table">
+		<thead>
+			<tr>
 				<th>{% trans "Username" %}</th>
 				<th>{% trans "Email" %}</th>
 				<th>{% trans "Active" %}</th>
 				<th>{% trans "Admin" %}</th>
 				<th>{% trans "Last login" %}</th>
-				</tr>
-					{% for user in users %}
-					<tr>
-					<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.username }}</a></td>
-					<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.email }}</a></td>
-					<td>
-						{% if user.is_active %}
-						<span class="text-success-bright"><i class="fa fa-check"></i></span>
-						{% else %}
-						<span class="text-danger-bright"><i class="fa fa-times"></i></span>
+			</tr>
+		</thead>
+		<tbody>
+			{% for user in users %}
+			<tr>
+				<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.username }}</a></td>
+				<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.email }}</a></td>
+
+				{% if user.is_active %}
+				<td class="positive"><i class="check icon"></i></span></td>
+				{% else %}
+				<td class="negative"><i class="times icon"></i></span></td>
+				{% endif %}
+
+				{% if user.is_superuser %}
+				<td class="positive"><i class="check icon"></i></span></td>
+				{% else %}
+				<td class="negative"><i class="times icon"></i></span></td>
+				{% endif %}
+
+				<td>{{ user.last_login|date:"Y-m-d H:i:s" }}</td>
+			</tr>
+			{% endfor %}
+		</tbody>
+		{% if is_paginated %}
+		<tfoot>
+			<tr>
+				<th colspan="5">
+					<div class="ui right floated pagination menu">
+						{% if page_obj.has_previous %}
+						<a class="icon item" href="?page={{ page_obj.previous_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">
+							<i class="left chevron icon"></i>
+						</a>
 						{% endif %}
-					</td>
-					<td>
-						{% if user.is_superuser %}
-						<span class="text-success-bright"><i class="fa fa-check"></i></span>
+						{% for page in paginator.page_range|smart_pages:page_obj.number %}
+						{% if page_obj.number == page %}
+						<a class="active item" href="#">{{ page }}</a>
 						{% else %}
-						<span class="text-danger-bright"><i class="fa fa-times"></i></span>
+						<a class="item" href="?page={{ page }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">{{ page }}</a>
 						{% endif %}
-					</td>
-					<td>{{ user.last_login|date:"Y-m-d H:i:s" }}</td>
-					</tr>
-					{% endfor %}
-				</table>
-			</div>
-			{% if is_paginated %}
-			<ul class="pagination">
-				{% if page_obj.has_previous %}
-				<li><a href="?page={{ page_obj.previous_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}"><i class="fa fa-chevron-left"></i></a></li>
-				{% else %}
-				<li class="disabled"><a href="#"><i class="fa fa-chevron-left"></i></a></li>
-				{% endif %}
-				{% for page in paginator.page_range|smart_pages:page_obj.number %}
-				{% if page_obj.number == page %}
-				<li class="active"><a href="#">{{ page }} <span class="sr-only">(current)</span></a></li>
-				{% else %}
-				<li><a href="?page={{ page }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">{{ page }}</a></li>
-				{% endif %}
-				{% endfor %}
-				{% if page_obj.has_next %}
-				<li><a href="?page={{ page_obj.next_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}"><i class="fa fa-chevron-right"></i></a></li>
-				{% else %}
-				<li class="disabled"><a href="#"><i class="fa fa-chevron-right"></i></a></li>
-				{% endif %}
-			</ul>
-			{% endif %}
-		</div>
-	</div>
+						{% endfor %}
+						{% if page_obj.has_next %}
+						<a class="icon item" href="?page={{ page_obj.next_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">
+							<i class="right chevron icon"></i>
+						</a>
+						{% endif %}
+					</div>
+				</th>
+			</tr>
+		</tfoot>
+		{% endif %}
+	</table>
 </div>
 {% endblock %}

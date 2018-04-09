@@ -7,14 +7,6 @@ rm -rf $BUNDLED_DIR/*
 
 cd $BUNDLED_DIR
 
-# wait for 5.0 https://github.com/cdnjs/cdnjs/issues/12307
-#ffsjs font-awesome
-
 ffsjs jquery
-ffsjs jqueryui
-
-ffsjs materialize
-# replace default teal color ("teal lighten-1")
-sed -i "" "s/26a69a/4D5E69/g" materialize/css/materialize.min.css
-# conflict with jQuery UI https://github.com/Dogfalo/materialize/issues/3457
-sed -i "" "s/autocomplete/autocomplete_disabled/g" materialize/js/materialize.min.js
+ffsjs semantic-ui
+ffsjs zxcvbn
