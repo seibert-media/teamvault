@@ -8,6 +8,7 @@ from random import choice
 from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
 
+import django.db
 from cryptography.fernet import Fernet
 
 
@@ -168,12 +169,21 @@ def configure_session(config):
 def configure_teamvault_secret_key(config, settings):
     from .models import Setting
 
-    checksum = Setting.get("fernet_key_hash", default=None)
+    try:
+        checksum = Setting.get("fernet_key_hash", default=None)
+    except django.db.utils.ProgrammingError:
+        # when `teamvault upgrade` initializes its database, the settings-table is not yet there.
+        checksum = None
+
     key = config.get("teamvault", "fernet_key")
     key_hash = sha1(key.encode('utf-8')).hexdigest()
 
     if checksum is None:
-        Setting.set("fernet_key_hash", key_hash)
+        try:
+            Setting.set("fernet_key_hash", key_hash)
+        except django.db.utils.ProgrammingError:
+            # when `teamvault upgrade` initializes its database, the settings-table is not yet there.
+            pass
 
     elif key_hash != checksum:
         raise RuntimeError(_(
