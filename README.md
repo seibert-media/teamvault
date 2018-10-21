@@ -20,9 +20,12 @@ TeamVault is an open-source web-based shared password manager for behind-the-fir
 	teamvault upgrade
 
 ## Development
---------------
 
-Install Postgres and create a database and superuser for TeamVault to use.
+Install Postgres and create a database and superuser for TeamVault to use, for example by starting a Docker-Container:
+
+	docker run --rm --detach --publish=5432:5432 --name teamvault-postgres -e POSTGRES_USER=teamvault -e POSTGRES_PASSWORD=teamvault postgres:latest
+
+Now create a virtual Environment to insstall and configure TeamVault in:
 
 	pipenv install
 	pipenv shell
@@ -35,4 +38,3 @@ Install Postgres and create a database and superuser for TeamVault to use.
 	teamvault upgrade
 	teamvault plumbing createsuperuser
 	teamvault run
-
