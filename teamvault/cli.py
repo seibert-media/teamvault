@@ -71,6 +71,7 @@ def run(pargs):
     if pargs.bind:
         cmd += ' -b ' + pargs.bind
 
+    print("Now open http://localhost:8000")
     gunicorn = Popen(
         cmd,
         shell=True,
