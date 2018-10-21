@@ -29,10 +29,11 @@ Install Postgres and create a database and superuser for TeamVault to use.
 	pip install -e .
 	export TEAMVAULT_CONFIG_FILE=teamvault.cfg
 	teamvault setup
-	vim teamvault.cfg  # base_url = http://localhost:8080
+	vim teamvault.cfg  # base_url = http://localhost:8000
 	                   # session_cookie_secure = False
 	                   # database config as needed
 	teamvault upgrade
 	teamvault plumbing createsuperuser
 	teamvault run
 
+Now open http://localhost:8000
