@@ -1,2 +1,15 @@
 /teamvault.cfg
 /teamvault/static_collected
+
+# PyCharm
+/.idea
+
+# VirtualEnv
+/env
+/venv
+
+# Egg-Build-Info
+/teamvault.egg-info/
+
+# Python3 cache files
+__pycache__
