@@ -6,10 +6,11 @@ from shutil import rmtree
 from subprocess import Popen
 from sys import argv
 
-from django.core.management import execute_from_command_line
+import django
+from django.core.management import execute_from_command_line, get_commands
 
-from .apps.settings.config import create_default_config
 from . import VERSION_STRING
+from .apps.settings.config import create_default_config
 
 
 def build_parser():
@@ -24,9 +25,15 @@ def build_parser():
         help=_("use 'teamvault <subcommand> --help' for more info"),
     )
 
+    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
+    environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
+
+    django.setup()
+    commands = [k for k in get_commands()]
+
     # teamvault plumbing
     parser_plumbing = subparsers.add_parser("plumbing")
-    parser_plumbing.add_argument('plumbing_command', nargs='+')
+    parser_plumbing.add_argument('plumbing_command', nargs='+', help='one of ' + ', '.join(commands))
     parser_plumbing.set_defaults(func=plumbing)
 
     # teamvault run
@@ -62,8 +69,6 @@ def main(*args):
 
 
 def plumbing(pargs):
-    environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
-    environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
     execute_from_command_line([""] + pargs.plumbing_command[0].split(" "))
 
 
