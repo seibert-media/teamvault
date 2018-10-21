@@ -1,4 +1,4 @@
-from argparse import ArgumentParser
+from argparse import ArgumentParser, REMAINDER
 from gettext import gettext as _
 from hashlib import sha1
 from os import environ, mkdir
@@ -33,7 +33,7 @@ def build_parser():
 
     # teamvault plumbing
     parser_plumbing = subparsers.add_parser("plumbing")
-    parser_plumbing.add_argument('plumbing_command', nargs='+', help='one of ' + ', '.join(commands))
+    parser_plumbing.add_argument('plumbing_command', nargs=REMAINDER, help='one of ' + ', '.join(commands))
     parser_plumbing.set_defaults(func=plumbing)
 
     # teamvault run
@@ -69,7 +69,7 @@ def main(*args):
 
 
 def plumbing(pargs):
-    execute_from_command_line([""] + pargs.plumbing_command[0].split(" "))
+    execute_from_command_line([""] + pargs.plumbing_command)
 
 
 def run(pargs):
