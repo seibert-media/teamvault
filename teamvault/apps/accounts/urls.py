@@ -1,10 +1,7 @@
 from django.conf.urls import url
-from django.contrib import admin
 from django.contrib.auth.views import login, logout
 
 from . import views
-
-admin.autodiscover()
 
 urlpatterns = (
     url(
