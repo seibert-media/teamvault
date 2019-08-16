@@ -1,19 +1,17 @@
 from django.conf.urls import url
-from django.contrib.auth.views import login, logout
+from django.contrib.auth.views import LoginView, LogoutView
 
 from . import views
 
 urlpatterns = (
     url(
         r'^login$',
-        login,
-        {'template_name': "accounts/login.html"},
+        LoginView.as_view(template_name="accounts/login.html"),
         name='accounts.login',
     ),
     url(
         r'^logout$',
-        logout,
-        {'template_name': "accounts/logout.html"},
+        LogoutView.as_view(template_name="accounts/logout.html"),
         name='accounts.logout',
     ),
     url(
