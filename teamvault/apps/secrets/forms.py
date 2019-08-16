@@ -25,7 +25,7 @@ class Select2DataWidget(SelectMultiple):
     """
     Used to render form values as a select2-compatible data structure.
     """
-    def render(self, name, value, attrs=None, choices=()):
+    def render(self, name, value, attrs=None, choices=(), renderer=None):
         if value is None:
             return "[]"
         output = []
