@@ -41,6 +41,7 @@ setup(
         "cryptography==2.7",
         "dj-static==0.0.6",
         "django-auth-ldap==2.0.0",
+        "django-filter==2.2.0",
         "django-gravatar2==1.4.2",
         "django==2.2.4",
         "djangorestframework==3.10.2",

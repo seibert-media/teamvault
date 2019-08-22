@@ -1,12 +1,9 @@
 [[source]]
-
 url = "https://pypi.python.org/simple"
 verify_ssl = true
 name = "pypi"
 
-
 [packages]
-
 cryptography = "*"
 dj-static = "*"
 django = "*"
@@ -17,7 +14,6 @@ gunicorn = "*"
 hashids = "*"
 "psycopg2" = "*"
 pytz = "*"
-
+django-filter = "*"
 
 [dev-packages]
-

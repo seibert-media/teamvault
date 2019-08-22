@@ -12,6 +12,7 @@ from django.utils.translation import ugettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
+import django_filters
 
 from ..audit.auditlog import log
 from .forms import CCForm, FileForm, PasswordForm
@@ -427,6 +428,22 @@ class SecretDetail(DetailView):
 secret_detail = login_required(SecretDetail.as_view())
 
 
+class SecretFilter(django_filters.FilterSet):
+    order = django_filters.OrderingFilter(
+        choices=(
+            ('last_changed', _("Last changed")),
+            ('last_read', _("Last read")),
+        ),
+    )
+
+    class Meta:
+        model = Secret
+        fields = {
+            'last_changed': ['gt', 'gte', 'lt', 'lte'],
+            'last_read': ['gt', 'gte', 'lt', 'lte'],
+        }
+
+
 class SecretList(ListView):
     context_object_name = 'secrets'
     paginate_by = 25
@@ -439,9 +456,11 @@ class SecretList(ListView):
 
     def get_queryset(self):
         if "search" in self.request.GET:
-            return Secret.get_search_results(self.request.user, self.request.GET['search'])
+            queryset = Secret.get_search_results(self.request.user, self.request.GET['search'])
         else:
-            return Secret.get_all_visible_to_user(self.request.user)
+            queryset = Secret.get_all_visible_to_user(self.request.user)
+        filtered = SecretFilter(self.request.GET, queryset)
+        return filtered.qs
 secret_list = login_required(SecretList.as_view())
 
 
@@ -497,7 +516,7 @@ def secret_share(request, hashid):
 def secret_search(request):
     search_term = request.GET['q']
     search_result = []
-    filtered_secrets = Secret.get_search_results(request.user, search_term, limit=10)
+    filtered_secrets = list(Secret.get_search_results(request.user, search_term, limit=10))
     unreadable_secrets = filtered_secrets[:]
     sorted_secrets = []
 

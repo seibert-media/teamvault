@@ -351,6 +351,9 @@ class Secret(HashIDModel):
         max_length=255,
         null=True,
     )
+    last_changed = models.DateTimeField(
+        auto_now_add=True,
+    )
     last_read = models.DateTimeField(
         default=now,
     )
@@ -522,9 +525,7 @@ class Secret(HashIDModel):
             fulltext_hits = fulltext_hits[:limit]
             substr_hits = substr_hits[:limit]
         # concatenate and remove duplicates
-        result = list(OrderedDict.fromkeys(
-            list(name_hits) + list(fulltext_hits) + list(substr_hits)
-        ))
+        result = (name_hits | fulltext_hits | substr_hits).distinct()
         if limit:
             return result[:limit]
         else:
@@ -595,6 +596,7 @@ class Secret(HashIDModel):
         else:
             previous_revision_id = _("none")
         self.current_revision = p
+        self.last_changed = now()
         self.last_read = now()
         if self.status == self.STATUS_NEEDS_CHANGING:
             self.status = self.STATUS_OK
