@@ -18,6 +18,7 @@ rm -rvf ${BUNDLED_DIR}/*/.jshintrc
 rm -rvf ${BUNDLED_DIR}/*/.npmignore
 rm -rvf ${BUNDLED_DIR}/*/AUTHORS.*
 rm -rvf ${BUNDLED_DIR}/*/CHANGELOG.*
+rm -rvf ${BUNDLED_DIR}/*/CODE_OF_CONDUCT.*
 rm -rvf ${BUNDLED_DIR}/*/CONTRIBUTING.*
 rm -rvf ${BUNDLED_DIR}/*/dist/*.map
 rm -rvf ${BUNDLED_DIR}/*/dist/test
@@ -32,6 +33,7 @@ rm -rvf ${BUNDLED_DIR}/*/less
 rm -rvf ${BUNDLED_DIR}/*/Makefile
 rm -rvf ${BUNDLED_DIR}/*/package.js
 rm -rvf ${BUNDLED_DIR}/*/package.json
+rm -rvf ${BUNDLED_DIR}/*/package-lock.json
 rm -rvf ${BUNDLED_DIR}/*/PULL_REQUEST_TEMPLATE.*
 rm -rvf ${BUNDLED_DIR}/*/README.*
 rm -rvf ${BUNDLED_DIR}/*/scss
