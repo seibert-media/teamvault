@@ -390,10 +390,8 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()
-        self.pre_delete(obj)
         obj.status = Secret.STATUS_DELETED
         obj.save()
-        self.post_delete(obj)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     def get_object(self):
