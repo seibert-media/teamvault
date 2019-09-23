@@ -1,4 +1,3 @@
-from collections import OrderedDict
 from datetime import timedelta
 from hashlib import sha256
 from operator import itemgetter
