@@ -68,10 +68,9 @@ class CCForm(SecretForm):
         required=False,
         widget=forms.PasswordInput,
     )
-    security_code = forms.IntegerField(
+    security_code = forms.CharField(
         required=False,
-        min_value=100,
-        max_value=9999,
+        widget=forms.NumberInput,
     )
 
     class Meta:
