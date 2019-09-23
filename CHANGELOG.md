@@ -1,3 +1,14 @@
+# 0.8.0
+
+2019-09-23
+
+* added hidden URL parameters for filtering search results
+* replaced owners with notification settings
+* fixed storage of credit card CVV values as integers
+* fixed deleting secrets by API
+* fixed storing past iterations of passwords
+
+
 # 0.7.3
 
 2017-03-26
