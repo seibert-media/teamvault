@@ -1,3 +1,10 @@
+# 0.8.2
+
+2019-10-23
+
+* fixed creating secrets by API
+
+
 # 0.8.1
 
 2019-09-23
