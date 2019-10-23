@@ -302,10 +302,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
         instance = self.Meta.model.objects.create(**validated_data)
 
-        instance.allowed_groups = allowed_groups
-        instance.allowed_users = allowed_users
+        instance.allowed_groups.set(allowed_groups)
+        instance.allowed_users.set(allowed_users)
         instance.content_type = content_type
-        instance.notify_on_access_request = notify_on_access_request
+        instance.notify_on_access_request.set(notify_on_access_request)
         instance._data = data
         return instance
 
@@ -421,7 +421,7 @@ class SecretList(generics.ListCreateAPIView):
             return Secret.get_all_visible_to_user(self.request.user)
 
     def perform_create(self, serializer):
-        instance = serializer.save()
+        instance = serializer.save(created_by=self.request.user)
         if hasattr(instance, '_data'):
             instance.set_data(self.request.user, instance._data, skip_access_check=True)
             del instance._data
