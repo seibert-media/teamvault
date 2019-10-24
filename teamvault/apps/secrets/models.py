@@ -199,7 +199,7 @@ class AccessRequest(HashIDModel):
         selected = sample(candidates, min(3, len(candidates)))
         if not selected:
             raise RuntimeError(_("unable to find reviewers for {}").format(self))
-        self.reviewers = selected
+        self.reviewers.set(selected)
 
         send_mail(
             self.reviewers.all(),
