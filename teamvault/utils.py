@@ -1,5 +1,4 @@
 from django.core.mail import EmailMultiAlternatives
-from django.template import Context
 from django.template.loader import get_template, TemplateDoesNotExist
 from django.utils import translation
 
@@ -9,9 +8,8 @@ def send_mail(users_to, subject, template,
               attachments=None):
     if attachments is None:
         attachments = []
-    c = Context(context)
     translation.activate(lang)
-    text_mail = get_template(template + ".txt").render(c)
+    text_mail = get_template(template + ".txt").render(context)
 
     msg = EmailMultiAlternatives(
         subject,
@@ -21,7 +19,7 @@ def send_mail(users_to, subject, template,
     )
 
     try:
-        html_mail = get_template(template + ".html").render(c)
+        html_mail = get_template(template + ".html").render(context)
         msg.attach_alternative(html_mail, "text/html")
     except TemplateDoesNotExist:
         pass
