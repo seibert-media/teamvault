@@ -1,3 +1,10 @@
+# 0.8.4
+
+2019-11-06
+
+* fixed sending email notifications
+
+
 # 0.8.3
 
 2019-10-24
