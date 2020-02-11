@@ -43,7 +43,7 @@ setup(
         "django-auth-ldap==2.0.0",
         "django-filter==2.2.0",
         "django-gravatar2==1.4.2",
-        "django==2.2.5",
+        "django==2.2.10",
         "djangorestframework==3.10.3",
         "gunicorn==19.9.0",
         "hashids==1.2.0",
