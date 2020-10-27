@@ -38,7 +38,7 @@ setup(
     install_requires=[  # pipenv lock -r | sed "s/ --hash.*//g"
         "asn1crypto==0.24.0",
         "cffi==1.12.3",
-        "cryptography==2.7",
+        "cryptography==3.2",
         "dj-static==0.0.6",
         "django-auth-ldap==2.0.0",
         "django-filter==2.2.0",
