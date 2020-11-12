@@ -9,6 +9,7 @@ from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
+from django.db.utils import ProgrammingError
 
 
 def configure_base_url(config, settings):
@@ -168,20 +169,25 @@ def configure_session(config):
 def configure_teamvault_secret_key(config, settings):
     from .models import Setting
 
-    checksum = Setting.get("fernet_key_hash", default=None)
     key = config.get("teamvault", "fernet_key")
-    key_hash = sha1(key.encode('utf-8')).hexdigest()
 
-    if checksum is None:
-        Setting.set("fernet_key_hash", key_hash)
+    try:
+        checksum = Setting.get("fernet_key_hash", default=None)
+    except ProgrammingError:  # db not populated
+        pass
+    else:
+        key_hash = sha1(key.encode('utf-8')).hexdigest()
 
-    elif key_hash != checksum:
-        raise RuntimeError(_(
-            "secret in '{path}' does not match SHA1 hash in database ({hash})"
-        ).format(
-            hash=checksum,
-            path=environ['TEAMVAULT_CONFIG_FILE'],
-        ))
+        if checksum is None:
+            Setting.set("fernet_key_hash", key_hash)
+
+        elif key_hash != checksum:
+            raise RuntimeError(_(
+                "secret in '{path}' does not match SHA1 hash in database ({hash})"
+            ).format(
+                hash=checksum,
+                path=environ['TEAMVAULT_CONFIG_FILE'],
+            ))
 
     settings.TEAMVAULT_SECRET_KEY = key
 

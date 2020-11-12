@@ -1,5 +1,6 @@
 from argparse import ArgumentParser
 from gettext import gettext as _
+from hashlib import sha1
 from os import environ, mkdir
 from shutil import rmtree
 from subprocess import Popen
@@ -90,8 +91,15 @@ def upgrade(pargs):
     print("\n### Running migrations...\n")
     execute_from_command_line(["", "migrate", "--noinput", "-v", "3", "--traceback"])
 
-    print("\n### Gathering static files...\n")
     from django.conf import settings
+    from .apps.settings.models import Setting
+
+    if Setting.get("fernet_key_hash", default=None) is None:
+        print("\n### Storing fernet_key hash in database...\n")
+        key_hash = sha1(settings.TEAMVAULT_SECRET_KEY.encode('utf-8')).hexdigest()
+        Setting.set("fernet_key_hash", key_hash)
+
+    print("\n### Gathering static files...\n")
     try:
         rmtree(settings.STATIC_ROOT)
     except FileNotFoundError:
