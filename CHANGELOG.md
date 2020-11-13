@@ -1,3 +1,10 @@
+# 0.8.5
+
+2020-11-13
+
+* fixed bootstrapping problem when running `teamvault upgrade` on empty DB
+
+
 # 0.8.4
 
 2019-11-06
