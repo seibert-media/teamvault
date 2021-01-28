@@ -64,11 +64,6 @@ urlpatterns = (
         name='secrets.secret-restore',
     ),
     url(
-        r'^secrets/(?P<hashid>\w+)/share$',
-        views.secret_share,
-        name='secrets.secret-share',
-    ),
-    url(
         r'^secrets/add/(?P<content_type>\w+)$',
         views.secret_add,
         name='secrets.secret-add',

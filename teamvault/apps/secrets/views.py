@@ -465,53 +465,6 @@ secret_list = login_required(SecretList.as_view())
 
 
 @login_required
-@require_http_methods(["POST"])
-def secret_share(request, hashid):
-    secret = get_object_or_404(Secret, hashid=hashid)
-    secret.check_access(request.user)
-
-    request.POST = _patch_post_data(request.POST, ('share_groups', 'share_users'))
-
-    groups = []
-    for group_id in request.POST.getlist('share_groups', []):
-        groups.append(get_object_or_404(Group, pk=int(group_id)))
-
-    users = []
-    for user_id in request.POST.getlist('share_users', []):
-        users.append(get_object_or_404(User, pk=int(user_id)))
-
-    for group in groups:
-        log(
-            _("{actor} shared '{secret}' with {group}").format(
-                actor=request.user,
-                group=group.name,
-                secret=secret.name,
-            ),
-            actor=request.user,
-            group=group,
-            secret=secret,
-        )
-        secret.allowed_groups.add(group)
-        # TODO email with additional message field
-
-    for user in users:
-        log(
-            _("{actor} shared '{secret}' with {user}").format(
-                actor=request.user,
-                secret=secret.name,
-                user=user.username,
-            ),
-            actor=request.user,
-            secret=secret,
-            user=user,
-        )
-        secret.allowed_users.add(user)
-        # TODO email with additional message field
-
-    return HttpResponseRedirect(secret.get_absolute_url())
-
-
-@login_required
 @require_http_methods(["GET"])
 def secret_search(request):
     search_term = request.GET['q']
