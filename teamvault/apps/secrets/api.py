@@ -1,4 +1,4 @@
-from base64 import decodestring, encodestring
+from base64 import b64decode, b64encode
 from json import dumps, loads
 
 from django.contrib.auth.models import Group, User
@@ -55,7 +55,7 @@ def _extract_data(validated_data):
         )
     elif 'file' in validated_data:
         return (
-            decodestring(validated_data.pop('file').encode('ascii')),
+            b64decode(validated_data.pop('file').encode('ascii')),
             Secret.CONTENT_FILE,
         )
     elif REQUIRED_CC_FIELDS.intersection(set(validated_data.keys())):
@@ -445,6 +445,6 @@ def data_get(request, hashid):
     if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:
         return Response({'password': data})
     elif secret_revision.secret.content_type == Secret.CONTENT_FILE:
-        return Response({'file': encodestring(data).decode('ascii')})
+        return Response({'file': b64encode(data).decode('ascii')})
     elif secret_revision.secret.content_type == Secret.CONTENT_CC:
         return Response(loads(data))

@@ -1,4 +1,4 @@
-from base64 import decodestring, encodestring
+from base64 import b64decode, b64encode
 from configparser import SafeConfigParser
 from gettext import gettext as _
 from hashlib import sha1
@@ -47,7 +47,7 @@ def configure_django_secret_key(config):
     """
     Called directly from the Django settings module.
     """
-    return decodestring(config.get("django", "secret_key").encode()).decode('utf-8')
+    return b64decode(config.get("django", "secret_key").encode()).decode('utf-8')
 
 
 def configure_hashid(config):
@@ -56,7 +56,7 @@ def configure_hashid(config):
     """
     return (
         int(get_from_config(config, "hashid", "min_length", "6")),
-        decodestring(config.get("hashid", "salt").encode()).decode('utf-8'),
+        b64decode(config.get("hashid", "salt").encode()).decode('utf-8'),
     )
 
 
@@ -240,8 +240,8 @@ salt = {hashid_salt}
 ##attr_last_name = sn
 #admin_group = cn=admins,ou=groups,dc=example,dc=com
     """.format(
-        django_key=encodestring(SECRET_KEY.encode('utf-8')).decode('utf-8'),
-        hashid_salt=encodestring(HASHID_SALT.encode('utf-8')).decode('utf-8'),
+        django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
+        hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),
         teamvault_key=Fernet.generate_key().decode('utf-8'),
     )
     old_umask = umask(7)
