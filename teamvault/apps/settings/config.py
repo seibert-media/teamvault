@@ -60,6 +60,64 @@ def configure_hashid(config):
     )
 
 
+def configure_google_auth(config, settings):
+    if not config.has_section("auth_google"):
+        settings.GOOGLE_AUTH_ENABLED = False
+        return
+
+    settings.GOOGLE_AUTH_ENABLED = True
+
+    settings.AUTHENTICATION_BACKENDS.insert(
+        0,
+        'social_core.backends.google.GoogleOAuth2',
+    )
+
+    settings.SOCIAL_AUTH_PIPELINE = (
+        # Get the information we can about the user and return it in a simple
+        # format to create the user instance later. In some cases the details are
+        # already part of the auth response from the provider, but sometimes this
+        # could hit a provider API.
+        'social_core.pipeline.social_auth.social_details',
+
+        # Get the social uid from whichever service we're authing thru. The uid is
+        # the unique identifier of the given user in the provider.
+        'social_core.pipeline.social_auth.social_uid',
+
+        # Verifies that the current auth process is valid within the current
+        # project, this is where emails and domains whitelists are applied (if
+        # defined).
+        'social_core.pipeline.social_auth.auth_allowed',
+
+        # Checks if the current social-account is already associated in the site.
+        'social_core.pipeline.social_auth.social_user',
+
+        # Associates the current social details with another user account with
+        # a similar email address.
+        'social_core.pipeline.social_auth.associate_by_email',
+
+        # Create a user account if we haven't found one yet.
+        'social_core.pipeline.user.create_user',
+
+        # Create the record that associates the social account with the user.
+        'social_core.pipeline.social_auth.associate_user',
+
+        # Populate the extra_data field in the social record with the values
+        # specified by settings (and the default ones like access_token, etc).
+        'social_core.pipeline.social_auth.load_extra_data',
+
+        # Update the user record with any changed info from the auth service.
+        'social_core.pipeline.user.user_details',
+    )
+
+    settings.SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = [
+        domain.strip() for domain in
+        config.get("auth_google", "allowed_domains").split(",")
+    ]
+
+    settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config.get("auth_google", "oauth2_key")
+    settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config.get("auth_google", "oauth2_secret")
+
+
 def configure_ldap_auth(config, settings):
     if not config.has_section("auth_ldap"):
         return
@@ -67,9 +125,9 @@ def configure_ldap_auth(config, settings):
     from django_auth_ldap.config import LDAPSearch, MemberDNGroupType
     from ldap import SCOPE_SUBTREE
 
-    settings.AUTHENTICATION_BACKENDS = (
+    settings.AUTHENTICATION_BACKENDS.insert(
+        0,
         'django_auth_ldap.backend.LDAPBackend',
-        'django.contrib.auth.backends.ModelBackend',
     )
     settings.AUTH_LDAP_SERVER_URI = config.get("auth_ldap", "server_uri")
     settings.AUTH_LDAP_BIND_DN = config.get("auth_ldap", "bind_dn")
@@ -229,7 +287,7 @@ salt = {hashid_salt}
 #[auth_ldap]
 #server_uri = ldaps://ldap.example.com
 #bind_dn = cn=root,dc=example,dc=com
-#password = example
+#password = ******************
 #user_base_dn = ou=users,dc=example,dc=com
 ##user_search_filter = (cn=%%(user)s)
 #group_base_dn = ou=groups,dc=example,dc=com
@@ -239,6 +297,11 @@ salt = {hashid_salt}
 ##attr_first_name = givenName
 ##attr_last_name = sn
 #admin_group = cn=admins,ou=groups,dc=example,dc=com
+
+#[auth_google]
+#allowed_domains = example.com, another.example.com
+#oauth2_key = 123456789.apps.googleusercontent.com
+#oauth2_secret = ******************
     """.format(
         django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
         hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),

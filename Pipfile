@@ -15,5 +15,6 @@ hashids = "*"
 pytz = "*"
 django-filter = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
+social-auth-app-django = "*"
 
 [dev-packages]

@@ -8,4 +8,5 @@ urlpatterns = (
     url(r'^audit', include('teamvault.apps.audit.urls'), name='audit'),
     url(r'', include('teamvault.apps.secrets.urls'), name='secrets'),
     url(r'', include('teamvault.apps.accounts.urls'), name='accounts'),
+    url(r'', include('social_django.urls', namespace='social')),
 )

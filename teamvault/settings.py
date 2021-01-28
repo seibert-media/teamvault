@@ -14,9 +14,9 @@ PROJECT_ROOT = realpath(dirname(__file__))
 
 ### Django
 
-AUTHENTICATION_BACKENDS = (
+AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-)
+]
 
 DATABASES = configure_database(CONFIG)
 
@@ -37,6 +37,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_gravatar',
     'rest_framework',
+    'social_django',
     'teamvault.apps.accounts.AccountsConfig',
     'teamvault.apps.audit.AuditConfig',
     'teamvault.apps.secrets.SecretsConfig',
@@ -100,6 +101,7 @@ TEMPLATES = [
                 'django.template.context_processors.media',
                 'django.template.context_processors.request',
                 'django.template.context_processors.static',
+                'teamvault.apps.accounts.context_processors.google_auth_enabled',
                 'teamvault.apps.secrets.context_processors.access_request_count',
                 'teamvault.apps.secrets.context_processors.version',
             ],
@@ -131,3 +133,7 @@ REST_FRAMEWORK = {
     ),
     'PAGE_SIZE': 25,
 }
+
+### Social Auth
+
+SOCIAL_AUTH_POSTGRES_JSONFIELD = True

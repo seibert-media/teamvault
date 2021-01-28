@@ -20,6 +20,13 @@
 				</span>
 			</div>
 			{% csrf_token %}
+			{% if google_auth_enabled %}
+			<p class="text-center">{% trans "or" %}</p>
+			<a class="btn btn-default btn-lg btn-block" href="{% url "social:begin" "google-oauth2" %}">
+				<i class="fa fa-google"></i> &nbsp;
+				{% trans "Sign in with Google" %}
+			</a>
+			{% endif %}
 		</form>
 	</div>
 </div>
