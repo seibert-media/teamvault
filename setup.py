@@ -34,11 +34,11 @@ setup(
         "Topic :: Office/Business",
         "Topic :: Security",
     ],
-    install_requires=[  # pipenv lock -r | sed "s/ --hash.*//g"
+    install_requires=[  # pipenv lock -r
         "asgiref==3.3.1; python_version >= '3.5'",
+        "brotli==1.0.9",
         "cffi==1.14.4",
         "cryptography==3.3.1",
-        "dj-static==0.0.6",
         "django-auth-ldap==2.2.0",
         "django-filter==2.4.0",
         "django-gravatar2==1.4.4",
@@ -52,9 +52,9 @@ setup(
         "pycparser==2.20; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
         "python-ldap==3.3.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
         "pytz==2020.5",
-        "six==1.15.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2'",
+        "six==1.15.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
         "sqlparse==0.4.1; python_version >= '3.5'",
-        "static3==0.7.0",
+        "whitenoise[brotli]==5.2.0",
     ],
     zip_safe=False,
 )

@@ -5,7 +5,6 @@ name = "pypi"
 
 [packages]
 cryptography = "*"
-dj-static = "*"
 django = "*"
 django-auth-ldap = "*"
 "django-gravatar2" = "*"
@@ -15,5 +14,6 @@ hashids = "*"
 "psycopg2" = "*"
 pytz = "*"
 django-filter = "*"
+whitenoise = {extras = ["brotli"], version = "*"}
 
 [dev-packages]
