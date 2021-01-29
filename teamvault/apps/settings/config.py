@@ -107,6 +107,9 @@ def configure_google_auth(config, settings):
 
         # Update the user record with any changed info from the auth service.
         'social_core.pipeline.user.user_details',
+
+        # Get groups from LDAP
+        'teamvault.apps.accounts.auth.populate_from_ldap',
     )
 
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = [
@@ -120,7 +123,10 @@ def configure_google_auth(config, settings):
 
 def configure_ldap_auth(config, settings):
     if not config.has_section("auth_ldap"):
+        settings.LDAP_AUTH_ENABLED = False
         return
+
+    settings.LDAP_AUTH_ENABLED = True
 
     from django_auth_ldap.config import LDAPSearch, MemberDNGroupType
     from ldap import (
