@@ -123,7 +123,14 @@ def configure_ldap_auth(config, settings):
         return
 
     from django_auth_ldap.config import LDAPSearch, MemberDNGroupType
-    from ldap import SCOPE_SUBTREE
+    from ldap import (
+        SCOPE_SUBTREE,
+        OPT_X_TLS_CERTFILE,
+        OPT_X_TLS_KEYFILE,
+        OPT_X_TLS_REQUIRE_CERT,
+        OPT_X_TLS_NEVER,
+        OPT_X_TLS_NEWCTX,
+    )
 
     settings.AUTHENTICATION_BACKENDS.insert(
         0,
@@ -162,6 +169,26 @@ def configure_ldap_auth(config, settings):
     settings.AUTH_LDAP_MIRROR_GROUPS = True
     settings.AUTH_LDAP_CACHE_GROUPS = True
     settings.AUTH_LDAP_GROUP_CACHE_TIMEOUT = 900
+
+    settings.AUTH_LDAP_CONNECTION_OPTIONS = {}
+    settings.AUTH_LDAP_GLOBAL_OPTIONS = {}
+
+    if get_from_config(config, "auth_ldap", "start_tls", "no").lower() in \
+            ("1", "enabled", "true", "yes"):
+        settings.AUTH_LDAP_START_TLS = True
+
+    if get_from_config(config, "auth_ldap", "client_cert", None):
+        settings.AUTH_LDAP_CONNECTION_OPTIONS[OPT_X_TLS_CERTFILE] = \
+            config.get("auth_ldap", "client_cert")
+        settings.AUTH_LDAP_CONNECTION_OPTIONS[OPT_X_TLS_KEYFILE] = \
+            config.get("auth_ldap", "client_key")
+
+    if get_from_config(config, "auth_ldap", "disable_server_cert_validation", "no").lower() in \
+            ("1", "enabled", "true", "yes"):
+        settings.AUTH_LDAP_CONNECTION_OPTIONS[OPT_X_TLS_REQUIRE_CERT] = \
+            OPT_X_TLS_NEVER
+        # must be set last, relies on dict insertion order
+        settings.AUTH_LDAP_CONNECTION_OPTIONS[OPT_X_TLS_NEWCTX] = 0
 
 
 def configure_logging(config):
@@ -290,6 +317,10 @@ salt = {hashid_salt}
 
 #[auth_ldap]
 #server_uri = ldaps://ldap.example.com
+##start_tls = yes
+##client_cert = /path/to/cert.crt
+##client_key = /path/to/key.key
+##disable_server_cert_validation = no
 #bind_dn = cn=root,dc=example,dc=com
 #password = ******************
 #user_base_dn = ou=users,dc=example,dc=com
