@@ -191,6 +191,10 @@ def configure_logging(config):
                 'handlers': ['console'],
                 'level': level,
             },
+            'django_auth_ldap': {
+                'handlers': ['console'],
+                'level': level,
+            },
             'teamvault': {
                 'handlers': ['console'],
                 'level': level,
