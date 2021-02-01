@@ -1,3 +1,10 @@
+# 0.9.1
+
+2021-02-01
+
+* fixed missing social auth depedency
+
+
 # 0.9.0
 
 2021-02-01
