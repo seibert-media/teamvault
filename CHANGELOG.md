@@ -1,3 +1,15 @@
+# 0.9.0
+
+2021-02-01
+
+* added Google OAuth2
+* added LDAP client certificate auth and StartTLS
+* descriptions now have line breaks and clickable links
+* improved LDAP debug logging
+* removed Share button
+* updated Python dependencies
+
+
 # 0.8.5
 
 2020-11-13

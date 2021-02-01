@@ -8,7 +8,7 @@ environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
 
 setup(
     name="teamvault",
-    version="0.8.5",
+    version="0.9.0",
     description="Keep your passwords behind the firewall",
     author="//SEIBERT/MEDIA GmbH",
     license="GPLv3",
