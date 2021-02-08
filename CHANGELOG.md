@@ -1,3 +1,10 @@
+# 0.9.2
+
+2021-02-08
+
+* follow deeplinks after Google login
+
+
 # 0.9.1
 
 2021-02-01
