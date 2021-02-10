@@ -40,7 +40,7 @@ setup(
         "certifi==2020.12.5",
         "cffi==1.14.4",
         "chardet==4.0.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
-        "cryptography==3.3.1",
+        "cryptography==3.3.2",
         "defusedxml==0.6.0; python_version >= '3.0'",
         "django-auth-ldap==2.2.0",
         "django-filter==2.4.0",
