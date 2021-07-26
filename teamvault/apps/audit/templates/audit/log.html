@@ -22,7 +22,7 @@
 				<table class="table table-hover">
 					{% for entry in log_entries %}
 					<tr>
-					<td>{{ entry.time|date:"Y-m-d H:i:s" }}</td>
+					<td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
 					<td>{% if entry.secret %}<a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}</td>
 					<td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
 					<td>{{ entry.message }}</td>
