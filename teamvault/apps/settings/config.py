@@ -287,6 +287,10 @@ def configure_teamvault_secret_key(config, settings):
     settings.TEAMVAULT_SECRET_KEY = key
 
 
+def configure_time_zone(config):
+    return get_from_config(config, "teamvault", "time_zone", "UTC")
+
+
 def create_default_config(filename):
     if exists(filename):
         raise RuntimeError("not overwriting existing path {}".format(filename))
@@ -305,6 +309,7 @@ max_file_size = 5242880
 session_cookie_age = 3600
 session_expire_at_browser_close = True
 session_cookie_secure = False
+time_zone = UTC
 
 [django]
 # This key has been generated for you, there is no need to change it
