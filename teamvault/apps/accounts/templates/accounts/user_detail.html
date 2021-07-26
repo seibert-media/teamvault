@@ -70,11 +70,11 @@
 					</tr>
 					<tr>
 						<td>{% trans "Created" %}</td>
-						<td>{{ user.date_joined|date:"Y-m-d H:i:s" }}</td>
+						<td>{{ user.date_joined|date:"Y-m-d H:i:s e" }}</td>
 					</tr>
 					<tr>
 						<td>{% trans "Last login" %}</td>
-						<td>{{ user.last_login|date:"Y-m-d H:i:s" }}</td>
+						<td>{{ user.last_login|date:"Y-m-d H:i:s e" }}</td>
 					</tr>
 					<tr>
 						<td>{% trans "Groups" %}</td>
