@@ -6,6 +6,7 @@ from .apps.settings.config import (
     configure_hashid,
     configure_logging,
     configure_session,
+    configure_time_zone,
     get_config,
 )
 
@@ -111,7 +112,7 @@ TEMPLATES = [
 
 TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = configure_time_zone(CONFIG)
 
 USE_I18N = False
 USE_L10N = True
