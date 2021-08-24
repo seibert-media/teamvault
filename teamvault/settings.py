@@ -103,7 +103,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.template.context_processors.static',
                 'teamvault.apps.accounts.context_processors.google_auth_enabled',
-                'teamvault.apps.secrets.context_processors.access_request_count',
                 'teamvault.apps.secrets.context_processors.version',
             ],
         },

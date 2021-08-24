@@ -1,36 +1,7 @@
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
-from .models import AccessRequest, Secret, SecretRevision
-
-
-class AccessRequestAdmin(admin.ModelAdmin):
-    fieldsets = (
-        (_("Subject"), {
-            'fields': (
-                'requester',
-                'secret',
-                'created',
-                'reason_request',
-            ),
-        }),
-        (_("Status"), {
-            'fields': (
-                'reviewers',
-                'status',
-                'closed',
-                'closed_by',
-                'reason_rejected',
-            ),
-        }),
-    )
-    date_hierarchy = 'created'
-    list_display = ('requester', 'secret', 'status', 'created')
-    list_filter = ('status',)
-    readonly_fields = ('created',)
-    search_fields = ('requester__username', 'password__name',)
-
-admin.site.register(AccessRequest, AccessRequestAdmin)
+from .models import Secret, SecretRevision
 
 
 class SecretAdmin(admin.ModelAdmin):

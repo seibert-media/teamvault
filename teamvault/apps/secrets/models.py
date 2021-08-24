@@ -1,11 +1,10 @@
 from datetime import timedelta
 from hashlib import sha256
 from operator import itemgetter
-from random import sample
 
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import Group
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
@@ -17,7 +16,6 @@ from django.utils.timezone import now
 from django.utils.translation import ugettext_lazy as _
 from hashids import Hashids
 
-from ...utils import send_mail
 from ..audit.auditlog import log
 from ..audit.models import LogEntry
 from .exceptions import PermissionError
@@ -46,12 +44,6 @@ class HashIDModel(models.Model):
             # save the hashid
             super(HashIDModel, self).save(*args, **kwargs)
         if not self.hashid:
-            # We cannot use the same salt for every model because
-            # 1. sequentially create lots of secrets
-            # 2. note the hashid of each secrets
-            # 3. you can now enumerate access requests by using the same
-            #    hashids
-            # it's not a huge deal, but let's avoid it anyway
             hasher = Hashids(
                 min_length=settings.HASHID_MIN_LENGTH,
                 salt=self.HASHID_NAMESPACE + settings.HASHID_SALT,
@@ -63,233 +55,14 @@ class HashIDModel(models.Model):
         return super(HashIDModel, self).save(*args, **kwargs)
 
 
-class AccessRequest(HashIDModel):
-    HASHID_NAMESPACE = "AccessRequest"
-
-    STATUS_PENDING = 1
-    STATUS_REJECTED = 2
-    STATUS_APPROVED = 3
-    STATUS_CHOICES = (
-        (STATUS_PENDING, _("pending")),
-        (STATUS_REJECTED, _("rejected")),
-        (STATUS_APPROVED, _("approved")),
-    )
-
-    closed = models.DateTimeField(
-        blank=True,
-        null=True,
-    )
-    closed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        models.PROTECT,
-        blank=True,
-        null=True,
-        related_name='access_requests_closed',
-    )
-    created = models.DateTimeField(auto_now_add=True)
-    reason_request = models.TextField(
-        blank=True,
-        null=True,
-    )
-    reason_rejected = models.TextField(
-        blank=True,
-        null=True,
-    )
-    requester = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        models.PROTECT,
-        related_name='access_requests_created',
-    )
-    reviewers = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name='access_requests_reviewed',
-    )
-    secret = models.ForeignKey(
-        'Secret',
-        models.PROTECT,
-        related_name='access_requests',
-    )
-    status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-    )
-
-    class Meta:
-        ordering = ('-created',)
-
-    def __repr__(self):
-        return "<AccessRequest {user}@'{name}' ({id})>".format(
-            id=self.hashid,
-            name=self.secret.name,
-            user=self.requester,
-        )
-
-    @classmethod
-    def get_all_readable_by_user(cls, user):
-        if user.is_superuser:
-            return cls.objects.all()
-        return (
-            cls.objects.filter(requester=user) |
-            cls.objects.filter(reviewers=user)
-        )
-
-    def approve(self, reviewer):
-        if self.status != self.STATUS_PENDING:
-            raise PermissionDenied(_("Can't approve closed access request"))
-
-        # make sure user is still allowed to handle secret, privileges might
-        # have been revoked since the access request was made
-        self.secret.check_access(reviewer)
-
-        log(
-            _("{reviewer} has approved access request #{access_request} for {requester}, "
-              "allowing access to '{secret}'").format(
-                access_request=self.id,
-                requester=self.requester,
-                reviewer=reviewer,
-                secret=self.secret.name,
-            ),
-            actor=reviewer,
-            secret=self.secret,
-            user=self.requester,
-        )
-
-        self.closed = now()
-        self.closed_by = reviewer
-        self.status = self.STATUS_APPROVED
-        self.save()
-
-        self.secret.allowed_users.add(self.requester)
-
-        other_reviewers = list(self.reviewers.all())
-        try:
-            other_reviewers.remove(reviewer)
-        except ValueError:
-            # review by other superuser
-            pass
-
-        send_mail(
-            other_reviewers + [self.requester],
-            _("[TeamVault] Access request for '{}' approved").format(self.secret.name),
-            "secrets/mail_access_request_approved",
-            context={
-                'approved_by': reviewer.username,
-                'base_url': settings.BASE_URL,
-                'secret_name': self.secret.name,
-                'secret_url': self.secret.get_absolute_url(),
-                'username': self.requester.username,
-            },
-            user_from=reviewer,
-        )
-
-    def assign_reviewers(self):
-        candidates = list(self.secret.notify_on_access_request.filter(is_active=True))
-        if len(candidates) < 3:
-            candidates += list(
-                self.secret.allowed_users.order_by('-last_login').filter(is_active=True)[:10]
-            )
-            for group in self.secret.allowed_groups.all():
-                candidates += list(group.user_set.order_by('-last_login').filter(is_active=True)[:3])
-        if len(candidates) < 3:
-            candidates += list(User.objects.filter(
-                is_active=True,
-                is_superuser=True,
-            ).order_by('-last_login')[:3])
-        candidates = set(candidates)
-        selected = sample(candidates, min(3, len(candidates)))
-        if not selected:
-            raise RuntimeError(_("unable to find reviewers for {}").format(self))
-        self.reviewers.set(selected)
-
-        send_mail(
-            self.reviewers.all(),
-            _("[TeamVault] Review access request for '{}'").format(self.secret.name),
-            "secrets/mail_access_request_review",
-            context={
-                'access_request_url': reverse(
-                    'secrets.access_request-detail',
-                    kwargs={'hashid': self.hashid},
-                ),
-                'base_url': settings.BASE_URL,
-                'secret_name': self.secret.name,
-                'secret_url': self.secret.get_absolute_url(),
-                'username': self.requester.username,
-            },
-            user_from=self.requester,
-        )
-
-    def reject(self, reviewer, reason=None):
-        if self.status != self.STATUS_PENDING:
-            raise PermissionDenied(_("Can't reject closed access request"))
-
-        # make sure user is still allowed to handle secret, privileges might
-        # have been revoked since the access request was made
-        self.secret.check_access(reviewer)
-
-        log(
-            _("{reviewer} has rejected access request #{access_request} for {requester}, "
-              "NOT allowing access to '{secret}'").format(
-                access_request=self.id,
-                requester=self.requester,
-                reviewer=reviewer,
-                secret=self.secret.name,
-            ),
-            actor=reviewer,
-            secret=self.secret,
-            user=self.requester,
-        )
-
-        self.closed = now()
-        self.closed_by = reviewer
-        self.reason_rejected = reason
-        self.status = self.STATUS_REJECTED
-        self.save()
-
-        other_reviewers = list(self.reviewers.all())
-        try:
-            other_reviewers.remove(reviewer)
-        except ValueError:
-            # review by other superuser
-            pass
-
-        send_mail(
-            other_reviewers + [self.requester],
-            _("[TeamVault] Access request for '{}' denied").format(self.secret.name),
-            "secrets/mail_access_request_denied",
-            context={
-                'base_url': settings.BASE_URL,
-                'denied_by': reviewer.username,
-                'reason': reason,
-                'secret_name': self.secret.name,
-                'secret_url': self.secret.get_absolute_url(),
-                'username': self.requester.username,
-            },
-            user_from=reviewer,
-        )
-
-    @property
-    def full_url(self):
-        return settings.BASE_URL.rstrip("/") + self.get_absolute_url()
-
-    def get_absolute_url(self):
-        return reverse('secrets.access_request-detail', args=[str(self.hashid)])
-
-    def is_readable_by_user(self, user):
-        return (
-            user == self.requester or
-            user in self.reviewers.all() or
-            user.is_superuser
-        )
-
-
 class Secret(HashIDModel):
     HASHID_NAMESPACE = "Secret"
 
-    ACCESS_POLICY_REQUEST = 1
+    ACCESS_POLICY_DISCOVERABLE = 1
     ACCESS_POLICY_ANY = 2
     ACCESS_POLICY_HIDDEN = 3
     ACCESS_POLICY_CHOICES = (
-        (ACCESS_POLICY_REQUEST, _("request")),
+        (ACCESS_POLICY_DISCOVERABLE, _("discoverable")),
         (ACCESS_POLICY_ANY, _("everyone")),
         (ACCESS_POLICY_HIDDEN, _("hidden")),
     )
@@ -312,7 +85,7 @@ class Secret(HashIDModel):
 
     access_policy = models.PositiveSmallIntegerField(
         choices=ACCESS_POLICY_CHOICES,
-        default=ACCESS_POLICY_REQUEST,
+        default=ACCESS_POLICY_DISCOVERABLE,
     )
     allowed_groups = models.ManyToManyField(
         Group,
@@ -359,11 +132,6 @@ class Secret(HashIDModel):
     name = models.CharField(max_length=92)
     needs_changing_on_leave = models.BooleanField(
         default=True,
-    )
-    notify_on_access_request = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        blank=True,
-        related_name='notify_on_access_requests_for',
     )
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
@@ -468,7 +236,7 @@ class Secret(HashIDModel):
         if user.is_superuser:
             return queryset
         return (
-            queryset.filter(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_REQUEST)) |
+            queryset.filter(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_DISCOVERABLE)) |
             queryset.filter(allowed_users=user) |
             queryset.filter(allowed_groups__in=user.groups.all())
         ).exclude(status=cls.STATUS_DELETED).distinct()
@@ -545,7 +313,7 @@ class Secret(HashIDModel):
         return (
             user.is_superuser or (
                 (
-                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_REQUEST) or
+                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
                     self.is_readable_by_user(user)
                 ) and self.status != self.STATUS_DELETED
             )

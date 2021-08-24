@@ -10,22 +10,15 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
-from .models import AccessRequest, Secret, SecretRevision
+from .models import Secret, SecretRevision
 
 
 ACCESS_POLICY_REPR = {
     Secret.ACCESS_POLICY_ANY: "any",
     Secret.ACCESS_POLICY_HIDDEN: "hidden",
-    Secret.ACCESS_POLICY_REQUEST: "request",
+    Secret.ACCESS_POLICY_DISCOVERABLE: "discoverable",
 }
 REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
-
-ACCESS_REQUEST_STATUS_REPR = {
-    AccessRequest.STATUS_PENDING: "pending",
-    AccessRequest.STATUS_REJECTED: "rejected",
-    AccessRequest.STATUS_APPROVED: "approved",
-}
-ACCESS_REQUEST_REPR_STATUS = {v: k for k, v in ACCESS_REQUEST_STATUS_REPR.items()}
 
 CONTENT_TYPE_REPR = {
     Secret.CONTENT_CC: "cc",
@@ -77,110 +70,6 @@ def _extract_data(validated_data):
         )
     else:
         return (None, None)
-
-
-class AccessRequestSerializer(serializers.HyperlinkedModelSerializer):
-    api_url = serializers.HyperlinkedIdentityField(
-        lookup_field='hashid',
-        view_name='api.access-request_detail',
-    )
-    closed_by = serializers.SlugRelatedField(
-        default=serializers.CurrentUserDefault(),
-        read_only=True,
-        slug_field='username',
-    )
-    requester = serializers.SlugRelatedField(
-        default=serializers.CurrentUserDefault(),
-        read_only=True,
-        slug_field='username',
-    )
-    secret = serializers.HyperlinkedRelatedField(
-        lookup_field='hashid',
-        queryset=Secret.objects.exclude(status=Secret.STATUS_DELETED),
-        view_name='api.secret_detail',
-    )
-    reviewers = serializers.SlugRelatedField(
-        many=True,
-        queryset=User.objects.exclude(is_active=False),
-        slug_field='username',
-    )
-    web_url = serializers.CharField(
-        required=False,
-        read_only=True,
-    )
-
-    def to_representation(self, instance):
-        rep = super(AccessRequestSerializer, self).to_representation(instance)
-        rep['web_url'] = instance.full_url
-        rep['status'] = ACCESS_REQUEST_STATUS_REPR[rep['status']]
-        return rep
-
-    class Meta:
-        model = AccessRequest
-        fields = (
-            'api_url',
-            'closed',
-            'closed_by',
-            'created',
-            'secret',
-            'reason_request',
-            'reason_rejected',
-            'requester',
-            'reviewers',
-            'status',
-            'web_url',
-        )
-        read_only_fields = (
-            'closed',
-            'closed_by',
-            'created',
-        )
-
-
-class AccessRequestDetail(generics.RetrieveUpdateAPIView):
-    model = AccessRequest
-    serializer_class = AccessRequestSerializer
-
-    def get_object(self):
-        obj = get_object_or_404(AccessRequest, hashid=self.kwargs['hashid'])
-        if (
-            self.request.user != obj.requester and
-            self.request.user not in obj.reviewers and
-            not self.request.user.is_superuser
-        ):
-            self.permission_denied(self.request)
-        return obj
-
-    def pre_save(self, obj):
-        previous_state = AccessRequest.objects.get(hashid=obj.hashid)
-        if (
-            previous_state.status != AccessRequest.STATUS_PENDING or
-            obj.status == AccessRequest.STATUS_PENDING or
-            self.request.user not in previous_state.reviewers.all() or
-            obj.password != previous_state.password
-        ):
-            self.permission_denied(self.request)
-
-    def post_save(self, obj, created=False):
-        #obj.handle_status() TODO
-        pass
-
-
-class AccessRequestList(generics.ListCreateAPIView):
-    model = AccessRequest
-    serializer_class = AccessRequestSerializer
-
-    def get_queryset(self):
-        return AccessRequest.get_all_readable_by_user(self.request.user)
-
-    def pre_save(self, obj):
-        obj.reason_rejected = ""
-        obj.requester = self.request.user
-        obj.status = AccessRequest.STATUS_PENDING
-
-    def post_save(self, obj, created=False):
-        if created:
-            obj.assign_reviewers()
 
 
 class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
@@ -268,12 +157,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         write_only=True,
     )
-    notify_on_access_request = serializers.SlugRelatedField(
-        many=True,
-        queryset=User.objects.exclude(is_active=False),
-        required=False,
-        slug_field='username',
-    )
     number = serializers.CharField(
         required=False,
         write_only=True,
@@ -294,7 +177,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         allowed_groups = validated_data.pop('allowed_groups', [])
         allowed_users = validated_data.pop('allowed_users', [])
-        notify_on_access_request = validated_data.pop('notify_on_access_request', [])
 
         data, content_type = _extract_data(validated_data)
         if not data:
@@ -305,7 +187,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         instance.allowed_groups.set(allowed_groups)
         instance.allowed_users.set(allowed_users)
         instance.content_type = content_type
-        instance.notify_on_access_request.set(notify_on_access_request)
         instance._data = data
         return instance
 
@@ -368,7 +249,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'last_read',
             'name',
             'needs_changing_on_leave',
-            'notify_on_access_request',
             'number',
             'password',
             'security_code',

@@ -1,20 +1,9 @@
 from django.conf.urls import url
 
-from .api import AccessRequestDetail, AccessRequestList, SecretDetail, SecretList, \
-    SecretRevisionDetail, data_get
+from .api import SecretDetail, SecretList, SecretRevisionDetail, data_get
 
 
 urlpatterns = (
-    url(
-        r'^access-requests/$',
-        AccessRequestList.as_view(),
-        name='api.access-request_list',
-    ),
-    url(
-        r'^access-requests/(?P<hashid>\w+)/$',
-        AccessRequestDetail.as_view(),
-        name='api.access-request_detail',
-    ),
     url(
         r'^secrets/$',
         SecretList.as_view(),

@@ -9,21 +9,6 @@ urlpatterns = (
         name='dashboard',
     ),
     url(
-        r'^access_requests/$',
-        views.access_request_list,
-        name='secrets.access_request-list',
-    ),
-    url(
-        r'^access_requests/(?P<hashid>\w+)$',
-        views.access_request_detail,
-        name='secrets.access_request-detail',
-    ),
-    url(
-        r'^access_requests/(?P<hashid>\w+)/(?P<action>(allow|deny))$',
-        views.access_request_review,
-        name='secrets.access_request-review',
-    ),
-    url(
         r'^opensearch.xml$',
         views.opensearch,
         name='opensearch',
@@ -52,11 +37,6 @@ urlpatterns = (
         r'^secrets/(?P<hashid>\w+)/edit$',
         views.secret_edit,
         name='secrets.secret-edit',
-    ),
-    url(
-        r'^secrets/(?P<hashid>\w+)/request_access$',
-        views.access_request_create,
-        name='secrets.secret-request_access',
     ),
     url(
         r'^secrets/(?P<hashid>\w+)/restore$',

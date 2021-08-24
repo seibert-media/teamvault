@@ -3,8 +3,6 @@ from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import Group, User
-from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, HttpResponseRedirect, Http404
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
@@ -16,11 +14,11 @@ import django_filters
 
 from ..audit.auditlog import log
 from .forms import CCForm, FileForm, PasswordForm
-from .models import AccessRequest, Secret
+from .models import Secret
 
 ACCESS_STR_IDS = {
     'ACCESS_POLICY_ANY': str(Secret.ACCESS_POLICY_ANY),
-    'ACCESS_POLICY_REQUEST': str(Secret.ACCESS_POLICY_REQUEST),
+    'ACCESS_POLICY_DISCOVERABLE': str(Secret.ACCESS_POLICY_DISCOVERABLE),
     'ACCESS_POLICY_HIDDEN': str(Secret.ACCESS_POLICY_HIDDEN),
 }
 CONTENT_TYPE_FORMS = {
@@ -58,88 +56,6 @@ def _patch_post_data(POST, fields):
                 POST.getlist(csv_field)[0].split(","),
             )
     return POST
-
-
-@login_required
-def access_request_create(request, hashid):
-    secret = Secret.objects.get(hashid=hashid)
-    if not secret.is_visible_to_user(request.user):
-        raise Http404
-    try:
-        AccessRequest.objects.get(
-            requester=request.user,
-            secret=secret,
-            status=AccessRequest.STATUS_PENDING,
-        )
-    except AccessRequest.DoesNotExist:
-        if request.method == 'POST' and not secret.is_readable_by_user(request.user):
-            access_request = AccessRequest()
-            access_request.reason_request = request.POST['reason']
-            access_request.requester = request.user
-            access_request.secret = secret
-            access_request.save()
-            access_request.assign_reviewers()
-    return HttpResponseRedirect(secret.get_absolute_url())
-
-
-@login_required
-@require_http_methods(["POST"])
-def access_request_review(request, hashid, action):
-    access_request = get_object_or_404(
-        AccessRequest,
-        hashid=hashid,
-        status=AccessRequest.STATUS_PENDING,
-    )
-    if not request.user.is_superuser and request.user not in access_request.reviewers.all():
-        raise PermissionDenied()
-
-    if action == 'allow':
-        access_request.approve(request.user)
-    else:
-        access_request.reject(request.user, reason=request.POST.get('reason', None))
-
-    return HttpResponseRedirect(reverse('secrets.access_request-list'))
-
-
-class AccessRequestDetail(DetailView):
-    context_object_name = 'access_request'
-    model = AccessRequest
-    slug_field = 'hashid'
-    slug_url_kwarg = 'hashid'
-    template_name = "secrets/accessrequest_detail.html"
-
-    def get_object(self):
-        if self.request.user.is_superuser:
-            return get_object_or_404(
-                AccessRequest,
-                hashid=self.kwargs['hashid'],
-                status=AccessRequest.STATUS_PENDING,
-            )
-        else:
-            return get_object_or_404(
-                AccessRequest,
-                hashid=self.kwargs['hashid'],
-                reviewers=self.request.user,
-                status=AccessRequest.STATUS_PENDING,
-            )
-access_request_detail = login_required(AccessRequestDetail.as_view())
-
-
-class AccessRequestList(ListView):
-    context_object_name = 'access_requests'
-    template_name = "secrets/accessrequests_list.html"
-
-    def get_context_data(self, **kwargs):
-        queryset = self.get_queryset()
-        context = super(AccessRequestList, self).get_context_data(**kwargs)
-        context['reviewable'] = queryset.exclude(requester=self.request.user)
-        context['pending_review'] = queryset.filter(requester=self.request.user)
-        return context
-
-    def get_queryset(self):
-        queryset = AccessRequest.get_all_readable_by_user(self.request.user)
-        return queryset.filter(status=AccessRequest.STATUS_PENDING)
-access_request_list = login_required(AccessRequestList.as_view())
 
 
 class Dashboard(TemplateView):
@@ -409,15 +325,6 @@ class SecretDetail(DetailView):
         )
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
-        else:
-            try:
-                context['access_request'] = AccessRequest.objects.get(
-                    secret=secret,
-                    status=AccessRequest.STATUS_PENDING,
-                    requester=self.request.user,
-                )
-            except AccessRequest.DoesNotExist:
-                context['access_request'] = None
         return context
 
     def get_object(self):
