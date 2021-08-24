@@ -3,36 +3,30 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="utf-8">
-    <title>{% trans "TeamVault" %} &middot; {% block title %}{% endblock %}</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<title>{% trans "TeamVault" %} &middot; {% block title %}{% endblock %}</title>
 
     <link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
 
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet" crossorigin="anonymous">
+	<link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet" crossorigin="anonymous">
 
-    <link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
-    <link href="{% static 'bundled/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet">
-    <link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
-    <link href="{% static 'css/typeaheadjs.css' %}" rel="stylesheet">
-    <link href="{% static 'css/base.css' %}" rel="stylesheet">
-    <link href="{% static 'css/login.css' %}" rel="stylesheet">
-    <link href="{% static 'css/secrets.css' %}" rel="stylesheet">
-    <link href="{% static 'bundled/select2/select2.css' %}" rel="stylesheet">
-    <link href="{% static 'bundled/select2-bootstrap/select2-bootstrap.css' %}" rel="stylesheet">
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" crossorigin="anonymous">
+	<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KyZXEAg3QhqLMpG8r+8fhAXLRk2vvoC2f3B09zVXn8CA5QIVfZOJ3BCsw2P0p/We" crossorigin="anonymous">
 
-    <script src="{% static 'bundled/jquery/dist/jquery.min.js' %}"></script>
-    <script src="{% static 'bundled/underscore/underscore-min.js' %}"></script>
-    <script src="{% static 'bundled/bootstrap/dist/js/bootstrap.min.js' %}"></script>
-    <script src="{% static 'bundled/card/dist/jquery.card.js' %}"></script>
-    <script src="{% static 'bundled/password-generator/dist/password-generator.min.js' %}"></script>
-    <script src="{% static 'bundled/select2/select2.min.js' %}"></script>
-    <script src="{% static 'bundled/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
-    <script src="{% static 'bundled/clipboard/dist/clipboard.min.js' %}"></script>
-    <script src="{% static 'bundled/zxcvbn/dist/zxcvbn.js' %}"></script>
+	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/bs5/dt-1.10.25/r-2.2.9/sl-1.3.3/datatables.min.css" crossorigin="anonymous">
+
+	<link href="{% static 'css/base.css' %}" rel="stylesheet">
+	<link href="{% static 'css/login.css' %}" rel="stylesheet">
 </head>
 <body>
-<div class="background"></div>
-{% block global_content %}{% endblock %}
+	<script src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
+	<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js" integrity="sha384-U1DAWAznBHeqEIlVSCgzq+c9gqGAJn5c/t99JyeKa9xxaYpSvHU5awsuZVVFIhvj" crossorigin="anonymous"></script>
+	<script type="text/javascript" src="https://cdn.datatables.net/v/bs5/dt-1.10.25/r-2.2.9/sl-1.3.3/datatables.min.js" crossorigin="anonymous"></script>
+	{% block global_content %}{% endblock %}
 </body>
 </html>
+
+

@@ -17,5 +17,6 @@ django-filter = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
 social-auth-app-django = "*"
 teamvault = {editable = true, path = "."}
+djangorestframework-datatables = "*"
 
 [dev-packages]

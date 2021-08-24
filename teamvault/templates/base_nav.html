@@ -2,118 +2,64 @@
 {% load gravatar %}
 {% load i18n %}
 {% block global_content %}
-<script>
-	$(document).ready(function() {
-		typeahead_search = new Bloodhound({
-			datumTokenizer: function(d) {
-				return Bloodhound.tokenizers.whitespace(d.val);
-			},
-			queryTokenizer: Bloodhound.tokenizers.whitespace,
-			remote: {
-				url: '{% url 'secrets.secret-search' %}?q=%QUERY',
-				wildcard: '%QUERY'
-			}
-		});
-		typeahead_search.initialize();
-
-		$('#search').typeahead(
-		{
-			minLength: 3,
-			highlight: true,
-		},
-		{
-			name: 'secrets',
-			displayKey: 'name',
-			source: typeahead_search.ttAdapter(),
-			templates: {
-				suggestion: function (datum) {
-					var output = '';
-					output += '<div class="search_result" onclick="document.location = \'' + datum.url + '\';">';
-					output += '<div class="search_result_icons"><i class="fa fa-' + datum.icon + '"></i></div>';
-					output += '<div class="search_result_name"><a href="' + datum.url + '">' + datum.name + '</a></div>';
-					output += '<div class="goto_icon"><i class="fa fa-arrow-right"></i></div>';
-					output += '<div class="clearfix"></div></div>';
-					return output;
-				}
-			}
-		});
-
-		$('#search').on('typeahead:selected', function(event, selection) {
-			window.location.href = selection.url;
-		});
-	});
-</script>
-<nav class="navbar navbar-default" role="navigation">
-	<div class="container">
-		<div class="navbar-header">
-			<button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#navbar-collapse">
-				<span class="sr-only">{% trans "Toggle navigation" %}</span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-				<span class="icon-bar"></span>
-			</button>
-			<a class="navbar-brand" href="{% url 'dashboard' %}">{% trans "TeamVault" %}</a>
-		</div>
-		<div class="collapse navbar-collapse" id="navbar-collapse">
-			<ul class="nav navbar-nav navbar-left">
+<nav class="navbar navbar-expand-lg navbar-dark bg-secondary">
+	<div class="container-fluid">
+		<a class="navbar-brand" href="{% url 'dashboard' %}">{% trans "TeamVault" %}</a>
+		<ul class="navbar-nav me-auto mb-2 mb-lg-0">
+			<li class="nav-item">
 				<div class="btn-group">
-					<a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-nav"><i class="fa fa-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
-					<button type="button" class="btn btn-nav dropdown-toggle" data-toggle="dropdown">
+					<a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark"><i class="bi bi-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
+					<button type="button" class="btn btn-dark dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown" aria-expanded="false">
 						<span class="caret"></span>
-						<span class="sr-only">Toggle Dropdown</span>
+						<span class="visually-hidden">Toggle Dropdown</span>
 					</button>
-					<ul class="dropdown-menu" role="menu">
-						<li><a href="{% url 'secrets.secret-add' content_type='cc' %}"><i class="fa fa-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a></li>
-						<li><a href="{% url 'secrets.secret-add' content_type='file' %}"><i class="fa fa-upload"></i>&nbsp; {% trans "Upload File" %}</a></li>
+					<ul class="dropdown-menu dropdown-menu-dark" role="menu">
+						<li><a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}"><i class="bi bi-credit-card"></i>&nbsp; {% trans "Add 	Credit Card" %}</a></li>
+						<li><a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}"><i class="bi bi-upload"></i>&nbsp; {% trans "Upload 	File" %}</a></li>
 					</ul>
 				</div>
-			</ul>
-			<ul class="nav navbar-nav navbar-right">
-				{% if request.user.is_superuser %}
-				<li class="dropdown">
-					<a href="#" class="dropdown-toggle" data-toggle="dropdown"><i class="fa fa-cog"></i>&nbsp; {% trans "Administration" %} <span class="caret"></span></a>
-					<ul class="dropdown-menu" role="menu">
-						<li><a href="{% url 'audit.log' %}"><i class="fa fa-address-card-o" aria-hidden="true"></i> &nbsp; {% trans "Audit log" %}</a></li>
-						<li><a href="{% url 'accounts.user-list' %}"><i class="fa fa-users" aria-hidden="true"></i> &nbsp; {% trans "Users" %}</a></li>
-					</ul>
-				</li>
-				{% endif %}
-				<li class="dropdown">
-					<a href="#" class="dropdown-toggle" data-toggle="dropdown">
-						<img class="avatar" src="{% gravatar_url request.user.email 64 %}">
-						&nbsp; {{ request.user.username }}
-						<span class="caret"></span>
-					</a>
-					<ul class="dropdown-menu" role="menu">
-						<li><a href="{% url 'accounts.logout' %}"><i class="fa fa-sign-out"></i>&nbsp; {% trans "Logout" %}</a></li>
-					</ul>
-				</li>
-			</ul>
-		</div>
+			</li>
+		</ul>
+		<form class="flex-fill mx-3" action="{% url 'secrets.secret-list' %}" role="search" method="GET">
+			<div class="input-group search-group">
+				<input id="search" name="search" placeholder="{% trans "Search secrets..." %}" value="{{ request.GET.search }}" type="text" class="form-control">
+				<span class="input-group-btn">
+					<button class="btn btn-dark" type="submit"><i class="bi bi-search"></i></button>
+				</span>
+			</div>
+		</form>
+		<ul class="navbar-nav">
+			{% if request.user.is_superuser %}
+			<li class="nav-item dropdown">
+				<a class="nav-link dropdown-toggle" href="#" id="adminmenu" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+					<i class="bi bi-gear-fill"></i>&nbsp; {% trans "Administration" %}
+				</a>
+				<ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminmenu">
+					<li><a class="dropdown-item" href="{% url 'audit.log' %}"><i class="bi bi-person-lines-fill"></i> &nbsp; {% trans "Audit log" %}</a></li>
+					<li><a class="dropdown-item" href="{% url 'accounts.user-list' %}"><i class="bi bi-people-fill"></i> &nbsp; {% trans "Users" %}</a></li>
+				</ul>
+			</li>
+			{% endif %}
+			<li class="nav-item dropdown">
+			  <a class="nav-link dropdown-toggle" href="#" id="usermenu" role="button" data-bs-toggle="dropdown" aria-expanded="		false">
+					<i class="bi bi-person-circle"></i>
+					&nbsp; {{ request.user.username }}
+				</a>
+				<ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="usermenu">
+					<li><a class="dropdown-item disabled" href="#"><i class="bi bi-arrow-left-right"></i>&nbsp; {% trans "1Password sync" %}</a></li>
+					<li><hr class="dropdown-divider"></li>
+					<li><a class="dropdown-item" href="{% url 'accounts.logout' %}"><i class="bi bi-door-open-fill"></i>&nbsp; {% trans "Logout" %}</a></li>
+				</ul>
+			</li>
+		</ul>
 	</div>
 </nav>
-<div class="container container-opaque">
-	<div class="row">
-		<div class="col-md-12">
-			<form action="{% url 'secrets.secret-list' %}" role="search" method="GET">
-				<div class="input-group input-group-lg search-group">
-					<input id="search" name="search" placeholder="{% trans "Search secrets..." %}" value="{{ search_term }}" type="text" class="form-control">
-					<span class="input-group-btn">
-						<button class="btn btn-default" type="submit"><i class="fa fa-search"></i></button>
-					</span>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
+<div class="container py-4 bg-light shadow-sm p-3 mb-5 rounded-bottom">
 {% block content %}{% endblock %}
+</div>
 <div class="container">
-	<div class="row">
-		<div class="col-md-12">
-			<footer>
-				TeamVault {{ version }} &nbsp; &middot; &nbsp; &copy; 2014-2021 //SEIBERT/MEDIA GmbH
-			</footer>
-		</div>
-	</div>
+	<footer class="text-center fs-6 text-muted">
+		TeamVault {{ version }} &nbsp; &middot; &nbsp; &copy; 2014-2021 //SEIBERT/MEDIA GmbH
+	</footer>
 </div>
 {% endblock %}
