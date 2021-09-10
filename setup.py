@@ -63,7 +63,7 @@ setup(
         "requests==2.26.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4, 3.5'",
         "social-auth-app-django==5.0.0",
         "social-auth-core==4.1.0; python_version >= '3.6'",
-        "sqlparse==0.4.1; python_version >= '3.5'",
+        "sqlparse==0.4.2; python_version >= '3.5'",
         "urllib3==1.26.6; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4' and python_version < '4'",
         "whitenoise[brotli]==5.3.0",
     ],
