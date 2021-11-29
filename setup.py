@@ -56,7 +56,7 @@ setup(
         "pyasn1==0.4.8",
         "pycparser==2.20; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
         "pyjwt==2.1.0; python_version >= '3.6'",
-        "python-ldap==3.3.1; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
+        "python-ldap==3.4.0; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
         "python3-openid==3.2.0; python_version >= '3.0'",
         "pytz==2021.1",
         "requests-oauthlib==1.3.0",
