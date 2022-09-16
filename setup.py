@@ -50,7 +50,7 @@ setup(
         "gunicorn==20.1.0",
         "hashids==1.3.1",
         "idna==3.2; python_version >= '3.0'",
-        "oauthlib==3.1.1; python_version >= '3.6'",
+        "oauthlib==3.2.1; python_version >= '3.6'",
         "psycopg2==2.9.1",
         "pyasn1-modules==0.2.8",
         "pyasn1==0.4.8",
