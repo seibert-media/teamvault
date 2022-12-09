@@ -37,7 +37,7 @@ setup(
     install_requires=[  # pipenv lock -r
         "asgiref==3.4.1; python_version >= '3.6'",
         "brotli==1.0.9",
-        "certifi==2021.5.30",
+        "certifi==2022.12.7",
         "cffi==1.14.6",
         "charset-normalizer==2.0.4; python_version >= '3.0'",
         "cryptography==3.4.7",
