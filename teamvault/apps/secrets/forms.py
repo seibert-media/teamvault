@@ -15,7 +15,6 @@ GENERIC_FIELDS_FOOTER = [
     'description',
     'access_policy',
     'needs_changing_on_leave',
-    'notify_on_access_request',
     'allowed_groups',
     'allowed_users',
 ]
@@ -46,10 +45,6 @@ class SecretForm(forms.ModelForm):
         queryset=User.objects.filter(is_active=True),
         required=False,
         widget=Select2DataWidget,
-    )
-    notify_on_access_request = forms.BooleanField(
-        initial=True,
-        required=False,
     )
 
 

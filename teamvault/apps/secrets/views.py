@@ -97,12 +97,6 @@ class SecretAdd(CreateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
 
-        for attr in ('notify_on_access_request',):
-            if form.cleaned_data[attr]:
-                getattr(secret, attr).add(self.request.user)
-            else:
-                getattr(secret, attr).remove(self.request.user)
-
         for attr in ('allowed_groups', 'allowed_users'):
             getattr(secret, attr).set(form.cleaned_data[attr])
 
@@ -160,17 +154,10 @@ class SecretEdit(UpdateView):
     def form_valid(self, form):
         secret = self.object
 
-        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
-                     'username'):
+        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url', 'username'):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        for attr in ('notify_on_access_request',):
-            if form.cleaned_data[attr]:
-                getattr(secret, attr).add(self.request.user)
-            else:
-                getattr(secret, attr).remove(self.request.user)
 
         for attr in ('allowed_groups', 'allowed_users'):
             getattr(secret, attr).set(form.cleaned_data[attr])
