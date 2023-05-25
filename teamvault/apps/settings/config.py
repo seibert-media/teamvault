@@ -12,6 +12,13 @@ from cryptography.fernet import Fernet
 from django.db.utils import ProgrammingError
 
 
+class UnconfiguredSettingsError(Exception):
+    def __str__(self):
+        return _(
+            "missing config file at {} (set env var TEAMVAULT_CONFIG_FILE to use a different path)"
+        ).format(environ['TEAMVAULT_CONFIG_FILE'])
+
+
 def configure_base_url(config, settings):
     settings.BASE_URL = config.get("teamvault", "base_url")
     settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
@@ -363,12 +370,7 @@ salt = {hashid_salt}
 
 def get_config():
     if not isfile(environ['TEAMVAULT_CONFIG_FILE']):
-        raise RuntimeError(
-            _("missing config file at {} "
-              "(set env var TEAMVAULT_CONFIG_FILE to use a different path)").format(
-                environ['TEAMVAULT_CONFIG_FILE'],
-            )
-        )
+        raise UnconfiguredSettingsError()
 
     with open(environ['TEAMVAULT_CONFIG_FILE']) as f:
         # SafeConfigParser.read() will not complain if it can't read the
