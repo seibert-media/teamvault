@@ -13,7 +13,7 @@ from django.dispatch import receiver
 from django.http import Http404
 from django.urls import reverse
 from django.utils.timezone import now
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from hashids import Hashids
 
 from ..audit.auditlog import log
