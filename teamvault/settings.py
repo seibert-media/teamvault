@@ -21,6 +21,8 @@ AUTHENTICATION_BACKENDS = [
 
 DATABASES = configure_database(CONFIG)
 
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
 FILE_UPLOAD_HANDLERS = (
     "teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler",
 )
