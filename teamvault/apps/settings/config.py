@@ -1,5 +1,5 @@
 from base64 import b64decode, b64encode
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 from gettext import gettext as _
 from hashlib import sha1
 from os import environ, umask
@@ -373,11 +373,11 @@ def get_config():
         raise UnconfiguredSettingsError()
 
     with open(environ['TEAMVAULT_CONFIG_FILE']) as f:
-        # SafeConfigParser.read() will not complain if it can't read the
+        # ConfigParser.read() will not complain if it can't read the
         # file, so we need to read it once ourselves to get a proper IOError
         f.read()
 
-    config = SafeConfigParser()
+    config = ConfigParser()
     config.read(environ['TEAMVAULT_CONFIG_FILE'])
     return config
 
