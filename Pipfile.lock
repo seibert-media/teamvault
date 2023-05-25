@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "2150c64afe7f45b0f5a9518caad8a6288607dfe09a113e8ebb9fd9d980ccd855"
+            "sha256": "2df7533ac7ad9e7ffa8479691d3b6e3840e1fe07de96dd27c0d0381e0a2d5b95"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -493,6 +493,10 @@
             ],
             "markers": "python_version >= '3.5'",
             "version": "==0.4.4"
+        },
+        "teamvault": {
+            "editable": true,
+            "path": "."
         },
         "urllib3": {
             "hashes": [

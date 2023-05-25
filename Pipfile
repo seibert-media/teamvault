@@ -7,14 +7,15 @@ name = "pypi"
 cryptography = "*"
 django = "*"
 django-auth-ldap = "*"
-"django-gravatar2" = "*"
+django-gravatar2 = "*"
 djangorestframework = "*"
 gunicorn = "*"
 hashids = "*"
-"psycopg2" = "*"
+psycopg2 = "*"
 pytz = "*"
 django-filter = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
 social-auth-app-django = "*"
+teamvault = {editable = true, path = "."}
 
 [dev-packages]
