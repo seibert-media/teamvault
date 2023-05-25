@@ -88,7 +88,11 @@ STATICFILES_DIRS = (
     join(PROJECT_ROOT, "static"),
 )
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    }
+}
 
 TEMPLATES = [
     {
