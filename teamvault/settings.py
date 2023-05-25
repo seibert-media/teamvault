@@ -120,7 +120,6 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 TIME_ZONE = configure_time_zone(CONFIG)
 
 USE_I18N = False
-USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
 USE_TZ = True
 
