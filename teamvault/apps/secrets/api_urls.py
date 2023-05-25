@@ -1,26 +1,26 @@
-from django.conf.urls import url
+from django.urls import path
 
 from .api import SecretDetail, SecretList, SecretRevisionDetail, data_get
 
 
 urlpatterns = (
-    url(
-        r'^secrets/$',
+    path(
+        'secrets/',
         SecretList.as_view(),
         name='api.secret_list',
     ),
-    url(
-        r'^secrets/(?P<hashid>\w+)/$',
+    path(
+        'secrets/<str:hashid>/',
         SecretDetail.as_view(),
         name='api.secret_detail',
     ),
-    url(
-        r'^secret-revisions/(?P<hashid>\w+)/$',
+    path(
+        'secret-revisions/<str:hashid>/',
         SecretRevisionDetail.as_view(),
         name='api.secret-revision_detail',
     ),
-    url(
-        r'^secret-revisions/(?P<hashid>\w+)/data$',
+    path(
+        'secret-revisions/<str:hashid>/data',
         data_get,
         name='api.secret-revision_data',
     ),

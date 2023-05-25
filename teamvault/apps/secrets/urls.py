@@ -1,55 +1,55 @@
-from django.conf.urls import url
+from django.urls import path
 
 from . import views
 
 urlpatterns = (
-    url(
-        r'^$',
+    path(
+        '',
         views.dashboard,
         name='dashboard',
     ),
-    url(
-        r'^opensearch.xml$',
+    path(
+        'opensearch.xml',
         views.opensearch,
         name='opensearch',
     ),
-    url(
-        r'^secrets/$',
+    path(
+        'secrets/',
         views.secret_list,
         name='secrets.secret-list',
     ),
-    url(
-        r'^secrets/(?P<hashid>\w+)$',
+    path(
+        'secrets/<str:hashid>/',
         views.secret_detail,
         name='secrets.secret-detail',
     ),
-    url(
-        r'^secrets/(?P<hashid>\w+)/delete$',
+    path(
+        'secrets/<str:hashid>/delete',
         views.secret_delete,
         name='secrets.secret-delete',
     ),
-    url(
-        r'^secrets/(?P<hashid>\w+)/download$',
+    path(
+        'secrets/<str:hashid>/download',
         views.secret_download,
         name='secrets.secret-download',
     ),
-    url(
-        r'^secrets/(?P<hashid>\w+)/edit$',
+    path(
+        'secrets/<str:hashid>/edit',
         views.secret_edit,
         name='secrets.secret-edit',
     ),
-    url(
-        r'^secrets/(?P<hashid>\w+)/restore$',
+    path(
+        'secrets/<str:hashid>/restore',
         views.secret_restore,
         name='secrets.secret-restore',
     ),
-    url(
-        r'^secrets/add/(?P<content_type>\w+)$',
+    path(
+        'secrets/add/<str:content_type>',
         views.secret_add,
         name='secrets.secret-add',
     ),
-    url(
-        r'^secrets/live-search$',
+    path(
+        'secrets/live-search',
         views.secret_search,
         name='secrets.secret-search',
     ),
