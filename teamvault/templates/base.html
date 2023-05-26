@@ -3,36 +3,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<title>{% trans "TeamVault" %} &middot; {% block "title" %}{% endblock %}</title>
+    <meta charset="utf-8">
+    <title>{% trans "TeamVault" %} &middot; {% block title %}{% endblock %}</title>
 
-	<link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
+    <link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
 
-	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet">
-	<link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
 
-	<link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet">
-	<link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
-	<link href="{% static 'css/typeaheadjs.css' %}" rel="stylesheet">
-	<link href="{% static 'css/base.css' %}" rel="stylesheet">
-	<link href="{% static 'css/login.css' %}" rel="stylesheet">
-	<link href="{% static 'css/secrets.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/select2/select2.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/select2-bootstrap/select2-bootstrap.css' %}" rel="stylesheet">
+    <link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
+    <link href="{% static 'bundled/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet">
+    <link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
+    <link href="{% static 'css/typeaheadjs.css' %}" rel="stylesheet">
+    <link href="{% static 'css/base.css' %}" rel="stylesheet">
+    <link href="{% static 'css/login.css' %}" rel="stylesheet">
+    <link href="{% static 'css/secrets.css' %}" rel="stylesheet">
+    <link href="{% static 'bundled/select2/select2.css' %}" rel="stylesheet">
+    <link href="{% static 'bundled/select2-bootstrap/select2-bootstrap.css' %}" rel="stylesheet">
 
-	<script src="{% static 'bundled/jquery/dist/jquery.min.js' %}"></script>
-	<script src="{% static 'bundled/underscore/underscore-min.js' %}"></script>
-	<script src="{% static 'bundled/bootstrap/dist/js/bootstrap.min.js' %}"></script>
-	<script src="{% static 'bundled/card/dist/jquery.card.js' %}"></script>
-	<script src="{% static 'bundled/password-generator/dist/password-generator.min.js' %}"></script>
-	<script src="{% static 'bundled/select2/select2.min.js' %}"></script>
-	<script src="{% static 'bundled/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
-	<script src="{% static 'bundled/clipboard/dist/clipboard.min.js' %}"></script>
-	<script src="{% static 'bundled/zxcvbn/dist/zxcvbn.js' %}"></script>
+    <script src="{% static 'bundled/jquery/dist/jquery.min.js' %}"></script>
+    <script src="{% static 'bundled/underscore/underscore-min.js' %}"></script>
+    <script src="{% static 'bundled/bootstrap/dist/js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'bundled/card/dist/jquery.card.js' %}"></script>
+    <script src="{% static 'bundled/password-generator/dist/password-generator.min.js' %}"></script>
+    <script src="{% static 'bundled/select2/select2.min.js' %}"></script>
+    <script src="{% static 'bundled/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
+    <script src="{% static 'bundled/clipboard/dist/clipboard.min.js' %}"></script>
+    <script src="{% static 'bundled/zxcvbn/dist/zxcvbn.js' %}"></script>
 </head>
 <body>
-	<div class="background"></div>
-	{% block "global_content" %}{% endblock %}
+<div class="background"></div>
+{% block global_content %}{% endblock %}
 </body>
 </html>
