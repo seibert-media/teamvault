@@ -20,9 +20,11 @@
     <link href="https://cdn.datatables.net/v/bs5/dt-1.13.4/r-2.4.1/sl-1.6.2/datatables.min.css" rel="stylesheet"/>
 
     <link href="{% static 'css/base.css' %}" rel="stylesheet">
+    <link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
     <link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
     <link href="{% static 'css/login.css' %}" rel="stylesheet">
 </head>
+
 <body>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js"
         integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4=" crossorigin="anonymous"></script>
@@ -32,10 +34,10 @@
 
 {% if not ignore_nav %}
     {% include 'base_nav_new.html' %}
-    <div class="container py-4 bg-light shadow-sm p-3 mb-5 rounded-bottom">
+    <div class="container">
         {% block content %}{% endblock %}
     </div>
-    <div class="container">
+    <div class="container mt-5">
         <footer class="text-center fs-6 text-muted">
             TeamVault {{ version }} &nbsp; &middot; &nbsp; &copy; 2014-2021 //SEIBERT/MEDIA GmbH
         </footer>

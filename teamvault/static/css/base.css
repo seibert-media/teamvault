@@ -29,6 +29,7 @@ h1 {
 h1>.badge {
 	vertical-align: top;
 }
+
 .secret-list tr td:last-child {
 	white-space: nowrap;
 	width: 1px;
