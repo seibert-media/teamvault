@@ -1,9 +1,4 @@
-html {
-    height: 100%;
-}
 body {
-    height: 100%;
-    margin: 0;
     background-repeat: no-repeat;
     background-attachment: fixed;
 	font-family: Roboto, Helvetica, sans-serif;
@@ -16,21 +11,28 @@ body {
 	background: linear-gradient(to bottom,  #e6edf2 0%,#ffffff 100%);
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e6edf2', endColorstr='#ffffff',GradientType=0 );
 }
+
 .container-opaque {
-	background-color: white;
+    background-color: white;
 }
 
 .dropdown-menu i {
-	color: #92A6B2;
+    color: #92A6B2;
 }
+
 h1 {
-	color: #505050;
+    color: #505050;
 }
-h1>.badge {
-	vertical-align: top;
+
+h1 > .badge {
+    vertical-align: top;
+}
+
+.card .table {
+    margin-bottom: 0;
 }
 
 .secret-list tr td:last-child {
-	white-space: nowrap;
-	width: 1px;
+    white-space: nowrap;
+    width: 1px;
 }

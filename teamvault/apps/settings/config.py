@@ -229,7 +229,7 @@ def configure_logging(config):
         'loggers': {
             'django': {
                 'handlers': ['console'],
-                'level': level,
+                'level': 'INFO',  # level, XXX TEMPORARY
             },
             'django_auth_ldap': {
                 'handlers': ['console'],

@@ -79,7 +79,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_AGE, SESSION_EXPIRE_AT_BROWSER_CLOSE, SESSION_COOKIE_SECURE = \
     configure_session(CONFIG)
 
-STATIC_ROOT = join(PROJECT_ROOT, "static_collected")
+# STATIC_ROOT = join(PROJECT_ROOT, "static")
 
 # remember this is hardcoded in the error page templates (e.g. 500.html)
 STATIC_URL = "/static/"
@@ -88,11 +88,11 @@ STATICFILES_DIRS = (
     join(PROJECT_ROOT, "static"),
 )
 
-STORAGES = {
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    }
-}
+#STORAGES = {
+    #'staticfiles': {
+    #    'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    #}
+#}
 
 TEMPLATES = [
     {
