@@ -1,7 +1,11 @@
-body {
-    background-repeat: no-repeat;
-    background-attachment: fixed;
-	font-family: Roboto, Helvetica, sans-serif;
+.background {
+	position: fixed;
+	top: 0;
+	right: 0;
+	bottom: 0;
+	left: 0;
+	background-size: cover;
+	background-position: 50% 50%;
 	background: #e6edf2;
 	background: -moz-linear-gradient(top,  #e6edf2 0%, #ffffff 100%);
 	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#e6edf2), color-stop(100%,#ffffff));
@@ -10,8 +14,8 @@ body {
 	background: -ms-linear-gradient(top,  #e6edf2 0%,#ffffff 100%);
 	background: linear-gradient(to bottom,  #e6edf2 0%,#ffffff 100%);
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e6edf2', endColorstr='#ffffff',GradientType=0 );
+    z-index: -999;
 }
-
 .container-opaque {
     background-color: white;
 }
@@ -35,4 +39,8 @@ h1 > .badge {
 .secret-list tr td:last-child {
     white-space: nowrap;
     width: 1px;
+}
+
+table td a {
+	text-decoration: none;
 }

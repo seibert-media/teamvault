@@ -5,33 +5,32 @@
 {% load smart_pagination %}
 {% block title %}{% trans "Audit log" %}{% endblock %}
 {% block content %}
-<div class="container">
-	<div class="row">
-		<div class="col-md-12">
-			<h1>
-			{% if secret %}
-			{% blocktrans with name=secret.name %}Audit log for secret '{{ name }}'{% endblocktrans %}
-			{% elif user %}
-			{% blocktrans with name=user.username %}Audit log for user '{{ name }}'{% endblocktrans %}
-			{% else %}
-			{% trans "Audit log" %}
-			{% endif %}
-			</h1>
-			<br><br>
-			<div class="panel panel-default">
-				<table class="table table-hover">
-					{% for entry in log_entries %}
-					<tr>
-					<td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
-					<td>{% if entry.secret %}<a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}</td>
-					<td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
-					<td>{{ entry.message }}</td>
-					</tr>
-					{% endfor %}
-				</table>
-			</div>
-			{% include "pagination.html" %}
-		</div>
-	</div>
-</div>
+    <div class="container">
+        <div class="col-md-12">
+            <h1>
+                {% if secret %}
+                    {% blocktrans with name=secret.name %}Audit log for secret '{{ name }}'{% endblocktrans %}
+                {% elif user %}
+                    {% blocktrans with name=user.username %}Audit log for user '{{ name }}'{% endblocktrans %}
+                {% else %}
+                    {% trans "Audit log" %}
+                {% endif %}
+            </h1>
+            <div class="card mt-5">
+                <table class="table table-hover">
+                    {% for entry in log_entries %}
+                        <tr>
+                            <td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
+                            <td>{% if entry.secret %}
+                                <a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}
+                            </td>
+                            <td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
+                            <td>{{ entry.message }}</td>
+                        </tr>
+                    {% endfor %}
+                </table>
+            </div>
+            {% include "pagination.html" %}
+        </div>
+    </div>
 {% endblock %}
