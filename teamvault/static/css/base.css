@@ -16,9 +16,6 @@
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e6edf2', endColorstr='#ffffff',GradientType=0 );
     z-index: -999;
 }
-.container-opaque {
-    background-color: white;
-}
 
 .dropdown-menu i {
     color: #92A6B2;
@@ -43,4 +40,8 @@ h1 > .badge {
 
 table td a {
 	text-decoration: none;
+}
+
+label.form-label {
+	font-weight: 700;
 }
