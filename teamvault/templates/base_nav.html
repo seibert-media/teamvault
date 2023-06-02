@@ -1,10 +1,9 @@
 {% load gravatar %}
 {% load i18n %}
-<nav class="navbar navbar-expand-lg navbar-dark bg-secondary">
-    <div class="container-fluid">
-        <a class="navbar-brand" href="{% url 'dashboard' %}">{% trans "TeamVault" %}</a>
-        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-            <li class="nav-item">
+<header class="p-2 mb-3 border-bottom bg-secondary-subtle">
+    <div class="container">
+        <div class="d-flex flex-wrap align-items-center align-content-center justify-content-center justify-content-lg-between">
+            <div class="d-flex align-items-center col-12 col-lg-2 me-lg-auto justify-content-center my-2">
                 <div class="btn-group">
                     <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark"><i
                             class="bi bi-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
@@ -13,62 +12,80 @@
                         <span class="caret"></span>
                         <span class="visually-hidden">Toggle Dropdown</span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-dark" role="menu">
-                        <li><a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}"><i
-                                class="bi bi-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a></li>
-                        <li><a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}"><i
-                                class="bi bi-upload"></i>&nbsp; {% trans "Upload File" %}</a></li>
+                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" role="menu">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}"><i
+                                    class="bi bi-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}"><i
+                                    class="bi bi-upload"></i>&nbsp; {% trans "Upload File" %}</a>
+                        </li>
                     </ul>
                 </div>
-            </li>
-            <li class="nav-item">
-                <form class="flex-fill mx-3" action="{% url 'secrets.secret-list' %}" role="search" method="GET">
-                    <div class="input-group search-group">
-                        <input id="search" name="search" placeholder="{% trans "Search secrets..." %}"
-                               value="{{ request.GET.search }}" type="text" class="form-control">
-                        <span class="input-group-btn">
-					            <button class="btn btn-dark" type="submit"><i class="bi bi-search"></i></button>
-				            </span>
+            </div>
+
+            <form class="d-flex align-items-center col-6 col-lg-5 mb-lg-0 me-lg-3 my-2" action="{% url 'secrets.secret-list' %}" role="search"
+                  method="GET">
+                <div class="input-group search-group">
+                    <input id="search" name="search" placeholder="{% trans "Search secrets..." %}"
+                           value="{{ request.GET.search }}" type="text" class="form-control">
+                    <span class="input-group-btn">
+                        <button class="btn btn-dark" type="submit"><i class="bi bi-search"></i></button>
+                    </span>
+                </div>
+            </form>
+
+            <div class="col-12 col-lg-3 text-lg-end">
+                <div class="row align-items-center">
+                    <div class="col-6">
+                        <div class="dropdown text-end my-2 dropdown-center">
+                            <a href="#" class="d-block link-dark text-decoration-none"
+                               data-bs-toggle="dropdown"
+                               aria-expanded="false">
+                                <i class="bi bi-gear-fill align-middle"></i>&nbsp;
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminmenu">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'audit.log' %}">
+                                        <i class="bi bi-person-lines-fill"></i>&nbsp;{% trans "Audit log" %}
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'accounts.user-list' %}">
+                                        <i class="bi bi-people-fill"></i>&nbsp;{% trans "Users" %}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
-                </form>
-            </li>
-        </ul>
-        <ul class="navbar-nav">
-            {% if request.user.is_superuser %}
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="adminmenu" role="button"
-                       data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-gear-fill"></i>&nbsp;
-                        <span class="d-sm-none d-md-inline">{% trans "Administration" %}</span>
-                    </a>
-                    <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminmenu">
-                        <li>
-                            <a class="dropdown-item" href="{% url 'audit.log' %}">
-                                <i class="bi bi-person-lines-fill"></i>&nbsp;{% trans "Audit log" %}
+                    <div class="col-6">
+                        <div class="dropdown text-end my-2">
+                            <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle"
+                               data-bs-toggle="dropdown"
+                               aria-expanded="false">
+                                <img src="{% gravatar_url request.user.email 64 %}" alt="avatar" class="rounded-circle align-middle me-1"
+                                     width="30px" height="30px">
+                                <span class="d-sm-none d-md-inline">{{ request.user.get_full_name }}</span>
                             </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'accounts.user-list' %}">
-                                <i class="bi bi-people-fill"></i>&nbsp;{% trans "Users" %}
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-            {% endif %}
-            <li class="nav-item dropdown">
-                <a class="nav-link dropdown-toggle" href="#" id="usermenu" role="button" data-bs-toggle="dropdown"
-                   aria-expanded="false">
-                    <i class="bi bi-person-circle"></i>&nbsp;
-                    <span class="d-sm-none d-md-inline">{{ request.user.username }}</span>
-                </a>
-                <div class="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="usermenu">
-                    <a class="dropdown-item disabled" href="#">
-                        <i class="bi bi-arrow-left-right"></i>&nbsp; {% trans "1Password sync" %}</a>
-                    <hr class="dropdown-divider">
-                    <a class="dropdown-item" href="{% url 'accounts.logout' %}"><i class="bi bi-door-open-fill"></i>&nbsp; {% trans "Logout" %}
-                    </a>
+
+                            <ul class="dropdown-menu dropdown-menu-dark">
+                                <li>
+                                    <a class="dropdown-item disabled" href="#">
+                                        <i class="bi bi-arrow-left-right"></i>&nbsp; {% trans "1Password sync" %}
+                                    </a>
+                                </li>
+                                <li class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'accounts.logout' %}">
+                                        <i class="bi bi-door-open-fill"></i>&nbsp; {% trans "Sign out" %}
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
                 </div>
-            </li>
-        </ul>
+            </div>
+        </div>
     </div>
-</nav>
+</header>
