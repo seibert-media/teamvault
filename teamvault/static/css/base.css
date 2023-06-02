@@ -17,6 +17,11 @@
     z-index: -999;
 }
 
+.navbar-brand {
+	font-size: 2rem;
+	font-weight: 300;
+}
+
 .dropdown-menu i {
     color: #92A6B2;
 }

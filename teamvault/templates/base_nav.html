@@ -1,18 +1,22 @@
 {% load gravatar %}
 {% load i18n %}
-<header class="p-2 mb-3 border-bottom bg-secondary-subtle">
+<header class="mb-3 border-bottom bg-secondary-subtle">
     <div class="container">
         <div class="d-flex flex-wrap align-items-center align-content-center justify-content-center justify-content-lg-between">
-            <div class="d-flex align-items-center col-12 col-lg-2 me-lg-auto justify-content-center my-2">
+            <div class="d-flex col-12 col-lg-2 align-items-center my-2 justify-content-center justify-content-lg-start">
+                <a class="navbar-brand" href="{% url 'dashboard' %}">Teamvault</a>
+            </div>
+
+            <div class="d-flex col-12 col-lg-2 align-items-center my-2 justify-content-center justify-content-lg-start">
                 <div class="btn-group">
-                    <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark"><i
+                    <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark text-nowrap"><i
                             class="bi bi-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
                     <button type="button" class="btn btn-dark dropdown-toggle dropdown-toggle-split"
                             data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="caret"></span>
                         <span class="visually-hidden">Toggle Dropdown</span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end" role="menu">
+                    <ul class="dropdown-menu dropdown-menu-dark" role="menu">
                         <li>
                             <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}"><i
                                     class="bi bi-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a>
@@ -25,7 +29,9 @@
                 </div>
             </div>
 
-            <form class="d-flex align-items-center col-6 col-lg-5" action="{% url 'secrets.secret-list' %}" role="search"
+            <form class="d-flex align-items-center col-6 col-lg-5 px-3 px-xxl-0"
+                  action="{% url 'secrets.secret-list' %}"
+                  role="search"
                   method="GET">
                 <div class="input-group search-group">
                     <input id="search" name="search" placeholder="{% trans "Search secrets..." %}"
@@ -36,14 +42,15 @@
                 </div>
             </form>
 
-            <div class="col-12 col-lg-3 text-lg-end">
+            <div class="col-12 col-lg-2 col-xl-3">
                 <div class="row align-items-center">
-                    <div class="col-6">
-                        <div class="dropdown text-end my-2 dropdown-center">
-                            <a href="#" class="d-block link-dark text-decoration-none"
+                    <div class="col-12 col-lg-6">
+                        <div class="dropdown text-center text-lg-end my-2">
+                            <a href="#" class="d-inline-block link-dark text-decoration-none text-nowrap"
                                data-bs-toggle="dropdown"
                                aria-expanded="false">
                                 <i class="bi bi-gear-fill align-middle"></i>&nbsp;
+                                <span class="d-inline d-lg-none d-xl-inline">{% trans "Administration" %}</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminmenu">
                                 <li>
@@ -59,14 +66,15 @@
                             </ul>
                         </div>
                     </div>
-                    <div class="col-6">
-                        <div class="dropdown text-end my-2">
-                            <a href="#" class="d-block link-dark text-decoration-none dropdown-toggle"
+                    <div class="col-12 col-lg-6">
+                        <div class="dropdown text-center text-xl-end my-2">
+                            <a href="#" class="d-inline-block link-dark text-decoration-none dropdown-toggle"
                                data-bs-toggle="dropdown"
                                aria-expanded="false">
-                                <img src="{% gravatar_url request.user.email 64 %}" alt="avatar" class="rounded-circle align-middle me-1"
+                                <img src="{% gravatar_url request.user.email 64 %}" alt="avatar"
+                                     class="rounded-circle align-middle me-1"
                                      width="30px" height="30px">
-                                <span class="d-sm-none d-md-inline">{{ request.user.get_full_name }}</span>
+                                <span class="d-inline d-lg-none d-xl-inline">{{ request.user.get_full_name }}</span>
                             </a>
 
                             <ul class="dropdown-menu dropdown-menu-dark">
