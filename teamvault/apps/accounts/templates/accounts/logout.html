@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% load static %}
-{% block title %}{% trans "Logout" %}{% endblock %}
+{% block head %}
+    <link href="{% static 'css/login.css' %}" rel="stylesheet">
+{% endblock %}
 {% block navbar %}{% endblock %}
+{% block title %}{% trans "Logout" %}{% endblock %}
+
 {% block content %}
     <div class="login-wrapper">
         <div class="logout">
