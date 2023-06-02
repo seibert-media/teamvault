@@ -1,3 +1,9 @@
+:root {
+	--tv-bg-nav: #586273;
+	--tv-bg-primary: #e6edf2;
+	--tv-text-dark: #2C2F33;
+}
+
 .background {
 	position: fixed;
 	top: 0;
@@ -6,7 +12,7 @@
 	left: 0;
 	background-size: cover;
 	background-position: 50% 50%;
-	background: #e6edf2;
+	background: var(--tv-bg-primary);
 	background: -moz-linear-gradient(top,  #e6edf2 0%, #ffffff 100%);
 	background: -webkit-gradient(linear, left top, left bottom, color-stop(0%,#e6edf2), color-stop(100%,#ffffff));
 	background: -webkit-linear-gradient(top,  #e6edf2 0%,#ffffff 100%);
@@ -15,6 +21,17 @@
 	background: linear-gradient(to bottom,  #e6edf2 0%,#ffffff 100%);
 	filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#e6edf2', endColorstr='#ffffff',GradientType=0 );
     z-index: -999;
+}
+
+.text-darkish {
+	color: var(--tv-text-dark);
+}
+header {
+	background-color: var(--tv-bg-nav);
+}
+
+a {
+	text-decoration: none;
 }
 
 .navbar-brand {
@@ -41,10 +58,6 @@ h1 > .badge {
 .secret-list tr td:last-child {
     white-space: nowrap;
     width: 1px;
-}
-
-table td a {
-	text-decoration: none;
 }
 
 label.form-label {
