@@ -5,8 +5,8 @@
 {% load smart_pagination %}
 {% block title %}{% trans "Audit log" %}{% endblock %}
 {% block content %}
-    <div class="container">
-        <div class="col-md-12">
+    <div class="row">
+        <div class="col-12">
             <h1>
                 {% if secret %}
                     {% blocktrans with name=secret.name %}Audit log for secret '{{ name }}'{% endblocktrans %}
