@@ -1,13 +1,12 @@
 {% extends "base.html" %}
 {% load i18n %}
 {% load static %}
-{% block css %}
+{% block head %}
 <link href="{% static 'css/login.css' %}" rel="stylesheet">
 {% endblock %}
+{% block navbar %}{% endblock %}
 {% block title %}{% trans "Logout" %}{% endblock %}
-{% block global_content %}
-<div class="container">
-	<div class="background"></div>
+{% block content %}
 	<div class="login-wrapper">
 		<div class="logout">
 			<div class="login-icon">{% trans "404" %}</div>
@@ -15,5 +14,5 @@
 			<a href="{% url 'accounts.login' %}">{% trans "Log in" %}</a>
 		</div>
 	</div>
-</div>
 {% endblock %}
+{% block footer %}{% endblock %}

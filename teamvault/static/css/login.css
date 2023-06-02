@@ -6,6 +6,7 @@
 	margin-bottom: 20px;
 	text-align: center;
 }
+
 .login-wrapper {
 	height: 400px;
 	left: 50%;
@@ -15,6 +16,7 @@
 	top: 50%;
 	width: 400px;
 }
+
 form.login, div.logout {
 	background-color: white;
 	border-radius: 50px;

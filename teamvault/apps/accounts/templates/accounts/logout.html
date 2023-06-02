@@ -2,15 +2,14 @@
 {% load i18n %}
 {% load static %}
 {% block title %}{% trans "Logout" %}{% endblock %}
-{% block global_content %}
-<div class="container">
-	<div class="background"></div>
-	<div class="login-wrapper">
-		<div class="logout">
-			<div class="login-icon">{% trans "TeamVault" %}</div>
-			{% trans "Logged out." %}&nbsp;
-			<a href="{% url 'accounts.login' %}">{% trans "Log in again?" %}</a>
-		</div>
-	</div>
-</div>
+{% block navbar %}{% endblock %}
+{% block content %}
+    <div class="login-wrapper">
+        <div class="logout">
+            <div class="login-icon">{% trans "TeamVault" %}</div>
+            {% trans "Logged out." %}&nbsp;
+            <a href="{% url 'accounts.login' %}">{% trans "Log in again?" %}</a>
+        </div>
+    </div>
 {% endblock %}
+{% block footer %}{% endblock %}
