@@ -1,7 +1,7 @@
 :root {
-	--tv-bg-nav: #586273;
-	--tv-bg-primary: #e6edf2;
-	--tv-text-dark: #2C2F33;
+    --tv-bg-nav: #586273;
+    --tv-bg-primary: #e6edf2;
+    --tv-text-dark: #2C2F33;
 }
 
 .background {
@@ -26,6 +26,7 @@
 .text-darkish {
 	color: var(--tv-text-dark);
 }
+
 header {
 	background-color: var(--tv-bg-nav);
 }
