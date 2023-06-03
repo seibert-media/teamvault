@@ -29,7 +29,7 @@
             {% if google_auth_enabled %}
                 <p class="text-center">{% trans "or" %}</p>
                 <div class="d-grid">
-                    <a class="btn btn-secondary btn-lg"
+                    <a class="btn btn-outline-secondary btn-lg"
                        href="{% url "social:begin" "google-oauth2" %}?{{ request.GET.urlencode }}">
                         <i class="bi bi-google"></i> &nbsp;
                         {% trans "Sign in with Google" %}
