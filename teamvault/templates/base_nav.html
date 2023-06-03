@@ -3,11 +3,11 @@
 <header class="mb-3 border-bottom">
     <div class="container">
         <div class="d-flex flex-wrap align-items-center align-content-center justify-content-center justify-content-lg-between">
-            <div class="d-flex col-12 col-lg-2 align-items-center my-2 justify-content-center justify-content-lg-start">
+            <div class="d-flex col-12 col-lg-auto align-items-center my-2 justify-content-center justify-content-lg-start">
                 <a class="navbar-brand text-muted-bright" href="{% url 'dashboard' %}">Teamvault</a>
             </div>
 
-            <div class="d-flex col-12 col-lg-2 align-items-center my-2 justify-content-center justify-content-lg-start">
+            <div class="d-flex col-12 col-lg-auto align-items-center my-2 justify-content-center justify-content-lg-start">
                 <div class="btn-group">
                     <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark text-nowrap"><i
                             class="bi bi-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
