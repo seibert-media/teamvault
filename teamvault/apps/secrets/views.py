@@ -40,24 +40,6 @@ CONTENT_TYPE_NAMES = {
 }
 
 
-def _patch_post_data(POST, fields):
-    """
-    Select2 passes in selected values as CSV instead of as a real
-    multiple value field, so we need to split them before any validation
-    takes place.
-    """
-    POST = POST.copy()
-    for csv_field in fields:
-        if POST.getlist(csv_field) == ['']:
-            del POST[csv_field]
-        else:
-            POST.setlist(
-                csv_field,
-                POST.getlist(csv_field)[0].split(","),
-            )
-    return POST
-
-
 class Dashboard(TemplateView):
     template_name = "secrets/dashboard.html"
 
@@ -133,16 +115,6 @@ class SecretAdd(CreateView):
 
     def get_template_names(self):
         return "secrets/secret_addedit_{}.html".format(self.kwargs['content_type'])
-
-    def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(
-            request.POST,
-            (
-                'allowed_groups',
-                'allowed_users',
-            ),
-        )
-        return super(SecretAdd, self).post(request, *args, **kwargs)
 secret_add = login_required(SecretAdd.as_view())
 
 
@@ -215,16 +187,6 @@ class SecretEdit(UpdateView):
 
     def get_template_names(self):
         return "secrets/secret_addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
-
-    def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(
-            request.POST,
-            (
-                'allowed_groups',
-                'allowed_users',
-            ),
-        )
-        return super(SecretEdit, self).post(request, *args, **kwargs)
 secret_edit = login_required(SecretEdit.as_view())
 
 

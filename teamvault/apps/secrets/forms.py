@@ -1,14 +1,11 @@
 from datetime import date
-from json import dumps
 
 from django import forms
 from django.contrib.auth.models import Group, User
-from django.forms.widgets import SelectMultiple
-from django.utils.safestring import mark_safe
+from django.forms.widgets import RadioSelect
 from django.utils.translation import gettext_lazy as _
 
 from .models import Secret
-
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
@@ -20,31 +17,14 @@ GENERIC_FIELDS_FOOTER = [
 ]
 
 
-class Select2DataWidget(SelectMultiple):
-    """
-    Used to render form values as a select2-compatible data structure.
-    """
-    def render(self, name, value, attrs=None, choices=(), renderer=None):
-        if value is None:
-            return "[]"
-        output = []
-        value_ints = [int(v) for v in value]
-        for option_id, option_label in self.choices:
-            if option_id in value_ints:
-                output.append({'id': str(option_id), 'text': option_label})
-        return mark_safe(dumps(output))
-
-
 class SecretForm(forms.ModelForm):
     allowed_groups = forms.ModelMultipleChoiceField(
-        queryset=Group.objects.all(),
+        queryset=Group.objects.all().order_by('name'),
         required=False,
-        widget=Select2DataWidget,
     )
     allowed_users = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True),
+        queryset=User.objects.filter(is_active=True).order_by('username'),
         required=False,
-        widget=Select2DataWidget,
     )
 
 
@@ -100,16 +80,24 @@ class FileForm(SecretForm):
 
 
 class PasswordForm(SecretForm):
+    access_policy = forms.ChoiceField(
+        choices=Secret.ACCESS_POLICY_CHOICES,
+        initial=Secret.ACCESS_POLICY_DISCOVERABLE,
+        widget=RadioSelect,
+    )
     password = forms.CharField(
         required=False,
     )
     url = forms.CharField(
         max_length=255,
         required=False,
+        label='URL',
+        help_text=_('This field will also be considered when searching.')
     )
     username = forms.CharField(
         max_length=255,
         required=False,
+        help_text=_('This field will also be considered when searching.')
     )
 
     def clean_password(self):

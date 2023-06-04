@@ -117,6 +117,7 @@ class Secret(HashIDModel):
     description = models.TextField(
         blank=True,
         null=True,
+        help_text=_('Further information on the secret.'),
     )
     filename = models.CharField(
         blank=True,
@@ -129,7 +130,7 @@ class Secret(HashIDModel):
     last_read = models.DateTimeField(
         default=now,
     )
-    name = models.CharField(max_length=92)
+    name = models.CharField(max_length=92, help_text=_('Enter a unique name for the secret'))
     needs_changing_on_leave = models.BooleanField(
         default=True,
     )
