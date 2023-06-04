@@ -44,6 +44,7 @@ setup(
         "defusedxml==0.7.1 ; python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3, 3.4'",
         "django==4.2.1",
         "django-auth-ldap==4.3.0",
+        "django-bootstrap5==23.3",
         "django-filter==23.2",
         "django-gravatar2==1.4.4",
         "djangorestframework==3.14.0",

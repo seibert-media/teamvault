@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django_bootstrap5',
     'django_gravatar',
     'rest_framework',
     'social_django',
@@ -150,3 +151,13 @@ REST_FRAMEWORK = {
 ### Social Auth
 
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
+
+
+### Django-Bootstrap5
+BOOTSTRAP5 = {
+    'horizontal_field_class': 'col-xl-8',
+    'horizontal_label_class': 'col-xl-2',
+    'required_css_class': 'required',
+    'success_css_class': 'is-valid',
+    'error_css_class': 'is-invalid',
+}
