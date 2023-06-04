@@ -1,0 +1,22 @@
+<script>
+    // Patch width. See https://github.com/select2/select2/issues/3278
+    $.fn.select2.defaults.set("width", "100%")
+    $.fn.select2.defaults.set("theme", "bootstrap4")
+    // Patch backspace on select2 4.X. See https://github.com/select2/select2/issues/3354
+    $.fn.select2.amd.require(['select2/selection/search'], function (Search) {
+        Search.prototype.searchRemoveChoice = function (decorated, item) {
+            this.trigger('unselect', {
+                data: item
+            });
+
+            this.$search.val('');
+            this.handleSearch();
+        };
+    }, null, true);
+</script>
+<style>
+    /* Hide selected options in choices */
+    .select2-results__option[aria-selected=true] {
+        display: none;
+    }
+</style>
