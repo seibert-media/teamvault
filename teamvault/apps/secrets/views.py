@@ -261,7 +261,6 @@ class SecretDetail(DetailView):
     model = Secret
     slug_field = 'hashid'
     slug_url_kwarg = 'hashid'
-    template_name = "secrets/secret_detail.html"
 
     def get_context_data(self, **kwargs):
         context = super(SecretDetail, self).get_context_data(**kwargs)
@@ -276,11 +275,15 @@ class SecretDetail(DetailView):
             context['placeholder'] = secret.current_revision.length * "•"
         return context
 
-    def get_object(self):
+    def get_object(self, queryset=None):
         object = super(SecretDetail, self).get_object()
         if not object.is_visible_to_user(self.request.user):
             raise Http404
         return object
+
+    def get_template_names(self):
+        content_type = CONTENT_TYPE_IDENTIFIERS[self.object.content_type]
+        return f'secrets/detail_content/{content_type}.html'
 secret_detail = login_required(SecretDetail.as_view())
 
 
