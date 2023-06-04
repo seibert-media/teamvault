@@ -19,6 +19,7 @@
           crossorigin="anonymous">
     <link href="https://cdn.datatables.net/v/bs5/dt-1.13.4/r-2.4.1/sl-1.6.2/datatables.min.css" rel="stylesheet"/>
     <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
+    <link href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css" rel="stylesheet">
 
     <!-- bs4 theme looks a bit better here, even if we're on bs5 -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
@@ -36,6 +37,8 @@
         crossorigin="anonymous"></script>
 <script src="https://cdn.datatables.net/v/bs5/dt-1.13.4/r-2.4.1/sl-1.6.2/datatables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.11/dist/clipboard.min.js"></script>
 {% include "_select2-patches.html" %}
 
 <script>
@@ -45,7 +48,10 @@
         [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, bsOptions));
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
+    const notyfOptions = {position: {x: 'right', y: 'top'}}
+    window.notyf = new Notyf(notyfOptions)
+
+    window.addEventListener('DOMContentLoaded', () => {
        refreshTooltips()
     })
 </script>
