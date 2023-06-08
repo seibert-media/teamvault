@@ -127,7 +127,7 @@ class SecretAdd(CreateView):
         return form
 
     def get_template_names(self):
-        return "secrets/secret_addedit_{}.html".format(self.kwargs['content_type'])
+        return "secrets/addedit_content/{}.html".format(self.kwargs['content_type'])
 secret_add = login_required(SecretAdd.as_view())
 
 
@@ -212,7 +212,7 @@ class SecretEdit(UpdateView):
         return secret
 
     def get_template_names(self):
-        return "secrets/secret_addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
+        return "secrets/addedit_content/{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
 secret_edit = login_required(SecretEdit.as_view())
 
 
