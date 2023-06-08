@@ -113,6 +113,19 @@ class SecretAdd(CreateView):
     def get_form_class(self):
         return CONTENT_TYPE_FORMS[self.kwargs['content_type']]
 
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=form_class)
+        # handle files with sizes above FILE_UPLOAD_MAX_MEMORY_SIZE setting
+        if (
+            self.content_type == 'file'
+            and self.request.method == 'POST'
+            and not self.request.upload_handlers[0].activated
+        ):
+            form.add_error(
+                f'file', f'File size too big. Allowed file size: {settings.FILE_UPLOAD_MAX_MEMORY_SIZE} bytes'
+            )
+        return form
+
     def get_template_names(self):
         return "secrets/secret_addedit_{}.html".format(self.kwargs['content_type'])
 secret_add = login_required(SecretAdd.as_view())
@@ -165,6 +178,19 @@ class SecretEdit(UpdateView):
 
     def get_form_class(self):
         return CONTENT_TYPE_FORMS[CONTENT_TYPE_IDENTIFIERS[self.object.content_type]]
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=form_class)
+        # handle files with sizes above FILE_UPLOAD_MAX_MEMORY_SIZE setting
+        if (
+            self.content_type == 'file'
+            and self.request.method == 'POST'
+            and not self.request.upload_handlers[0].activated
+        ):
+            form.add_error(
+                f'file', f'File size too big. Allowed file size: {settings.FILE_UPLOAD_MAX_MEMORY_SIZE} bytes'
+            )
+        return form
 
     def get_initial(self):
         if self.object.content_type == Secret.CONTENT_CC:

@@ -1,8 +1,7 @@
 from random import choice
 from string import ascii_letters, digits, punctuation
 
-from django.conf import settings
-from django.core.files.uploadhandler import MemoryFileUploadHandler, StopUpload
+from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 
 
 def generate_password(length=12, alphanum=False):
@@ -17,6 +16,9 @@ def generate_password(length=12, alphanum=False):
 
 class CappedMemoryFileUploadHandler(MemoryFileUploadHandler):
     def receive_data_chunk(self, raw_data, start):
-        if start + len(raw_data) > settings.TEAMVAULT_MAX_FILE_SIZE:
-            raise StopUpload(connection_reset=True)
+        if not self.activated:  # if the file size is too big, this handler will not be activated
+            # if we use StopUpload here, forms will not get fully validated,
+            # which leads to more form errors than we prefer
+            # raise StopUpload(connection_reset=True)
+            raise SkipFile()
         super(CappedMemoryFileUploadHandler, self).receive_data_chunk(raw_data, start)
