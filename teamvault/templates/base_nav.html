@@ -33,7 +33,7 @@
                   action="{% url 'secrets.secret-list' %}"
                   role="search"
                   method="GET">
-                <div class="input-group search-group">
+                <div class="input-group">
                     <input id="search" name="search" placeholder="{% trans "Search secrets..." %}"
                            value="{{ request.GET.search }}" type="text" class="form-control">
                     <span class="input-group-btn">
