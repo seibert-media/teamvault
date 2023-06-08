@@ -18,6 +18,11 @@ GENERIC_FIELDS_FOOTER = [
 
 
 class SecretForm(forms.ModelForm):
+    access_policy = forms.ChoiceField(
+        choices=Secret.ACCESS_POLICY_CHOICES,
+        initial=Secret.ACCESS_POLICY_DISCOVERABLE,
+        widget=RadioSelect(),
+    )
     allowed_groups = forms.ModelMultipleChoiceField(
         queryset=Group.objects.all().order_by('name'),
         required=False,
@@ -66,7 +71,10 @@ class CCForm(SecretForm):
 
 class FileForm(SecretForm):
     file = forms.FileField(
+        # Note: There's also custom handling for files with a file size above the FILE_UPLOAD_MAX_MEMORY_SIZE limit
+        #  in the corresponding view
         allow_empty_file=False,
+        help_text=_('This file will be stored securely.'),
         required=False,
     )
 
@@ -80,11 +88,6 @@ class FileForm(SecretForm):
 
 
 class PasswordForm(SecretForm):
-    access_policy = forms.ChoiceField(
-        choices=Secret.ACCESS_POLICY_CHOICES,
-        initial=Secret.ACCESS_POLICY_DISCOVERABLE,
-        widget=RadioSelect,
-    )
     password = forms.CharField(
         required=False,
     )

@@ -74,6 +74,10 @@ label.form-label, div.form-label > label, .col-form-label {
     white-space: nowrap;
 }
 
+.card .card-body .table tr:last-child {
+    border-bottom-style: hidden;
+}
+
 /* Custom card style */
 /* Not sure, if we want this (yet) */
 /*
