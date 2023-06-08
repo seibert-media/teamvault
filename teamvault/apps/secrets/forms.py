@@ -42,13 +42,16 @@ class CCForm(SecretForm):
         min_value=date.today().year,
         max_value=date.today().year + 50,
     )
-    holder = forms.CharField()
+    holder = forms.CharField(
+        label=_('Name on card'),
+    )
     number = forms.CharField()
     password = forms.CharField(
         required=False,
         widget=forms.PasswordInput,
     )
     security_code = forms.CharField(
+        label=_('Card CVV'),
         required=False,
         widget=forms.NumberInput,
     )
