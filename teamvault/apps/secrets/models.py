@@ -1,4 +1,5 @@
 from datetime import timedelta
+from enum import Enum
 from hashlib import sha256
 from operator import itemgetter
 
@@ -19,6 +20,12 @@ from hashids import Hashids
 from ..audit.auditlog import log
 from ..audit.models import LogEntry
 from .exceptions import PermissionError
+
+
+class AccessPermissionTypes(Enum):
+    NOT_ALLOWED = 0
+    ALLOWED = 1
+    SUPERUSER_ALLOWED = 2
 
 
 def validate_url(value):
@@ -167,8 +174,11 @@ class Secret(HashIDModel):
     def check_access(self, user):
         if not self.is_visible_to_user(user):
             raise Http404
-        elif not self.is_readable_by_user(user):
+
+        readable = self.is_readable_by_user(user)
+        if not readable:
             raise PermissionDenied()
+        return readable
 
     @property
     def full_url(self):
@@ -180,13 +190,11 @@ class Secret(HashIDModel):
     def get_data(self, user):
         if not self.current_revision:
             raise Http404
-        if not self.is_readable_by_user(user):
-            log(_(
-                    "{user} tried to access '{name}' without permission"
-                ).format(
-                    name=self.name,
-                    user=user.username,
-                ),
+
+        read_allowed = self.is_readable_by_user(user)
+        if not read_allowed:
+            log(
+                _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
                 actor=user,
                 level='warn',
                 secret=self,
@@ -198,10 +206,14 @@ class Secret(HashIDModel):
                 name=self.name,
                 user=user.username,
             ))
-        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        log(_(
-                "{user} read '{name}'"
-            ).format(
+
+        if read_allowed == AccessPermissionTypes.SUPERUSER_ALLOWED:
+            log_message = _("{user} used superuser privileges to read '{name}'")
+        else:
+            log_message = _("{user} read '{name}'")
+
+        log(
+            log_message.format(
                 name=self.name,
                 user=user.username,
             ),
@@ -215,6 +227,7 @@ class Secret(HashIDModel):
         self.last_read = now()
         self.save()
 
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         plaintext_data = f.decrypt(self.current_revision.encrypted_data.tobytes())
         if self.content_type != Secret.CONTENT_FILE:
             plaintext_data = plaintext_data.decode('utf-8')
@@ -300,25 +313,29 @@ class Secret(HashIDModel):
             return result
 
     def is_readable_by_user(self, user):
-        return (
-            user.is_superuser or (
-                (
-                    self.access_policy == self.ACCESS_POLICY_ANY or
-                    user in self.allowed_users.all() or
-                    set(self.allowed_groups.all()).intersection(set(user.groups.all()))
-                ) and self.status != self.STATUS_DELETED
-            )
-        )
+        if self.status != self.STATUS_DELETED:
+            if (
+                self.access_policy == self.ACCESS_POLICY_ANY or
+                user in self.allowed_users.all() or
+                set(self.allowed_groups.all()).intersection(set(user.groups.all()))
+            ):
+                return AccessPermissionTypes.ALLOWED
+
+        if user.is_superuser:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+        return AccessPermissionTypes.NOT_ALLOWED
 
     def is_visible_to_user(self, user):
-        return (
-            user.is_superuser or (
-                (
-                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
-                    self.is_readable_by_user(user)
-                ) and self.status != self.STATUS_DELETED
-            )
-       )
+        if self.status != self.STATUS_DELETED:
+            if (
+                self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
+                self.is_readable_by_user(user)
+            ):
+                return AccessPermissionTypes.ALLOWED
+
+        if user.is_superuser:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+        return AccessPermissionTypes.NOT_ALLOWED
 
     def set_data(self, user, plaintext_data, skip_access_check=False):
         # skip_access_check is used when initially creating a secret
