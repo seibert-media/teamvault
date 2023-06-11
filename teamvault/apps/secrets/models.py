@@ -17,9 +17,9 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from hashids import Hashids
 
+from .exceptions import PermissionError
 from ..audit.auditlog import log
 from ..audit.models import LogEntry
-from .exceptions import PermissionError
 
 
 class AccessPermissionTypes(Enum):
@@ -97,11 +97,15 @@ class Secret(HashIDModel):
     allowed_groups = models.ManyToManyField(
         Group,
         blank=True,
+        through='SharedSecretData',
+        through_fields=('secret', 'group'),
         related_name='allowed_passwords',
     )
     allowed_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
+        through='SharedSecretData',
+        through_fields=('secret', 'user'),
         related_name='allowed_passwords',
     )
     content_type = models.PositiveSmallIntegerField(
@@ -445,6 +449,31 @@ class SecretRevision(HashIDModel):
     @property
     def is_current_revision(self):
         return self.secret.current_revision == self
+
+
+class SharedSecretData(models.Model):
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='+',
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='+',
+    )
+
+    secret = models.ForeignKey(
+        'Secret',
+        on_delete=models.CASCADE,
+        related_name='+',
+    )
+
+    class Meta:
+        unique_together = [('group', 'secret'), ('user', 'secret')]
 
 
 @receiver(post_save, sender=Secret)
