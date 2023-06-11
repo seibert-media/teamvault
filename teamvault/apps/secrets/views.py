@@ -14,7 +14,7 @@ import django_filters
 
 from ..audit.auditlog import log
 from .forms import CCForm, FileForm, PasswordForm
-from .models import Secret
+from .models import AccessPermissionTypes, Secret
 
 ACCESS_STR_IDS = {
     'ACCESS_POLICY_ANY': str(Secret.ACCESS_POLICY_ANY),
@@ -299,6 +299,8 @@ class SecretDetail(DetailView):
         )
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
+            if context['readable'] == AccessPermissionTypes.SUPERUSER_ALLOWED:
+                context['su_access'] = True
         return context
 
     def get_object(self, queryset=None):
