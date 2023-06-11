@@ -3,9 +3,10 @@ from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.http import HttpResponse, HttpResponseRedirect, Http404
+from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
+from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
@@ -355,26 +356,39 @@ secret_list = login_required(SecretList.as_view())
 @require_http_methods(["GET"])
 def secret_search(request):
     search_term = request.GET['q']
-    search_result = []
-    filtered_secrets = list(Secret.get_search_results(request.user, search_term, limit=10))
+    search_limit = request.GET.get('limit', 15)
+    search_results = []
+    raw_results = Secret.get_search_results(request.user, search_term)
+    filtered_secrets = list(raw_results[:search_limit])
     unreadable_secrets = filtered_secrets[:]
     sorted_secrets = []
 
     # sort readable passwords to top...
     for secret in filtered_secrets:
         if secret.is_readable_by_user(request.user):
-            sorted_secrets.append((secret, "unlock"))
+            icon = "unlock"
+            metadata = ''
+            if secret.content_type == secret.CONTENT_PASSWORD:
+                icon = "user"
+                metadata = getattr(secret, 'username')
+            elif secret.content_type == secret.CONTENT_FILE:
+                icon = "file"
+                metadata = getattr(secret, 'filename')
+            elif secret.content_type == secret.CONTENT_CC:
+                icon = "credit-card"
+                metadata = getattr(secret, 'description')
+            sorted_secrets.append((secret, icon, metadata))
             unreadable_secrets.remove(secret)
 
     # and others to the bottom
     for secret in unreadable_secrets:
         sorted_secrets.append((secret, "lock"))
 
-    for secret, icon in sorted_secrets:
-        search_result.append({
+    for secret, icon, metadata in sorted_secrets:
+        search_results.append({
+            'icon': icon,
+            'meta': metadata,
             'name': secret.name,
             'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
-            'icon': icon,
         })
-
-    return HttpResponse(dumps(search_result), content_type="application/json")
+    return JsonResponse({'count': raw_results.count(), 'results': search_results})
