@@ -9,8 +9,8 @@
 
             <div class="d-flex col-12 col-lg-auto align-items-center my-2 justify-content-center justify-content-lg-start">
                 <div class="btn-group">
-                    <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark text-nowrap"><i
-                            class="bi bi-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
+                    <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark text-nowrap">
+                        <i class="bi bi-plus-circle fa-fw"></i> {% trans "Add Password" %}</a>
                     <button type="button" class="btn btn-dark dropdown-toggle dropdown-toggle-split"
                             data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="caret"></span>
@@ -18,30 +18,27 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-dark" role="menu">
                         <li>
-                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}"><i
-                                    class="bi bi-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a>
+                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}">
+                                <i class="bi bi-credit-card fa-fw"></i> {% trans "Add Credit Card" %}</a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}"><i
-                                    class="bi bi-upload"></i>&nbsp; {% trans "Upload File" %}</a>
+                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}">
+                                <i class="bi bi-upload fa-fw"></i> {% trans "Upload File" %}</a>
                         </li>
                     </ul>
                 </div>
             </div>
 
-            <form class="d-flex align-items-center col-6 col-lg-5 px-3 px-xxl-0"
-                  action="{% url 'secrets.secret-list' %}"
-                  role="search"
-                  method="GET">
-                <div class="input-group">
-                    <input id="search" name="search" placeholder="{% trans "Search secrets..." %}"
-                           value="{{ request.GET.search }}" type="text" class="form-control">
-                    <span class="input-group-btn">
-                        <button class="btn btn-dark" type="submit"><i class="bi bi-search"></i></button>
-                    </span>
-                </div>
-            </form>
-
+            <!-- Search button TODO: Collapse to Icon on < md + Maybe replace SVG? -->
+            <div class="col-6 col-lg-5 px-3 px-xxl-0">
+                <button id="searchbar-toggle" type="button"
+                        class="btn btn-light bg-light d-flex w-100 justify-content-between" aria-label="Search"
+                        data-bs-toggle="modal"
+                        data-bs-target="#search-modal">
+                    <span><i class="fa fa-search fa-fw"></i> {% translate "Search" %}</span>
+                    <span><kbd>{% translate "CTRL" %}</kbd><kbd>K</kbd></span>
+                </button>
+            </div>
             <div class="col-12 col-lg-2 col-xl-3">
                 <div class="row align-items-center">
                     <div class="col-12 col-lg-6">
@@ -97,3 +94,5 @@
         </div>
     </div>
 </header>
+
+{% include 'secrets/secret_search.html' %}
