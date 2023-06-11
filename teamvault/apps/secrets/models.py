@@ -473,6 +473,15 @@ class SharedSecretData(models.Model):
     )
 
     class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (Q(group__isnull=False) & Q(user__isnull=True)) |
+                    (Q(group__isnull=True) & Q(user__isnull=False))
+                ),
+                name='only_one_set'
+            ),
+        ]
         unique_together = [('group', 'secret'), ('user', 'secret')]
 
 
