@@ -262,9 +262,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'created',
             'last_read',
         )
-        datatables_always_serialize = (
-            'web_url',
-        )
 
 
 class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
