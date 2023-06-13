@@ -1,21 +1,20 @@
 from json import dumps, loads
 from urllib.parse import quote, urlencode
 
+import django_filters
 from django.conf import settings
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse
-from django.utils.decorators import method_decorator
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
-import django_filters
 
-from ..audit.auditlog import log
 from .forms import CCForm, FileForm, PasswordForm
 from .models import AccessPermissionTypes, Secret
+from ..audit.auditlog import log
 
 ACCESS_STR_IDS = {
     'ACCESS_POLICY_ANY': str(Secret.ACCESS_POLICY_ANY),
@@ -51,6 +50,8 @@ class Dashboard(TemplateView):
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
         context['recently_used_secrets'] = Secret.get_most_recently_used_for_user(self.request.user)
         return context
+
+
 dashboard = login_required(Dashboard.as_view())
 
 
@@ -62,6 +63,8 @@ class OpenSearch(TemplateView):
         context = super(OpenSearch, self).get_context_data(**kwargs)
         context['base_url'] = settings.BASE_URL
         return context
+
+
 opensearch = OpenSearch.as_view()
 
 
@@ -79,9 +82,6 @@ class SecretAdd(CreateView):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        for attr in ('allowed_groups', 'allowed_users'):
-            getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
             plaintext_data = form.cleaned_data['password']
@@ -118,9 +118,9 @@ class SecretAdd(CreateView):
         form = super().get_form(form_class=form_class)
         # handle files with sizes above FILE_UPLOAD_MAX_MEMORY_SIZE setting
         if (
-            self.content_type == 'file'
-            and self.request.method == 'POST'
-            and not self.request.upload_handlers[0].activated
+                self.content_type == 'file'
+                and self.request.method == 'POST'
+                and not self.request.upload_handlers[0].activated
         ):
             form.add_error(
                 f'file', f'File size too big. Allowed file size: {settings.FILE_UPLOAD_MAX_MEMORY_SIZE} bytes'
@@ -129,6 +129,8 @@ class SecretAdd(CreateView):
 
     def get_template_names(self):
         return "secrets/addedit_content/{}.html".format(self.kwargs['content_type'])
+
+
 secret_add = login_required(SecretAdd.as_view())
 
 
@@ -144,9 +146,6 @@ class SecretEdit(UpdateView):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        for attr in ('allowed_groups', 'allowed_users'):
-            getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
             plaintext_data = form.cleaned_data['password']
@@ -184,9 +183,9 @@ class SecretEdit(UpdateView):
         form = super().get_form(form_class=form_class)
         # handle files with sizes above FILE_UPLOAD_MAX_MEMORY_SIZE setting
         if (
-            self.content_type == 'file'
-            and self.request.method == 'POST'
-            and not self.request.upload_handlers[0].activated
+                self.content_type == 'file'
+                and self.request.method == 'POST'
+                and not self.request.upload_handlers[0].activated
         ):
             form.add_error(
                 f'file', f'File size too big. Allowed file size: {settings.FILE_UPLOAD_MAX_MEMORY_SIZE} bytes'
@@ -214,6 +213,8 @@ class SecretEdit(UpdateView):
 
     def get_template_names(self):
         return "secrets/addedit_content/{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
+
+
 secret_edit = login_required(SecretEdit.as_view())
 
 
@@ -223,13 +224,13 @@ def secret_delete(request, hashid):
     secret.check_access(request.user)
     if request.method == 'POST':
         log(_(
-                "{user} deleted '{name}' ({id}:{revision})"
-            ).format(
-                id=secret.id,
-                name=secret.name,
-                revision=secret.current_revision.id,
-                user=request.user.username,
-            ),
+            "{user} deleted '{name}' ({id}:{revision})"
+        ).format(
+            id=secret.id,
+            name=secret.name,
+            revision=secret.current_revision.id,
+            user=request.user.username,
+        ),
             actor=request.user,
             level='info',
             secret=secret,
@@ -237,7 +238,8 @@ def secret_delete(request, hashid):
         )
         secret.status = Secret.STATUS_DELETED
         secret.save()
-        return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
+        return HttpResponseRedirect(
+            reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
     else:
         return render(request, "secrets/secret_delete.html", {'secret': secret})
 
@@ -249,13 +251,13 @@ def secret_restore(request, hashid):
     secret.check_access(request.user)
     if request.method == 'POST':
         log(_(
-                "{user} restore '{name}' ({id}:{revision})"
-            ).format(
-                id=secret.id,
-                name=secret.name,
-                revision=secret.current_revision.id,
-                user=request.user.username,
-            ),
+            "{user} restore '{name}' ({id}:{revision})"
+        ).format(
+            id=secret.id,
+            name=secret.name,
+            revision=secret.current_revision.id,
+            user=request.user.username,
+        ),
             actor=request.user,
             level='info',
             secret=secret,
@@ -263,7 +265,8 @@ def secret_restore(request, hashid):
         )
         secret.status = Secret.STATUS_OK
         secret.save()
-        return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
+        return HttpResponseRedirect(
+            reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
     else:
         return render(request, "secrets/secret_restore.html", {'secret': secret})
 
@@ -313,6 +316,8 @@ class SecretDetail(DetailView):
     def get_template_names(self):
         content_type = CONTENT_TYPE_IDENTIFIERS[self.object.content_type]
         return f'secrets/detail_content/{content_type}.html'
+
+
 secret_detail = login_required(SecretDetail.as_view())
 
 
@@ -349,6 +354,8 @@ class SecretList(ListView):
             queryset = Secret.get_all_visible_to_user(self.request.user)
         filtered = SecretFilter(self.request.GET, queryset)
         return filtered.qs
+
+
 secret_list = login_required(SecretList.as_view())
 
 

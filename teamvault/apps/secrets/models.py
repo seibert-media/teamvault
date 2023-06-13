@@ -9,6 +9,7 @@ from django.contrib.auth.models import Group
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
+from django.db.models import Q
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
@@ -470,6 +471,28 @@ class SharedSecretData(models.Model):
         'Secret',
         on_delete=models.CASCADE,
         related_name='+',
+    )
+
+    grant_description = models.TextField(
+        null=True
+    )
+
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='+',
+    )
+
+    granted_on = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+    )
+
+    # Secrets are considered permanently shared if granted_until is not set
+    granted_until = models.DateTimeField(
+       blank=True,
+       null=True,
     )
 
     class Meta:

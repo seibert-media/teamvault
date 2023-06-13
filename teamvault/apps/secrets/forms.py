@@ -12,8 +12,8 @@ GENERIC_FIELDS_FOOTER = [
     'description',
     'access_policy',
     'needs_changing_on_leave',
-    'allowed_groups',
-    'allowed_users',
+    # 'allowed_groups',
+    # 'allowed_users',
 ]
 
 
@@ -22,14 +22,6 @@ class SecretForm(forms.ModelForm):
         choices=Secret.ACCESS_POLICY_CHOICES,
         initial=Secret.ACCESS_POLICY_DISCOVERABLE,
         widget=RadioSelect(),
-    )
-    allowed_groups = forms.ModelMultipleChoiceField(
-        queryset=Group.objects.all().order_by('name'),
-        required=False,
-    )
-    allowed_users = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True).order_by('username'),
-        required=False,
     )
 
 

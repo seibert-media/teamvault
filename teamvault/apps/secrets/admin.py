@@ -24,8 +24,8 @@ class SecretAdmin(admin.ModelAdmin):
                 'status',
                 'access_policy',
                 'needs_changing_on_leave',
-                'allowed_groups',
-                'allowed_users',
+                # 'allowed_groups',
+                # 'allowed_users',
             ),
         }),
     )

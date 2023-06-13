@@ -110,18 +110,20 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SecretSerializer(serializers.HyperlinkedModelSerializer):
-    allowed_groups = serializers.SlugRelatedField(
-        many=True,
-        queryset=Group.objects.all(),
-        required=False,
-        slug_field='name',
-    )
-    allowed_users = serializers.SlugRelatedField(
-        many=True,
-        queryset=User.objects.exclude(is_active=False),
-        required=False,
-        slug_field='username',
-    )
+    # allowed_groups = serializers.SlugRelatedField(
+    #     many=True,
+    #     queryset=Group.objects.all(),
+    #     read_only=True,  # FIXME: Temporary
+    #     required=False,
+    #     slug_field='name',
+    # )
+    # allowed_users = serializers.SlugRelatedField(
+    #     many=True,
+    #     queryset=User.objects.exclude(is_active=False),
+    #     read_only=True,  # FIXME: Temporary
+    #     required=False,
+    #     slug_field='username',
+    # )
     api_url = serializers.HyperlinkedIdentityField(
         lookup_field='hashid',
         view_name='api.secret_detail',
@@ -175,8 +177,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     )
 
     def create(self, validated_data):
-        allowed_groups = validated_data.pop('allowed_groups', [])
-        allowed_users = validated_data.pop('allowed_users', [])
+        # FIXME: Allowed_users and Allowed_groups only per /share
+        # allowed_groups = validated_data.pop('allowed_groups', [])
+        # allowed_users = validated_data.pop('allowed_users', [])
 
         data, content_type = _extract_data(validated_data)
         if not data:
@@ -184,8 +187,8 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
         instance = self.Meta.model.objects.create(**validated_data)
 
-        instance.allowed_groups.set(allowed_groups)
-        instance.allowed_users.set(allowed_users)
+        # instance.allowed_groups.set(allowed_groups)
+        # instance.allowed_users.set(allowed_users)
         instance.content_type = content_type
         instance._data = data
         return instance
@@ -232,8 +235,8 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         model = Secret
         fields = (
             'access_policy',
-            'allowed_groups',
-            'allowed_users',
+            # 'allowed_groups',
+            # 'allowed_users',
             'api_url',
             'content_type',
             'created',
