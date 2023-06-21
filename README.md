@@ -25,6 +25,9 @@ Install Postgres and create a database and superuser for TeamVault to use, for e
 
 	docker run --rm --detach --publish=5432:5432 --name teamvault-postgres -e POSTGRES_USER=teamvault -e POSTGRES_PASSWORD=teamvault postgres:latest
 
+
+To compile all staticfiles, you'll need to install all required packages via yarn with node >= v18.
+``` yarn build ```
 Now create a virtual environment to install and configure TeamVault in:
 
 	pipenv install

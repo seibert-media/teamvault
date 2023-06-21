@@ -1,0 +1,118 @@
+@import "bootstrap/scss/bootstrap";
+@import "./login";
+@import "./secrets";
+
+$fa-font-path: '~@fortawesome/fontawesome-free/webfonts';
+@import '~@fortawesome/fontawesome-free/scss/fontawesome';
+@import '~@fortawesome/fontawesome-free/scss/solid';
+@import '~@fortawesome/fontawesome-free/scss/regular';
+
+:root {
+  --tv-bg-nav: #586273;
+  --tv-bg-primary: #e6edf2;
+  --tv-shadow: 0 0.5rem 0.5rem rgba(0, 0, 0, 0.05);
+  --tv-text-dark: #2C2F33;
+}
+
+.background {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-size: cover;
+  background-position: 50% 50%;
+  background: var(--tv-bg-primary);
+  background: -moz-linear-gradient(top, #e6edf2 0%, #ffffff 100%);
+  background: -webkit-gradient(linear, left top, left bottom, color-stop(0%, #e6edf2), color-stop(100%, #ffffff));
+  background: -webkit-linear-gradient(top, #e6edf2 0%, #ffffff 100%);
+  background: -o-linear-gradient(top, #e6edf2 0%, #ffffff 100%);
+  background: -ms-linear-gradient(top, #e6edf2 0%, #ffffff 100%);
+  background: linear-gradient(to bottom, #e6edf2 0%, #ffffff 100%);
+  filter: progid:DXImageTransform.Microsoft.gradient(startColorstr='#e6edf2', endColorstr='#ffffff', GradientType=0);
+  z-index: -999;
+}
+
+header {
+  background-color: var(--tv-bg-nav);
+}
+
+a {
+  text-decoration: none;
+}
+
+.navbar-brand {
+  font-size: 2rem;
+  font-weight: 100;
+}
+
+.dropdown-menu i {
+  color: #92A6B2;
+}
+
+h1 {
+  color: #505050;
+
+  > .badge {
+    vertical-align: top;
+  }
+}
+
+.btn-group-xs > .btn, .btn-xxs {
+  padding: .25rem .4rem;
+  font-size: .875rem;
+  line-height: .5;
+  border-radius: .2rem;
+}
+
+.card {
+  table {
+    margin-bottom: 0;
+  }
+
+  &.shadow {
+    box-shadow: var(--tv-shadow);
+  }
+}
+
+.secret-list tr td:last-child {
+  white-space: nowrap;
+  width: 1px;
+}
+
+label.form-label, div.form-label > label, .col-form-label {
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.card .card-body .table tr:last-child {
+  border-bottom-style: hidden;
+}
+
+/* Custom card style */
+/* Not sure, if we want this (yet) */
+/*
+.card {
+    border: 0 solid transparent;
+    word-wrap: break-word;
+    border-radius: 0.25rem;
+}
+
+.card-header {
+    background-color: #fff;
+    border-bottom: 0;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    color: rgb(108, 117, 125);
+    margin-bottom: 0;
+    padding: 1rem 1.25rem 0.5rem;
+}
+
+.card-header:first-child {
+    border-radius: 0.25rem 0.25rem 0 0;
+}
+
+.card-title {
+    font-weight: 500;
+}
+*/

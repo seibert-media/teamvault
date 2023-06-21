@@ -1,0 +1,33 @@
+.login-icon {
+  color: #4D5E69;
+  font-size: 50px;
+  font-weight: 100;
+  margin-top: -20px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.login-wrapper {
+  height: 400px;
+  left: 50%;
+  margin-left: -200px;
+  margin-top: -200px;
+  position: fixed;
+  top: 50%;
+  width: 400px;
+}
+
+form.login {
+  background-color: white;
+  border-radius: 50px;
+  box-shadow: 0 0 80px 0 rgba(0, 0, 0, 0.1);
+  padding: 60px;
+}
+
+div.logout {
+  background-color: white;
+  border-radius: 50px;
+  box-shadow: 0 0 80px 0 rgba(0, 0, 0, 0.1);
+  padding: 60px;
+  text-align: center;
+}

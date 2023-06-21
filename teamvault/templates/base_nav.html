@@ -9,8 +9,8 @@
 
             <div class="d-flex col-12 col-lg-auto align-items-center my-2 justify-content-center justify-content-lg-start">
                 <div class="btn-group">
-                    <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark text-nowrap">
-                        <i class="bi bi-plus-circle fa-fw"></i> {% trans "Add Password" %}</a>
+                    <a href="{% url 'secrets.secret-add' content_type='password' %}" class="btn btn-dark text-nowrap"><i
+                            class="fa fa-plus-circle"></i>&nbsp; {% trans "Add Password" %}</a>
                     <button type="button" class="btn btn-dark dropdown-toggle dropdown-toggle-split"
                             data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="caret"></span>
@@ -18,12 +18,12 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-dark" role="menu">
                         <li>
-                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}">
-                                <i class="bi bi-credit-card fa-fw"></i> {% trans "Add Credit Card" %}</a>
+                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}"><i
+                                    class="fa fa-credit-card"></i>&nbsp; {% trans "Add Credit Card" %}</a>
                         </li>
                         <li>
-                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}">
-                                <i class="bi bi-upload fa-fw"></i> {% trans "Upload File" %}</a>
+                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}"><i
+                                    class="fa fa-upload"></i>&nbsp; {% trans "Upload File" %}</a>
                         </li>
                     </ul>
                 </div>
@@ -46,18 +46,18 @@
                             <a href="#" class="d-inline-block link-light text-decoration-none text-nowrap"
                                data-bs-toggle="dropdown"
                                aria-expanded="false">
-                                <i class="bi bi-gear-fill align-middle"></i>&nbsp;
+                                <i class="fa fa-gear align-middle"></i>&nbsp;
                                 <span class="d-inline d-lg-none d-xl-inline">{% trans "Administration" %}</span>
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="adminmenu">
                                 <li>
                                     <a class="dropdown-item" href="{% url 'audit.log' %}">
-                                        <i class="bi bi-person-lines-fill"></i>&nbsp;{% trans "Audit log" %}
+                                        <i class="fa fa-users-line"></i>&nbsp;{% trans "Audit log" %}
                                     </a>
                                 </li>
                                 <li>
                                     <a class="dropdown-item" href="{% url 'accounts.user-list' %}">
-                                        <i class="bi bi-people-fill"></i>&nbsp;{% trans "Users" %}
+                                        <i class="fa fa-users"></i>&nbsp;{% trans "Users" %}
                                     </a>
                                 </li>
                             </ul>
@@ -77,13 +77,13 @@
                             <ul class="dropdown-menu dropdown-menu-dark">
                                 <li>
                                     <a class="dropdown-item disabled" href="#">
-                                        <i class="bi bi-arrow-left-right"></i>&nbsp; {% trans "1Password sync" %}
+                                        <i class="fa fa-arrows-left-right"></i>&nbsp; {% trans "1Password sync" %}
                                     </a>
                                 </li>
                                 <li class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{% url 'accounts.logout' %}">
-                                        <i class="bi bi-door-open-fill"></i>&nbsp; {% trans "Sign out" %}
+                                        <i class="fa fa-door-open"></i>&nbsp; {% trans "Sign out" %}
                                     </a>
                                 </li>
                             </ul>

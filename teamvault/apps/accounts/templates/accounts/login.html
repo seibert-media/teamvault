@@ -2,9 +2,6 @@
 {% load i18n %}
 {% load static %}
 {% block navbar %}{% endblock %}
-{% block head %}
-    <link href="{% static 'css/login.css' %}" rel="stylesheet">
-{% endblock %}
 {% block title %}{% trans "Login" %}{% endblock %}
 {% block content %}
     <div class="login-wrapper">
@@ -23,7 +20,7 @@
                     <input type="password" name="password" class="form-control" placeholder="{% trans "Password" %}"
                            autocomplete="current-password" required>
                     <button form="loginform" class="btn btn-outline-secondary" type="submit"><i
-                            class="bi bi-chevron-right"></i></button>
+                            class="fa fa-chevron-right"></i></button>
                 </div>
             </div>
             {% if google_auth_enabled %}
@@ -31,7 +28,7 @@
                 <div class="d-grid">
                     <a class="btn btn-outline-secondary btn-lg"
                        href="{% url "social:begin" "google-oauth2" %}?{{ request.GET.urlencode }}">
-                        <i class="bi bi-google"></i> &nbsp;
+                        <i class="fab fa-google"></i> &nbsp;
                         {% trans "Sign in with Google" %}
                     </a>
                 </div>

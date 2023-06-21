@@ -13,7 +13,7 @@ from .apps.settings.config import (
 CONFIG = get_config()
 PROJECT_ROOT = realpath(dirname(__file__))
 
-### Django
+# Django
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'teamvault.apps.audit.AuditConfig',
     'teamvault.apps.secrets.SecretsConfig',
     'teamvault.apps.settings.SettingsConfig',
+    'webpack_loader',
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -81,7 +82,7 @@ SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_AGE, SESSION_EXPIRE_AT_BROWSER_CLOSE, SESSION_COOKIE_SECURE = \
     configure_session(CONFIG)
 
-# STATIC_ROOT = join(PROJECT_ROOT, "static")
+# STATIC_ROOT = join(PROJECT_ROOT, "static_collected")
 
 # remember this is hardcoded in the error page templates (e.g. 500.html)
 STATIC_URL = "/static/"
@@ -90,16 +91,16 @@ STATICFILES_DIRS = (
     join(PROJECT_ROOT, "static"),
 )
 
-#STORAGES = {
-    #'staticfiles': {
-    #    'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    #}
-#}
+# STORAGES = {
+# 'staticfiles': {
+#    'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# }
+# }
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [join(PROJECT_ROOT, "templates"),],
+        'DIRS': [join(PROJECT_ROOT, "templates"), ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -125,12 +126,10 @@ USE_I18N = False
 USE_THOUSAND_SEPARATOR = False
 USE_TZ = True
 
-### Hashid
-
+# HashID
 HASHID_MIN_LENGTH, HASHID_SALT = configure_hashid(CONFIG)
 
-### REST Framework
-
+# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_MODEL_SERIALIZER_CLASS':
         'rest_framework.serializers.HyperlinkedModelSerializer',
@@ -141,12 +140,10 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
 }
 
-### Social Auth
-
+# Social Auth
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
-
-### Django-Bootstrap5
+# Django-Bootstrap5
 BOOTSTRAP5 = {
     'horizontal_field_class': 'col-xl-8',
     'horizontal_label_class': 'col-xl-2',

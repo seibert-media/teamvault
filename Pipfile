@@ -8,16 +8,17 @@ cryptography = "*"
 django = "*"
 django-auth-ldap = "*"
 django-bootstrap5 = "*"
+django-filter = "*"
 django-gravatar2 = "*"
 django-htmx = "*"
+django-webpack-loader = "*"
 djangorestframework = "*"
 gunicorn = "*"
 hashids = "*"
 psycopg2 = "*"
 pytz = "*"
-django-filter = "*"
-whitenoise = {extras = ["brotli"], version = "*"}
 social-auth-app-django = "*"
+whitenoise = {extras = ["brotli"], version = "*"}
 teamvault = {editable = true, path = "."}
 
 [dev-packages]
