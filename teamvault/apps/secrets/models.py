@@ -319,10 +319,13 @@ class Secret(HashIDModel):
 
     def is_readable_by_user(self, user):
         if self.status != self.STATUS_DELETED:
+            shares = self.share_data.prefetch_related('user', 'group').all().exclude(granted_until__lte=now())
             if (
                 self.access_policy == self.ACCESS_POLICY_ANY or
-                user in self.allowed_users.all() or
-                set(self.allowed_groups.all()).intersection(set(user.groups.all()))
+                user in shares.values('user') or
+                set(shares.values_list('group', flat=True)).intersection(
+                    set(user.groups.all().values_list('id', flat=True))
+                )
             ):
                 return AccessPermissionTypes.ALLOWED
 
@@ -457,20 +460,20 @@ class SharedSecretData(models.Model):
         Group,
         on_delete=models.CASCADE,
         null=True,
-        related_name='+',
+        related_name='secret_share_data',
     )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         null=True,
-        related_name='+',
+        related_name='secret_share_data',
     )
 
     secret = models.ForeignKey(
         'Secret',
         on_delete=models.CASCADE,
-        related_name='+',
+        related_name='share_data',
     )
 
     grant_description = models.TextField(
@@ -479,7 +482,7 @@ class SharedSecretData(models.Model):
 
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         null=True,
         related_name='+',
     )
@@ -491,9 +494,49 @@ class SharedSecretData(models.Model):
 
     # Secrets are considered permanently shared if granted_until is not set
     granted_until = models.DateTimeField(
-       blank=True,
-       null=True,
+        blank=True,
+        null=True,
     )
+
+    @property
+    def shared_entity(self):
+        return self.group if self.group else self.user
+
+    @property
+    def shared_entity_name(self):
+        return self.group.name if self.group else self.user.username
+
+    @property
+    def shared_entity_type(self):
+        return 'group' if self.group else 'user'
+
+    @property
+    def is_expired(self):
+        if not self.granted_until:
+            return False
+        return bool(now() >= self.granted_until)
+
+    @property
+    def about_to_expire(self):
+        if not self.granted_until:
+            return False
+
+        if now() + timedelta(hours=8) >= self.granted_until:
+            return True
+
+    @property
+    def expiry_icon(self):
+        if not self.granted_until:
+            return 'success'
+
+        if self.about_to_expire:
+            time_left = self.granted_until - now()
+            if time_left <= timedelta(hours=8):
+                return 'danger'
+        return 'warning'
+
+    def __str__(self):
+        return f'SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})'
 
     class Meta:
         constraints = [

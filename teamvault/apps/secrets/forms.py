@@ -2,18 +2,17 @@ from datetime import date
 
 from django import forms
 from django.contrib.auth.models import Group, User
+from django.core.exceptions import ValidationError
 from django.forms.widgets import RadioSelect
 from django.utils.translation import gettext_lazy as _
 
-from .models import Secret
+from .models import Secret, SharedSecretData
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
     'description',
     'access_policy',
     'needs_changing_on_leave',
-    # 'allowed_groups',
-    # 'allowed_users',
 ]
 
 
@@ -111,3 +110,35 @@ class PasswordForm(SecretForm):
             ['password', 'username', 'url'] +
             GENERIC_FIELDS_FOOTER
         )
+
+
+class SecretShareForm(forms.ModelForm):
+    group = forms.ModelChoiceField(
+        required=False,
+        queryset=Group.objects.all().order_by('name'),
+    )
+
+    user = forms.ModelChoiceField(
+        required=False,
+        queryset=User.objects.filter(is_active=True).order_by('username'),
+    )
+
+    grant_description = forms.CharField(
+        label=_('Reason'),
+        required=False,
+        widget=forms.Textarea(attrs={'cols': '15', 'rows': '1', 'placeholder': _('(optional)')})
+    )
+
+    granted_until = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (cleaned_data['group'] and cleaned_data['user']) or (not cleaned_data['group'] and not cleaned_data['user']):
+            raise ValidationError('Choose exactly one group *or* one user to share the secret with.')
+
+    class Meta:
+        fields = ['group', 'user', 'granted_until', 'grant_description']
+        model = SharedSecretData

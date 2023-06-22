@@ -3,17 +3,22 @@ from urllib.parse import quote, urlencode
 
 import django_filters
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
+from django.template.defaultfilters import pluralize
 from django.urls import reverse
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
+from django_htmx.http import trigger_client_event
 
-from .forms import CCForm, FileForm, PasswordForm
-from .models import AccessPermissionTypes, Secret
+from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
+from .models import AccessPermissionTypes, Secret, SharedSecretData
 from ..audit.auditlog import log
 
 ACCESS_STR_IDS = {
@@ -321,6 +326,23 @@ class SecretDetail(DetailView):
 secret_detail = login_required(SecretDetail.as_view())
 
 
+@login_required
+@require_http_methods(["GET"])
+def secret_metadata(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
+    secret.check_access(request.user)
+    # TODO: ObjectManager "share_data.allowed_groups|users()"?
+    share_data = secret.share_data.prefetch_related(
+        'group', 'user'
+    ).filter(Q(granted_until__isnull=True) | Q(granted_until__gt=now()))
+    context = {
+        'allowed_groups': share_data.filter(group__isnull=False).order_by('group__name'),
+        'allowed_users': share_data.filter(user__isnull=False).order_by('user__username'),
+        'secret': secret,
+    }
+    return render(request, context=context, template_name='secrets/detail_content/meta.html')
+
+
 class SecretFilter(django_filters.FilterSet):
     order = django_filters.OrderingFilter(
         choices=(
@@ -357,6 +379,115 @@ class SecretList(ListView):
 
 
 secret_list = login_required(SecretList.as_view())
+
+
+class SecretShareList(CreateView):
+    _group_shares = None
+    _user_shares = None
+    form_class = SecretShareForm
+    slug_field = 'secret__hashid'
+    slug_url_kwarg = 'hashid'
+    template_name = 'secrets/share_content/share_list_modal.html'
+
+    @property
+    def group_shares(self):
+        if not self._group_shares:
+            if not self.queryset:
+                self.queryset = self.get_queryset()
+            self._group_shares = self.queryset.filter(group__isnull=False).order_by('group__name', '-granted_until')
+        return self._group_shares
+
+    @property
+    def user_shares(self):
+        if not self._user_shares:
+            if not self.queryset:
+                self.queryset = self.get_queryset()
+            self._user_shares = self.queryset.filter(user__isnull=False).order_by('user__username', '-granted_until')
+        return self._user_shares
+
+    def get_queryset(self):
+        return SharedSecretData.objects.filter(
+            secret__hashid=self.kwargs[self.slug_url_kwarg]
+        ).prefetch_related('secret', 'user', 'group')
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        secret = get_object_or_404(Secret, hashid=self.kwargs[self.slug_url_kwarg])
+        secret.check_access(self.request.user)
+
+        context = {
+            'secret': secret,
+            'shares': {
+                'groups': self.group_shares,
+                'users': self.user_shares,
+            },
+        }
+        return super().get_context_data(**context)
+
+    def form_valid(self, form):
+        secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
+        secret.check_access(self.request.user)
+        obj = form.save(commit=False)
+        obj.secret = secret
+        obj.save()
+
+        log(
+            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
+                shared_entity_type=obj.shared_entity_type,
+                name=obj.shared_entity_name,
+                user=self.request.user.username,
+                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
+            ),
+            actor=self.request.user,
+            level='warn',
+            secret=secret,
+        )
+
+        shared_with_object = form.cleaned_data['group'] if form.cleaned_data['group'] else form.cleaned_data['user']
+        messages.success(self.request, _('Shared secret with {}'.format(shared_with_object)))
+        context = self.get_context_data()
+        context.update({
+            'form': self.get_form_class()(),  # create a new blank form
+            'show_object': {
+                'id': shared_with_object.id,
+                'type': 'group' if form.cleaned_data['group'] else 'user',
+            }
+        })
+        response = self.render_to_response(context=context)
+        trigger_client_event(response, 'refreshMetadata')
+        return response
+
+    def get_form_class(self):
+        form_class = super(SecretShareList, self).get_form_class()
+
+        # Exclude groups and users which the secret was already shared with
+        form_class.base_fields['group'].queryset = form_class.base_fields['group'].queryset.exclude(
+            name__in=self.group_shares.values('group__name')
+        )
+        form_class.base_fields['user'].queryset = form_class.base_fields['user'].queryset.exclude(
+            username__in=self.user_shares.values('user__username')
+        )
+        return form_class
+
+
+secret_share_list = login_required(SecretShareList.as_view())
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def secret_share_delete(request, hashid, share_id):
+    share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
+    share_data.secret.check_access(request.user)
+    share_data.delete()
+    messages.success(
+        request,
+        _('Successfully removed {} from allowed {}'.format(
+            share_data.shared_entity_name, pluralize(share_data.shared_entity_type)
+        ))
+    )
+    response = HttpResponse(status=200)
+    trigger_client_event(response, 'refreshMetadata')
+    trigger_client_event(response, 'refreshShareData')
+    return response
 
 
 @login_required

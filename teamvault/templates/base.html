@@ -19,11 +19,17 @@
           crossorigin="anonymous">
     <link href="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/css/select2.min.css" rel="stylesheet"/>
     <link href="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.css" rel="stylesheet">
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.7.7/dist/css/tempus-dominus.min.css"
+          crossorigin="anonymous">
+
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/card@2.5.4/dist/card.min.css">
+    <script src="https://unpkg.com/htmx.org@1.9.2"
+            integrity="sha384-L6OqL9pRWyyFU3+/bjdSri+iIphTN/bvYyM37tICVyOJkWZLpP2vGn6VUEXgzg6h"
+            crossorigin="anonymous"></script>
 
-    <!-- bs4 theme looks a bit better here, even if we're on bs5 -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@ttskch/select2-bootstrap4-theme@1.5.2/dist/select2-bootstrap4.min.css">
-
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"/>
 
     <link href="{% static 'css/base.css' %}" rel="stylesheet">
     <link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
@@ -33,27 +39,47 @@
 
 <body>
 <script src="https://cdn.jsdelivr.net/npm/jquery@3.7.0/dist/jquery.min.js" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js"
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"
         crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.0.13/dist/js/select2.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/notyf@3/notyf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.11/dist/clipboard.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/card@2.5.4/dist/card.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tarekraafat/autocomplete.js@10.2.7/dist/autoComplete.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.3/dist/purify.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@eonasdan/tempus-dominus@6.7.7/dist/js/tempus-dominus.min.js"
+        crossorigin="anonymous"></script>
+
 {% include "_select2-patches.html" %}
 
+
 <script>
-    const bsOptions = {container: 'body', html: true, trigger : 'hover'}
+    const tooltipOptions = {container: 'body', html: true, trigger: 'hover'}
+
     function refreshTooltips() {
-        const tooltipTriggerList = document.querySelectorAll('[data-bs-toggle="tooltip"]');
-        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, bsOptions));
+        let tooltipTriggerList = htmx.findAll('[data-bs-toggle="tooltip"]');
+        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, tooltipOptions));
     }
+
+    document.addEventListener('htmx:load', () => {
+        refreshTooltips()
+    })
 
     const notyfOptions = {position: {x: 'right', y: 'top'}}
     window.notyf = new Notyf(notyfOptions)
 
-    window.addEventListener('DOMContentLoaded', () => {
-       refreshTooltips()
-    })
+    // listener for htmx message events
+    document.addEventListener('django.contrib.messages', event => {
+        // event.detail contains the message_list we defined in our htmx_message_middleware
+        for (const msg of event.detail.message_list) {
+            window.notyf.open({
+                dismissible: true,
+                message: msg.message,
+                type: msg.level
+            })
+        }
+    });
 </script>
 
 <div class="background"></div>

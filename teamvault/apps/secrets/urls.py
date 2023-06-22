@@ -39,9 +39,24 @@ urlpatterns = (
         name='secrets.secret-edit',
     ),
     path(
+        'secrets/<str:hashid>/metadata',
+        views.secret_metadata,
+        name='secrets.secret-metadata',
+    ),
+    path(
         'secrets/<str:hashid>/restore',
         views.secret_restore,
         name='secrets.secret-restore',
+    ),
+    path(
+        'secrets/<str:hashid>/share',
+        views.secret_share_list,
+        name='secrets.secret-share',
+    ),
+    path(
+        'secrets/<str:hashid>/share/<int:share_id>/delete',
+        views.secret_share_delete,
+        name='secrets.secret-share-delete',
     ),
     path(
         'secrets/add/<str:content_type>',

@@ -136,12 +136,10 @@ kbd:not(kbd:first-of-type) {
     /* padding: 12px 12px 0; */
 }
 
-.searchbar form {
+.searchbar div, .searchbar form {
     cursor: auto;
     box-sizing: border-box;
-    align-items: center;
     box-shadow: inset 0 0 0 2px var(--tv-bg-nav);
-    display: flex;
     height: 56px;
     margin: 0;
     padding: 0 12px;
@@ -150,33 +148,33 @@ kbd:not(kbd:first-of-type) {
     border-radius: var(--bs-border-radius);
 }
 
-.searchbar form label {
+.searchbar label {
     margin: 0;
     padding: 0;
     align-items: center;
     display: flex;
     justify-content: center;
-    color: #bb0000;
+    color: var(--tv-bg-nav);
 }
 
-.searchbar form label svg {
+.searchbar label svg {
     height: 24px;
     width: 24px;
     stroke-width: 1.6;
 }
 
-.searchbar form .loading-indicator {
+.searchbar .loading-indicator {
     display: none;
     margin: 0;
     padding: 0;
 }
 
-.searchbar form input {
+.searchbar input {
     border: 0;
     box-shadow: none;
 }
 
-.searchbar form input:focus {
+.searchbar input:focus {
     border: 0;
     box-shadow: none;
 }
@@ -240,4 +238,20 @@ kbd:not(kbd:first-of-type) {
 
 .search-modal-result:hover .search-modal-result-action svg {
     visibility: visible;
+}
+
+.select2-container--bootstrap-5.select2-container--open .select2-selection {
+    box-shadow: none;
+}
+
+/* Even modals with "modal-xl" will get smaller. Let's not leave too much real estate on the table */
+.modal-xl {
+--bs-modal-width: 88%;
+}
+
+
+@media (min-width: 1200px) { /* --bs-breakpoint-xl */
+  .modal-xl {
+    --bs-modal-width: 1140px;
+  }
 }
