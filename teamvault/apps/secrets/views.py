@@ -504,7 +504,7 @@ def secret_search(request):
     # sort readable passwords to top...
     for secret in filtered_secrets:
         if secret.is_readable_by_user(request.user):
-            icon = "unlock"
+            icon = "lock-open"
             metadata = ''
             if secret.content_type == secret.CONTENT_PASSWORD:
                 icon = "user"
