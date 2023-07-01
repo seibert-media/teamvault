@@ -438,7 +438,7 @@ class SecretShareList(CreateView):
                 time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
             ),
             actor=self.request.user,
-            level='warn',
+            level='warning',
             secret=secret,
         )
 

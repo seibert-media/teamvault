@@ -201,7 +201,7 @@ class Secret(HashIDModel):
             log(
                 _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
                 actor=user,
-                level='warn',
+                level='warning',
                 secret=self,
             )
             raise PermissionError(_(
