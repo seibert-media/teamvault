@@ -11,7 +11,6 @@ import DOMPurify from 'dompurify';
 import {TempusDominus} from '@eonasdan/tempus-dominus'
 import '@eonasdan/tempus-dominus/src/scss/tempus-dominus.scss'
 
-import 'select2';
 import '../scss/select2.scss';
 
 // Bootstrap
@@ -23,6 +22,9 @@ window.htmx = require('htmx.org')
 // jQuery
 window.$ = $
 window.jQuery = $
+
+// Bigtext
+require('bigtext');
 
 // Notyf
 document.addEventListener('DOMContentLoaded', () => {
@@ -46,6 +48,7 @@ window.DOMPurify = DOMPurify
 window.TempusDominus = TempusDominus
 
 // Select2
+require('select2');
 $.fn.select2.defaults.set("theme", "bootstrap-5")
 $.fn.select2.defaults.set("width", "100%")  // https://github.com/select2/select2/issues/3278
 $.fn.select2.amd.require(['select2/selection/search'], function (Search) {
