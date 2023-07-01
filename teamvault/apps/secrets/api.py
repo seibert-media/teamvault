@@ -1,7 +1,6 @@
 from base64 import b64decode, b64encode
 from json import dumps, loads
 
-from django.contrib.auth.models import Group, User
 from django.shortcuts import get_object_or_404
 from rest_framework import generics
 from rest_framework import serializers
@@ -11,7 +10,7 @@ from rest_framework.response import Response
 from rest_framework.reverse import reverse
 
 from .models import Secret, SecretRevision
-
+from .utils import generate_password
 
 ACCESS_POLICY_REPR = {
     Secret.ACCESS_POLICY_ANY: "any",
@@ -34,9 +33,7 @@ SECRET_STATUS_REPR = {
 }
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
-REQUIRED_CC_FIELDS = set((
-    'holder', 'expiration_month', 'expiration_year', 'number', 'security_code',
-))
+REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number', 'security_code'}
 
 
 def _extract_data(validated_data):
@@ -69,7 +66,7 @@ def _extract_data(validated_data):
             Secret.CONTENT_CC,
         )
     else:
-        return (None, None)
+        return None, None
 
 
 class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
@@ -110,20 +107,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SecretSerializer(serializers.HyperlinkedModelSerializer):
-    # allowed_groups = serializers.SlugRelatedField(
-    #     many=True,
-    #     queryset=Group.objects.all(),
-    #     read_only=True,  # FIXME: Temporary
-    #     required=False,
-    #     slug_field='name',
-    # )
-    # allowed_users = serializers.SlugRelatedField(
-    #     many=True,
-    #     queryset=User.objects.exclude(is_active=False),
-    #     read_only=True,  # FIXME: Temporary
-    #     required=False,
-    #     slug_field='username',
-    # )
+    # FIXME: Allowed_users and Allowed_groups via /share
     api_url = serializers.HyperlinkedIdentityField(
         lookup_field='hashid',
         view_name='api.secret_detail',
@@ -177,10 +161,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     )
 
     def create(self, validated_data):
-        # FIXME: Allowed_users and Allowed_groups only per /share
-        # allowed_groups = validated_data.pop('allowed_groups', [])
-        # allowed_users = validated_data.pop('allowed_users', [])
-
         data, content_type = _extract_data(validated_data)
         if not data:
             raise serializers.ValidationError("missing secret field (e.g. 'password')")
@@ -235,8 +215,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         model = Secret
         fields = (
             'access_policy',
-            # 'allowed_groups',
-            # 'allowed_users',
             'api_url',
             'content_type',
             'created',
@@ -331,3 +309,8 @@ def data_get(request, hashid):
         return Response({'file': b64encode(data).decode('ascii')})
     elif secret_revision.secret.content_type == Secret.CONTENT_CC:
         return Response(loads(data))
+
+
+@api_view(['GET'])
+def generate_password_view(*_args, **_kwargs):
+    return Response(generate_password())
