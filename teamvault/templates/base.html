@@ -34,9 +34,6 @@
         refreshTooltips()
     })
 
-    const notyfOptions = {position: {x: 'right', y: 'top'}}
-    window.notyf = new Notyf(notyfOptions)
-
     // listener for htmx message events
     document.addEventListener('django.contrib.messages', event => {
         // event.detail contains the message_list we defined in our htmx_message_middleware

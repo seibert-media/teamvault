@@ -3,26 +3,53 @@ import '../scss/base.scss'
 
 import * as bootstrap from 'bootstrap' // TODO: Specify which plugins we really need
 import $ from 'jquery'
-import * as Notyf from 'notyf'
-import * as Card from 'card'
-import 'select2'
-import '../scss/select2.scss'
+import {Notyf} from 'notyf';
+import 'notyf/notyf.min.css'
+import autoCompleteJS from '@tarekraafat/autocomplete.js';
+import ClipboardJS from "clipboard";
+import DOMPurify from 'dompurify';
+import {TempusDominus} from '@eonasdan/tempus-dominus'
+import '@eonasdan/tempus-dominus/src/scss/tempus-dominus.scss'
 
+import 'select2';
+import '../scss/select2.scss';
+
+// Bootstrap
 window.bootstrap = bootstrap
 
+// HTMX
+window.htmx = require('htmx.org')
+
+// jQuery
 window.$ = $
 window.jQuery = $
 
-window.Notyf = Notyf
+// Notyf
+document.addEventListener('DOMContentLoaded', () => {
+  // Notyf tries to hook to a body, which we don't have in this context yet.
+  window.notyf = new Notyf({position: {x: 'right', y: 'top'}})
+})
 
-window.Card = Card
+// Card
+window.Card = require('card')
 
-// Patch width. See https://github.com/select2/select2/issues/3278
-$.fn.select2.defaults.set("width", "100%")
+// ClipboardJS
+window.ClipboardJS = ClipboardJS
+
+// autocomplete.js
+window.autoCompleteJS = autoCompleteJS
+
+// DOMPurify (needed for autocompleteJS ajax queries)
+window.DOMPurify = DOMPurify
+
+// Tempus Dominus
+window.TempusDominus = TempusDominus
+
+// Select2
 $.fn.select2.defaults.set("theme", "bootstrap-5")
-
-// Patch backspace on select2 4.X. See https://github.com/select2/select2/issues/3354
+$.fn.select2.defaults.set("width", "100%")  // https://github.com/select2/select2/issues/3278
 $.fn.select2.amd.require(['select2/selection/search'], function (Search) {
+  // Patch backspace on select2 4.X. See https://github.com/select2/select2/issues/3354
   Search.prototype.searchRemoveChoice = function (decorated, item) {
     this.trigger('unselect', {
       data: item
@@ -32,4 +59,3 @@ $.fn.select2.amd.require(['select2/selection/search'], function (Search) {
     this.handleSearch();
   };
 }, null, true);
-
