@@ -34,15 +34,29 @@
         refreshTooltips()
     })
 
+</script>
+<script>
+    function triggerNotyf(type, message) {
+        window.notyf.open({
+            dismissible: true,
+            message: message,
+            type: type,
+        })
+    }
+
+    {% if messages %}
+        document.addEventListener('DOMContentLoaded', () => {
+            {% for message in messages %}
+                triggerNotyf("{{ message.level_tag }}", "{{ message }}");
+            {% endfor %}
+        })
+    {% endif %}
+
     // listener for htmx message events
     document.addEventListener('django.contrib.messages', event => {
         // event.detail contains the message_list we defined in our htmx_message_middleware
-        for (const msg of event.detail.message_list) {
-            window.notyf.open({
-                dismissible: true,
-                message: msg.message,
-                type: msg.level
-            })
+        for (const msg of event['detail']['message_list']) {
+            triggerNotyf(msg.level, msg.message)
         }
     });
 </script>
