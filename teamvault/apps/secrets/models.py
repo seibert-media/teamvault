@@ -322,7 +322,7 @@ class Secret(HashIDModel):
             shares = self.share_data.prefetch_related('user', 'group').all().exclude(granted_until__lte=now())
             if (
                 self.access_policy == self.ACCESS_POLICY_ANY or
-                user in shares.values('user') or
+                shares.filter(user=user).exists() or
                 set(shares.values_list('group', flat=True)).intersection(
                     set(user.groups.all().values_list('id', flat=True))
                 )
