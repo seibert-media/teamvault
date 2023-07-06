@@ -21,6 +21,7 @@ from django_htmx.http import trigger_client_event
 
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
 from .models import AccessPermissionTypes, Secret, SharedSecretData
+from ..accounts.models import UserSettings
 from ..audit.auditlog import log
 
 ACCESS_STR_IDS = {
@@ -107,6 +108,17 @@ class SecretAdd(CreateView):
             })
         secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
 
+        # Create default share objects
+        secret.share_data.create(user=self.request.user)
+        try:
+            secret.share_data.bulk_create(
+                [
+                    SharedSecretData(group=group, secret=secret, granted_by=self.request.user)
+                    for group in self.request.user.profile.default_sharing_groups.all()
+                ]
+            )
+        except UserSettings.DoesNotExist:
+            pass
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
