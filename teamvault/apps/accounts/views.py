@@ -1,15 +1,36 @@
-from django.contrib.auth.decorators import user_passes_test
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib.auth.models import User
 from django.db import transaction
 from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, UpdateView
 
+from .forms import UserSettingsForm
+from .models import UserSettings as UserSettingsModel
 from ..audit.auditlog import log
 from ..secrets.models import Secret, SecretRevision
+
+
+class UserSettings(UpdateView):
+    form_class = UserSettingsForm
+    model = UserSettingsModel
+    template_name = "accounts/user_settings.html"
+    success_url = reverse_lazy('accounts.user-settings')
+
+    def get_object(self, *args, **kwargs):
+        return UserSettingsModel.objects.get_or_create(user=self.request.user)[0]
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, _('Successfully updated settings.'))
+        return response
+
+
+user_settings = login_required(UserSettings.as_view())
 
 
 class UserList(ListView):

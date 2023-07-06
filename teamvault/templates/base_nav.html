@@ -76,14 +76,14 @@
 
                             <ul class="dropdown-menu dropdown-menu-dark">
                                 <li>
-                                    <a class="dropdown-item disabled" href="#">
-                                        <i class="fa fa-arrows-left-right"></i>&nbsp; {% trans "1Password sync" %}
+                                    <a class="dropdown-item" href="{% url 'accounts.user-settings' %}">
+                                        <i class="fa fa-sliders fa-fw"></i>&nbsp; {% trans "Settings" %}
                                     </a>
                                 </li>
                                 <li class="dropdown-divider"></li>
                                 <li>
                                     <a class="dropdown-item" href="{% url 'accounts.logout' %}">
-                                        <i class="fa fa-door-open"></i>&nbsp; {% trans "Sign out" %}
+                                        <i class="fa fa-door-open fa-fw"></i>&nbsp; {% trans "Sign out" %}
                                     </a>
                                 </li>
                             </ul>

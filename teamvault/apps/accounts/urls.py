@@ -35,4 +35,9 @@ urlpatterns = (
         {'deactivate': True},
         name='accounts.user-deactivate',
     ),
+    path(
+        'settings/',
+        views.user_settings,
+        name='accounts.user-settings',
+    ),
 )
