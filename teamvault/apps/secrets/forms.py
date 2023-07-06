@@ -115,12 +115,12 @@ class PasswordForm(SecretForm):
 class SecretShareForm(forms.ModelForm):
     group = forms.ModelChoiceField(
         required=False,
-        queryset=Group.objects.all().order_by('name'),
+        queryset=Group.objects.none(),  # will be set in view
     )
 
     user = forms.ModelChoiceField(
         required=False,
-        queryset=User.objects.filter(is_active=True).order_by('username'),
+        queryset=User.objects.none(),  # will be set in view
     )
 
     grant_description = forms.CharField(

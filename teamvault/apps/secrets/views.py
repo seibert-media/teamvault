@@ -5,11 +5,13 @@ import django_filters
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import Group, User
 from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
+from django.utils.functional import cached_property
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
@@ -382,28 +384,22 @@ secret_list = login_required(SecretList.as_view())
 
 
 class SecretShareList(CreateView):
-    _group_shares = None
-    _user_shares = None
     form_class = SecretShareForm
     slug_field = 'secret__hashid'
     slug_url_kwarg = 'hashid'
     template_name = 'secrets/share_content/share_list_modal.html'
 
-    @property
+    @cached_property
     def group_shares(self):
-        if not self._group_shares:
-            if not self.queryset:
-                self.queryset = self.get_queryset()
-            self._group_shares = self.queryset.filter(group__isnull=False).order_by('group__name', '-granted_until')
-        return self._group_shares
+        if not self.queryset:
+            self.queryset = self.get_queryset()
+        return self.queryset.filter(group__isnull=False).order_by('group__name', '-granted_until')
 
-    @property
+    @cached_property
     def user_shares(self):
-        if not self._user_shares:
-            if not self.queryset:
-                self.queryset = self.get_queryset()
-            self._user_shares = self.queryset.filter(user__isnull=False).order_by('user__username', '-granted_until')
-        return self._user_shares
+        if not self.queryset:
+            self.queryset = self.get_queryset()
+        return self.queryset.filter(user__isnull=False).order_by('user__username', '-granted_until')
 
     def get_queryset(self):
         return SharedSecretData.objects.filter(
@@ -444,6 +440,11 @@ class SecretShareList(CreateView):
 
         shared_with_object = form.cleaned_data['group'] if form.cleaned_data['group'] else form.cleaned_data['user']
         messages.success(self.request, _('Shared secret with {}'.format(shared_with_object)))
+
+        # Clear cache
+        delattr(self, 'group_shares')
+        delattr(self, 'user_shares')
+
         context = self.get_context_data()
         context.update({
             'form': self.get_form_class()(),  # create a new blank form
@@ -460,12 +461,12 @@ class SecretShareList(CreateView):
         form_class = super(SecretShareList, self).get_form_class()
 
         # Exclude groups and users which the secret was already shared with
-        form_class.base_fields['group'].queryset = form_class.base_fields['group'].queryset.exclude(
-            name__in=self.group_shares.values('group__name')
-        )
-        form_class.base_fields['user'].queryset = form_class.base_fields['user'].queryset.exclude(
-            username__in=self.user_shares.values('user__username')
-        )
+        form_class.base_fields['group'].queryset = Group.objects.all().exclude(
+            name__in=self.group_shares.values_list('group__name', flat=True)
+        ).order_by('name')
+        form_class.base_fields['user'].queryset = User.objects.filter(is_active=True).order_by('username').exclude(
+            username__in=self.user_shares.values_list('user__username', flat=True)
+        ).order_by('username')
         return form_class
 
 
