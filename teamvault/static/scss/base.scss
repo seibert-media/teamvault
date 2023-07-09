@@ -121,25 +121,10 @@ label.form-label, div.form-label > label, .col-form-label {
 */
 
 kbd {
-  color: #e6e6e6;
-  background-color: #1e1e1e;
   font-family: monospace;
-  width: fit-content;
-  min-width: 5rem !important;
   text-align: center;
-  border: 1px solid #303030;
-  padding-inline: .5rem;
+  border-color: #303030;
   font-size: inherit;
-
-  &:first-of-type {
-    border-top-left-radius: 1rem;
-    border-bottom-left-radius: 1rem;
-  }
-
-  &:last-of-type {
-    border-top-right-radius: 1rem;
-    border-bottom-right-radius: 1rem;
-  }
 
   &:not(kbd:first-of-type) {
     margin-left: 0.1rem;
@@ -147,7 +132,9 @@ kbd {
 }
 
 .searchbar {
-  /* padding: 12px 12px 0; */
+  &.modal-header {
+    border-bottom: 0;
+  }
 
   div, form {
     cursor: auto;
@@ -204,8 +191,25 @@ kbd {
   }
 }
 
-#searchbar-toggle:hover {
-  box-shadow: 0 0 0 0.25rem #828188;
+#searchbar-toggle {
+  &:hover {
+    box-shadow: 0 0 0 0.25rem #828188;
+  }
+
+  kbd {
+    padding-inline: .5rem;
+    font-size: $small-font-size;
+
+    &:first-of-type {
+      border-top-left-radius: 1rem;
+      border-bottom-left-radius: 1rem;
+    }
+
+    &:last-of-type {
+      border-top-right-radius: 1rem;
+      border-bottom-right-radius: 1rem;
+    }
+  }
 }
 
 .search-modal-result {
@@ -213,6 +217,14 @@ kbd {
   display: flex;
   flex-direction: row;
   height: 56px;
+
+  &[aria-selected="true"], &hover {
+    background-color: var(--bs-list-group-action-active-bg);
+
+    .search-modal-result-action {
+      visibility: visible;
+    }
+  }
 }
 
 .search-modal-result-icon {
@@ -250,23 +262,28 @@ kbd {
   visibility: hidden;
 }
 
-.search-modal-result:hover .search-modal-result-action svg {
-  visibility: visible;
-}
+.search-modal-actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
 
-.modal-xl {
-  /* Even modals with "modal-xl" will get smaller. Let's not leave too much real estate on the table */
-  --bs-modal-width: 88%;
-}
+  li {
+    align-items: center;
+    display: flex;
 
-@media (min-width: 1200px) {
-  /* --bs-breakpoint-xl */
-
-  .modal-xl {
-    --bs-modal-width: 1140px;
+    &:not(:last-of-type) {
+      margin-right: 0.8rem
+    }
   }
 }
 
+@include media-breakpoint-down(xl) {
+  .modal-xl {
+    --bs-modal-width: 88%
+  }
+}
+
+// Scrollbars
 body, .modal-dialog-scrollable .modal-body {
   &::-webkit-scrollbar {
     width: 20px;
