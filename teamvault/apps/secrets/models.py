@@ -5,11 +5,11 @@ from operator import itemgetter
 
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import Group
+from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import Q
+from django.db.models import Q, Case, When, Value, BooleanField
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
@@ -95,20 +95,6 @@ class Secret(HashIDModel):
         choices=ACCESS_POLICY_CHOICES,
         default=ACCESS_POLICY_DISCOVERABLE,
     )
-    allowed_groups = models.ManyToManyField(
-        Group,
-        blank=True,
-        through='SharedSecretData',
-        through_fields=('secret', 'group'),
-        related_name='allowed_passwords',
-    )
-    allowed_users = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        blank=True,
-        through='SharedSecretData',
-        through_fields=('secret', 'user'),
-        related_name='allowed_passwords',
-    )
     content_type = models.PositiveSmallIntegerField(
         choices=CONTENT_CHOICES,
         default=CONTENT_PASSWORD,
@@ -145,6 +131,18 @@ class Secret(HashIDModel):
     name = models.CharField(max_length=92, help_text=_('Enter a unique name for the secret'))
     needs_changing_on_leave = models.BooleanField(
         default=True,
+    )
+    shared_groups = models.ManyToManyField(
+        Group,
+        blank=True,
+        through='SharedSecretData',
+        through_fields=('secret', 'group'),
+    )
+    shared_users = models.ManyToManyField(
+        settings.AUTH_USER_MODEL,
+        blank=True,
+        through='SharedSecretData',
+        through_fields=('secret', 'user'),
     )
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
@@ -242,22 +240,27 @@ class Secret(HashIDModel):
     def get_all_readable_by_user(cls, user):
         if user.is_superuser:
             return cls.objects.all()
-        return (
-            cls.objects.filter(access_policy=cls.ACCESS_POLICY_ANY) |
-            cls.objects.filter(allowed_users=user) |
-            cls.objects.filter(allowed_groups__in=user.groups.all())
+
+        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
+            Q(user=user) | Q(group__user=user)
+        ).exclude(is_expired=True).values('secret__pk')
+        return cls.objects.filter(
+            Q(access_policy=cls.ACCESS_POLICY_ANY) | Q(pk__in=allowed_shares)
         ).exclude(status=cls.STATUS_DELETED).distinct()
 
     @classmethod
     def get_all_visible_to_user(cls, user, queryset=None):
         if queryset is None:
             queryset = cls.objects.all()
+
         if user.is_superuser:
             return queryset
-        return (
-            queryset.filter(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_DISCOVERABLE)) |
-            queryset.filter(allowed_users=user) |
-            queryset.filter(allowed_groups__in=user.groups.all())
+
+        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
+            Q(user=user) | Q(group__user=user)
+        ).exclude(is_expired=True).values('secret__pk')
+        return queryset.filter(
+            Q(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_DISCOVERABLE)) | Q(pk__in=allowed_shares)
         ).exclude(status=cls.STATUS_DELETED).distinct()
 
     @classmethod
@@ -319,13 +322,11 @@ class Secret(HashIDModel):
 
     def is_readable_by_user(self, user):
         if self.status != self.STATUS_DELETED:
-            shares = self.share_data.prefetch_related('user', 'group').all().exclude(granted_until__lte=now())
             if (
                 self.access_policy == self.ACCESS_POLICY_ANY or
-                shares.filter(user=user).exists() or
-                set(shares.values_list('group', flat=True)).intersection(
-                    set(user.groups.all().values_list('id', flat=True))
-                )
+                self.share_data.with_expiry_state().filter(
+                    Q(user=user) | Q(group__user=user)
+                ).exclude(is_expired=True).exists()
             ):
                 return AccessPermissionTypes.ALLOWED
 
@@ -455,7 +456,30 @@ class SecretRevision(HashIDModel):
         return self.secret.current_revision == self
 
 
+class SecretShareQuerySet(models.QuerySet):
+    # TODO: Rename to group_shares, user_shares
+    def groups(self):
+        return self.with_expiry_state().filter(group__isnull=False).order_by('group__name')
+
+    def users(self):
+        return self.with_expiry_state().filter(user__isnull=False).order_by('user__username')
+
+    def with_expiry_state(self):
+        return self.annotate(
+            is_expired=Case(
+                When(
+                    granted_until__lte=now(),
+                    then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
+
+
 class SharedSecretData(models.Model):
+    objects = SecretShareQuerySet.as_manager()
+
     group = models.ForeignKey(
         Group,
         on_delete=models.CASCADE,
@@ -509,12 +533,6 @@ class SharedSecretData(models.Model):
     @property
     def shared_entity_type(self):
         return 'group' if self.group else 'user'
-
-    @property
-    def is_expired(self):
-        if not self.granted_until:
-            return False
-        return bool(now() >= self.granted_until)
 
     @property
     def about_to_expire(self):

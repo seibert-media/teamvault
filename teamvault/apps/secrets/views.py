@@ -345,13 +345,10 @@ secret_detail = login_required(SecretDetail.as_view())
 def secret_metadata(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
     secret.check_access(request.user)
-    # TODO: ObjectManager "share_data.allowed_groups|users()"?
-    share_data = secret.share_data.prefetch_related(
-        'group', 'user'
-    ).filter(Q(granted_until__isnull=True) | Q(granted_until__gt=now()))
+    share_data = secret.share_data.with_expiry_state().filter(is_expired=False)
     context = {
-        'allowed_groups': share_data.filter(group__isnull=False).order_by('group__name'),
-        'allowed_users': share_data.filter(user__isnull=False).order_by('user__username'),
+        'allowed_groups': share_data.groups(),
+        'allowed_users': share_data.users(),
         'secret': secret,
     }
     return render(request, context=context, template_name='secrets/detail_content/meta.html')
@@ -404,14 +401,14 @@ class SecretShareList(CreateView):
     @cached_property
     def group_shares(self):
         if not self.queryset:
-            self.queryset = self.get_queryset()
-        return self.queryset.filter(group__isnull=False).order_by('group__name', '-granted_until')
+            self.queryset = self.get_queryset().with_expiry_state()
+        return self.queryset.groups()
 
     @cached_property
     def user_shares(self):
         if not self.queryset:
             self.queryset = self.get_queryset()
-        return self.queryset.filter(user__isnull=False).order_by('user__username', '-granted_until')
+        return self.queryset.users()
 
     def get_queryset(self):
         return SharedSecretData.objects.filter(

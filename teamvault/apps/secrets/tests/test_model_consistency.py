@@ -15,8 +15,8 @@ class SecretConsistencyTestCase(TestCase):
         group = Group.objects.get(name='testgroup')
 
         secret = Secret.objects.create(name="testsecret", created_by=user)
-        secret.allowed_users.add(user, through_defaults={})
-        secret.allowed_groups.add(group, through_defaults={})
+        secret.shared_users.add(user, through_defaults={})
+        secret.shared_groups.add(group, through_defaults={})
 
         with self.assertRaises(IntegrityError):
             SharedSecretData.objects.create(secret=secret, user=user)
