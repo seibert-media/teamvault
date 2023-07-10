@@ -131,6 +131,12 @@ kbd {
   }
 }
 
+.list-group-hover .list-group-item {
+  &:hover {
+    background-color: var(--bs-list-group-action-active-bg);
+  }
+}
+
 .searchbar {
   &.modal-header {
     border-bottom: 0;
@@ -218,7 +224,7 @@ kbd {
   flex-direction: row;
   height: 56px;
 
-  &[aria-selected="true"], &hover {
+  &[aria-selected="true"], &:hover {
     background-color: var(--bs-list-group-action-active-bg);
 
     .search-modal-result-action {
