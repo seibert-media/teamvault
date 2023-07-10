@@ -1,24 +1,22 @@
 from json import dumps, loads
 from urllib.parse import quote, urlencode
 
-import django_filters
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
-from django.db.models import Q
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
 from django.utils.functional import cached_property
-from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django_htmx.http import trigger_client_event
 
+from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
 from .models import AccessPermissionTypes, Secret, SharedSecretData
 from ..accounts.models import UserSettings
@@ -354,29 +352,15 @@ def secret_metadata(request, hashid):
     return render(request, context=context, template_name='secrets/detail_content/meta.html')
 
 
-class SecretFilter(django_filters.FilterSet):
-    order = django_filters.OrderingFilter(
-        choices=(
-            ('last_changed', _("Last changed")),
-            ('last_read', _("Last read")),
-        ),
-    )
-
-    class Meta:
-        model = Secret
-        fields = {
-            'last_changed': ['gt', 'gte', 'lt', 'lte'],
-            'last_read': ['gt', 'gte', 'lt', 'lte'],
-        }
-
-
 class SecretList(ListView):
     context_object_name = 'secrets'
+    filter = None
     paginate_by = 25
     template_name = "secrets/secret_list.html"
 
     def get_context_data(self, **kwargs):
         context = super(SecretList, self).get_context_data(**kwargs)
+        context['filter'] = self.filter
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
         return context
 
@@ -385,8 +369,8 @@ class SecretList(ListView):
             queryset = Secret.get_search_results(self.request.user, self.request.GET['search'])
         else:
             queryset = Secret.get_all_visible_to_user(self.request.user)
-        filtered = SecretFilter(self.request.GET, queryset)
-        return filtered.qs
+        self.filter = SecretFilter(self.request.GET, queryset)
+        return self.filter.qs
 
 
 secret_list = login_required(SecretList.as_view())
