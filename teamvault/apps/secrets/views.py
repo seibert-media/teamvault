@@ -310,6 +310,9 @@ class SecretDetail(DetailView):
             context['placeholder'] = secret.current_revision.length * "•"
             if context['readable'] == AccessPermissionTypes.SUPERUSER_ALLOWED:
                 context['su_access'] = True
+        context['show_modal'] = (secret.needs_changing() and (context['readable'] == AccessPermissionTypes.ALLOWED
+                                                              or AccessPermissionTypes.SUPERUSER_ALLOWED))
+        log(f"context[show_modal]: {context['show_modal']}")
         return context
 
     def get_object(self, queryset=None):

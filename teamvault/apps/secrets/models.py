@@ -217,6 +217,14 @@ class Secret(HashIDModel):
         else:
             log_message = _("{user} read '{name}'")
 
+        if self.needs_changing() and read_allowed:
+            log(_(
+                f'{user.username} was reminded to update {self.name}'
+            ),
+                actor=user,
+                level='info',
+                secret=self,
+            )
         log(
             log_message.format(
                 name=self.name,
@@ -407,6 +415,9 @@ class Secret(HashIDModel):
             secret=self,
             secret_revision=self.current_revision,
         )
+
+    def needs_changing(self):
+        return self.status == self.STATUS_NEEDS_CHANGING
 
 
 class SecretRevision(HashIDModel):
