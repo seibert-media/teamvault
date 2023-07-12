@@ -124,6 +124,12 @@ def configure_google_auth(config, settings):
         config.get("auth_google", "allowed_domains").split(",")
     ]
 
+    settings.GOOGLE_AUTH_AVATARS = get_from_config(config, "auth_google", "use_avatars", True)
+    if settings.GOOGLE_AUTH_AVATARS:
+        settings.SOCIAL_AUTH_PIPELINE += ('teamvault.apps.accounts.utils.save_google_avatar',)
+    else:
+        settings.SOCIAL_AUTH_PIPELINE += ('teamvault.apps.accounts.utils.save_gravatar',)
+
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config.get("auth_google", "oauth2_key")
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config.get("auth_google", "oauth2_secret")
 
@@ -208,7 +214,7 @@ def configure_logging(config):
     level = 'INFO'
 
     if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
-        ("1", "enabled", "true", "yes"):
+            ("1", "enabled", "true", "yes"):
         level = 'DEBUG'
 
     LOGGING = {

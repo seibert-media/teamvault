@@ -1,4 +1,3 @@
-{% load gravatar %}
 {% load i18n %}
 <header class="mb-3 border-bottom">
     <div class="container">
@@ -68,9 +67,7 @@
                             <a href="#" class="d-inline-block link-light text-decoration-none dropdown-toggle"
                                data-bs-toggle="dropdown"
                                aria-expanded="false">
-                                <img src="{% gravatar_url request.user.email 64 %}" alt="avatar"
-                                     class="rounded-circle align-middle me-1"
-                                     width="30px" height="30px">
+                                {% include "accounts/_avatar.html" with user=request.user %}
                                 <span class="d-inline d-lg-none d-xl-inline">{{ request.user.get_full_name }}</span>
                             </a>
 

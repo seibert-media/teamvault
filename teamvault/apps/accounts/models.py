@@ -1,9 +1,15 @@
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import Group, User
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
 class UserSettings(models.Model):
+    # Since our static files are not served by some webserver but by TeamVault (/Whitenoise) directly
+    # to keep the installation overhead low, we'd have to do the same thing with media files.
+    # Static files will get replaced with each teamvault deployment, media files should not.
+    # Because of that, we'd have to make admins configure a persistent directory for them.
+    # For now, that trade-off is not worth it, so let's store avatars as binary data, instead.
+    avatar = models.BinaryField(blank=True, null=True)
     default_sharing_groups = models.ManyToManyField(
         Group,
         blank=True,

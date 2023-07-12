@@ -46,7 +46,6 @@ setup(
         "django-auth-ldap==4.3.0",
         "django-bootstrap5==23.3",
         "django-filter==23.2",
-        "django-gravatar2==1.4.4",
         "djangorestframework==3.14.0",
         "gunicorn==20.1.0",
         "hashids==1.3.1",

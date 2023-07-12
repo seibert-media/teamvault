@@ -332,14 +332,6 @@
             "index": "pypi",
             "version": "==23.2"
         },
-        "django-gravatar2": {
-            "hashes": [
-                "sha256:545a6c2c5c624c7635dec29c7bc0be1a2cb89c9b8821af8616ae9838827cc35b",
-                "sha256:c813280967511ced93eea0359f60e5369c35b3311efe565c3e5d4ab35c10c9ee"
-            ],
-            "index": "pypi",
-            "version": "==1.4.4"
-        },
         "django-htmx": {
             "hashes": [
                 "sha256:b76068485905ad9f911419746f07f877633bb036c0870a0f9fc13dec42c6e425",
