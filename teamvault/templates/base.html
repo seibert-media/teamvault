@@ -13,9 +13,6 @@
 
     <link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
 
-    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet" crossorigin="anonymous">
-    <link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet" crossorigin="anonymous">
-
     {% render_bundle 'main' %}
 
     {% block head %}{% endblock %}
@@ -72,7 +69,7 @@
 {% block footer %}
     <div class="container p-5">
         <footer class="text-center text-muted">
-            TeamVault {{ version }} &nbsp; &middot; &nbsp; &copy; 2014-2021 //SEIBERT/MEDIA GmbH
+            TeamVault {{ version }} &nbsp; &middot; &nbsp; &copy; 2014-2023 //SEIBERT/MEDIA GmbH
         </footer>
     </div>
 {% endblock %}

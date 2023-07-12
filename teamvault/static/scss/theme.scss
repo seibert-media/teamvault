@@ -1,0 +1,32 @@
+@import "bootstrap/scss/functions";
+@import "bootstrap/scss/variables";
+
+$accent: rgb(248, 89, 44);
+$danger: rgb(255, 51, 51);
+$dark: rgb(47, 45, 53);
+$info: rgb(40, 156, 221);
+$main: rgb(26, 28, 34);
+$secondary: rgb(47, 45, 53);
+$success: rgb(19, 202, 92);
+$tertiary: rgb(66, 66, 66);
+$warning: rgb(255, 191, 61);
+
+$custom-colors: (
+        "accent": $accent,
+        "tertiary": $tertiary,
+);
+
+// Merge the maps
+$theme-colors: map-merge($theme-colors, $custom-colors);
+$badge-font-weight: 500;
+@import "bootstrap/scss/bootstrap";
+
+:root {
+  --tv-color-accent: rgb(248, 89, 44);
+  --tv-color-alert: rgb(255, 51, 51);
+  --tv-color-border: $gray-100;
+  --tv-color-main: rgb(26, 28, 34);
+  --tv-color-nav-bg: var(--tv-color-main);
+  --tv-color-secondary-txt: rgb(130, 129, 136);
+  --tv-color-secondary: rgb(47, 45, 53);
+}

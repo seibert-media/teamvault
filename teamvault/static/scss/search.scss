@@ -1,0 +1,134 @@
+@import "bootstrap/scss/variables";
+
+.searchbar {
+  &.modal-header {
+    border-bottom: 0;
+  }
+
+  div, form {
+    cursor: auto;
+    box-sizing: border-box;
+    box-shadow: inset 0 0 0 2px var(--tv-color-nav-bg);
+    height: 56px;
+    margin: 0;
+    padding: 0 12px;
+    position: relative;
+    width: 100%;
+    border-radius: var(--bs-border-radius);
+  }
+
+  label {
+    margin: 0;
+    padding: 0;
+    align-items: center;
+    display: flex;
+    justify-content: center;
+    color: var(--tv-color-nav-bg);
+
+    svg {
+      height: 24px;
+      width: 24px;
+      stroke-width: 1.6;
+    }
+  }
+
+  .loading-indicator {
+    display: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  input {
+    border: 0;
+    box-shadow: none;
+
+    &:focus {
+      border: 0;
+      box-shadow: none;
+    }
+  }
+
+  button[type="reset"] {
+    animation: fade-in .1s ease-in forwards;
+    visibility: hidden;
+    background: none;
+    border: 0;
+    border-radius: 50%;
+    padding: 2px;
+    right: 0;
+    stroke-width: 1.4;
+  }
+}
+
+#searchbar-toggle {
+  color: var(--tv-color-secondary-txt);
+
+  kbd {
+    padding-inline: .5rem;
+    font-size: $small-font-size;
+    color: var(--tv-color-secondary-txt);
+
+    &:first-of-type {
+      border-top-left-radius: 1rem;
+      border-bottom-left-radius: 1rem;
+    }
+
+    &:last-of-type {
+      border-top-right-radius: 1rem;
+      border-bottom-right-radius: 1rem;
+    }
+  }
+}
+
+#search-modal-results .list-group-item {
+  &[aria-selected="true"], &:hover {
+    background-color: var(--bs-list-group-action-active-bg);
+
+    .search-modal-result-action {
+      visibility: visible;
+    }
+  }
+}
+
+.search-modal-result-content {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  font-weight: 500;
+  justify-content: center;
+  line-height: 1.2em;
+  margin: 0 8px;
+  overflow-x: hidden;
+  position: relative;
+  white-space: nowrap;
+  width: 80%;
+}
+
+.search-modal-result-content-title {
+  font-size: .9em;
+}
+
+.search-modal-result-content-extras {
+  font-size: 0.75em;
+}
+
+.search-modal-result-action {
+  display: flex;
+  justify-content: end;
+  visibility: hidden;
+}
+
+.search-modal-actions {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    align-items: center;
+    display: flex;
+
+    &:not(:last-of-type) {
+      margin-right: 0.8rem
+    }
+  }
+}

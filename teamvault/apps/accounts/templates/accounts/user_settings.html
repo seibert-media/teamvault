@@ -1,29 +1,26 @@
 {% extends "base.html" %}
 {% load django_bootstrap5 %}
 {% load i18n %}
-{% block title %}{% trans "Settings" %}{% endblock %}
+{% block title %}{% translate "Settings" %}{% endblock %}
 {% block content %}
-    <div class="row justify-content-center">
-        <div class="col-12 col-lg-6">
-            <div class="card">
-                <div class="card-body">
-                    <form role="form" method="POST" action="{% url "accounts.user-settings" %}">
-                        {% csrf_token %}
-                        <h2 class="mb-5">{% translate "Settings" %}</h2>
-                        <div class="row justify-content-center">
-                            <div class="col-lg-8">
-                                {% bootstrap_field form.default_sharing_groups layout="horizontal" horizontal_label_class="col-xl-3" horizontal_field_class="col-xl-9" %}
-                                <div class="row">
-                                    <div class="col-12 text-end">
-                                        <button type="submit" class="btn btn-primary btn-lg">
-                                            {% trans "Save" %}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
+    <div class="container-xxl">
+        <h2 class="mb-3">{% translate "Settings" %}</h2>
+        <div class="card">
+            <div class="card-body mx-5 mt-4 mb-3">
+                <form role="form" method="POST" action="{% url "accounts.user-settings" %}">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-11">
+                            <label class="h5" for="{{ form.default_sharing_groups.id_for_label }}">
+                                {{ form.default_sharing_groups.label }}
+                            </label>
+                            {% bootstrap_field form.default_sharing_groups show_label="skip" %}
                         </div>
-                    </form>
-                </div>
+                    </div>
+                    <button type="submit" class="btn btn-outline-accent px-3">
+                        <i class="fa fa-floppy-disk fa-fw"></i> {% translate "Save" %}
+                    </button>
+                </form>
             </div>
         </div>
     </div>

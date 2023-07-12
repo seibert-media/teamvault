@@ -15,4 +15,5 @@ class SettingsConfig(AppConfig):
         config.configure_max_file_size(parsed_config, settings)
         config.configure_password_generator(parsed_config, settings)
         config.configure_teamvault_secret_key(parsed_config, settings)
+        config.configure_whitenoise(settings)
         webpack.configure_webpack(settings)

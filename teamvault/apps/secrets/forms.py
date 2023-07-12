@@ -126,7 +126,7 @@ class SecretShareForm(forms.ModelForm):
     grant_description = forms.CharField(
         label=_('Reason'),
         required=True,
-        widget=forms.Textarea(attrs={'cols': '15', 'rows': '1'})
+        widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'})
     )
 
     granted_until = forms.DateTimeField(

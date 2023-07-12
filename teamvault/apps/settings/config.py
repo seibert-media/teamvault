@@ -320,6 +320,15 @@ def configure_time_zone(config):
     return get_from_config(config, "teamvault", "time_zone", "UTC")
 
 
+def configure_whitenoise(settings):
+    if not settings.DEBUG:
+        settings.STORAGES = {
+            'staticfiles': {
+                'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+            }
+        }
+
+
 def create_default_config(filename):
     if exists(filename):
         raise RuntimeError("not overwriting existing path {}".format(filename))

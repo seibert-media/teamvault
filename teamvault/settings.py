@@ -9,6 +9,7 @@ from .apps.settings.config import (
     configure_session,
     configure_time_zone,
     get_config,
+    get_from_config,
 )
 
 CONFIG = get_config()
@@ -90,12 +91,6 @@ STATIC_URL = "/static/"
 STATICFILES_DIRS = (
     join(PROJECT_ROOT, "static"),
 )
-
-STORAGES = {
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-    }
-}
 
 TEMPLATES = [
     {

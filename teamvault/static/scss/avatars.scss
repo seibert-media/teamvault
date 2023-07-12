@@ -1,8 +1,7 @@
-@import "bootstrap/scss/bootstrap";
-
 .avatar {
   --tv-avatar-size-default: 2rem;
   --tv-avatar-size-sm: 1.25rem;
+  --tv-avatar-size-lg: 2.5rem;
   --tv-avatar-size: var(--tv-avatar-size-default);
 
   height: var(--tv-avatar-size);
@@ -12,9 +11,13 @@
   &.avatar-sm {
     --tv-avatar-size: var(--tv-avatar-size-sm);
   }
+
+  &.avatar-lg {
+    --tv-avatar-size: var(--tv-avatar-size-lg);
+  }
 }
 
 svg.avatar {
-    background-color: $body-secondary-color-dark;
-    font-size: calc(var(--tv-avatar-size) * 0.4);
+  background-color: var(--bs-gray-500);
+  font-size: calc(var(--tv-avatar-size) * 0.4);
 }

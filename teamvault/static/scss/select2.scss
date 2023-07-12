@@ -10,6 +10,11 @@
   box-shadow: none;
 }
 
-.select2-container--bootstrap-5 .select2-selection--multiple .select2-selection__rendered {
-  display: flex;
+.select2-selection.select2-selection--multiple {
+  background-color: var(--bs-gray-100);
+  padding: 1rem;
+
+  .select2-selection__rendered {
+    display: flex;
+  }
 }
