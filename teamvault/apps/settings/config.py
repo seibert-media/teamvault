@@ -9,6 +9,7 @@ from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
+from django.core.exceptions import ImproperlyConfigured
 from django.db.utils import ProgrammingError
 
 
@@ -17,6 +18,21 @@ class UnconfiguredSettingsError(Exception):
         return _(
             "missing config file at {} (set env var TEAMVAULT_CONFIG_FILE to use a different path)"
         ).format(environ['TEAMVAULT_CONFIG_FILE'])
+
+
+def configure_password_generator(config, settings):
+    settings.PASSWORD_LENGTH = int(config.get("teamvault", "password_length"))
+    settings.PASSWORD_DIGITS = int(config.get("teamvault", "password_digits"))
+    settings.PASSWORD_UPPER = int(config.get("teamvault", "password_upper"))
+    settings.PASSWORD_LOWER = int(config.get("teamvault", "password_lower"))
+    settings.PASSWORD_SPECIAL = int(config.get("teamvault", "password_special"))
+
+    char_sum = settings.PASSWORD_SPECIAL + settings.PASSWORD_LOWER + settings.PASSWORD_UPPER + settings.PASSWORD_DIGITS
+
+    if char_sum > settings.PASSWORD_LENGTH:
+        raise ImproperlyConfigured(_(
+            'The sum of characters defined in password settings exceeds the value set in password_length setting'
+        ))
 
 
 def configure_base_url(config, settings):

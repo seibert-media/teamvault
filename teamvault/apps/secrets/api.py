@@ -12,6 +12,8 @@ from rest_framework.reverse import reverse
 from .models import Secret, SecretRevision
 from .utils import generate_password
 
+from django.conf import settings
+
 ACCESS_POLICY_REPR = {
     Secret.ACCESS_POLICY_ANY: "any",
     Secret.ACCESS_POLICY_HIDDEN: "hidden",
@@ -313,4 +315,10 @@ def data_get(request, hashid):
 
 @api_view(['GET'])
 def generate_password_view(*_args, **_kwargs):
-    return Response(generate_password())
+    return Response(generate_password(
+        settings.PASSWORD_LENGTH,
+        settings.PASSWORD_DIGITS,
+        settings.PASSWORD_UPPER,
+        settings.PASSWORD_LOWER,
+        settings.PASSWORD_SPECIAL
+    ))
