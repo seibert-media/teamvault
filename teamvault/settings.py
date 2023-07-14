@@ -5,6 +5,7 @@ from .apps.settings.config import (
     configure_django_secret_key,
     configure_hashid,
     configure_logging,
+    configure_password_generator,
     configure_session,
     configure_time_zone,
     get_config,

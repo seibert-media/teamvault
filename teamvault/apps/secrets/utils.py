@@ -1,17 +1,24 @@
-from random import choice
-from string import ascii_letters, digits, punctuation
+import secrets
+import string
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 
 
-def generate_password(length=12, alphanum=False):
-    """
-    Returns a password of the given length.
-    """
-    char_pool = ascii_letters + digits
-    if not alphanum:
-        char_pool += punctuation
-    return "".join(choice(char_pool) for i in range(length))
+def generate_password(length, digits, upper, lower, special):
+    characters = string.ascii_letters + string.digits + string.punctuation
+    password = []
+    password.extend(secrets.choice(string.digits) for _ in range(digits))
+    password.extend(secrets.choice(string.ascii_lowercase) for _ in range(lower))
+    password.extend(secrets.choice(string.ascii_uppercase) for _ in range(upper))
+    password.extend(secrets.choice(string.punctuation) for _ in range(special))
+
+    # Fill the rest of the lenght with random characters from all types
+    password.extend(secrets.choice(characters) for _ in range(length - len(password)))
+
+    # Randomly shuffle the characters, so they're not grouped by type
+    secrets.SystemRandom().shuffle(password)
+
+    return ''.join(password)
 
 
 class CappedMemoryFileUploadHandler(MemoryFileUploadHandler):
