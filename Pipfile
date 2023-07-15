@@ -18,6 +18,5 @@ psycopg2 = "*"
 pytz = "*"
 social-auth-app-django = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
-teamvault = {editable = true, path = "."}
 
 [dev-packages]
