@@ -26,8 +26,11 @@ Install Postgres and create a database and superuser for TeamVault to use, for e
 	docker run --rm --detach --publish=5432:5432 --name teamvault-postgres -e POSTGRES_USER=teamvault -e POSTGRES_PASSWORD=teamvault postgres:latest
 
 
-To compile all staticfiles, you'll need to install all required packages via yarn with node >= v18.
-``` yarn build ```
+To compile all JS & SCSS files, you'll need to install all required packages via yarn v2 with node >= v18.
+
+Use ```yarn run serve``` to start a dev server.
+
+
 Now create a virtual environment to install and configure TeamVault in:
 
 	pipenv install
@@ -43,3 +46,10 @@ Now create a virtual environment to install and configure TeamVault in:
 	teamvault run
 
 Now open http://localhost:8000
+
+## Make a new release
+1. Change version in ```setup.py``` & commit your changes.
+2. Run ```python setup.py check``` and fix any errors
+3. Run ```python setup.py sdist``` to create a new package
+4. Upload package to PyPI
+5. Add a new GitHub release
