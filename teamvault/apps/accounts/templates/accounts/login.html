@@ -3,37 +3,41 @@
 {% load static %}
 {% block navbar %}{% endblock %}
 {% block title %}{% trans "Login" %}{% endblock %}
-{% block content %}
-    <div class="login-wrapper">
-        <form id="loginform" class="login" role="form" method="POST">
-            {% csrf_token %}
-            <div class="login-icon">{% trans "TeamVault" %}</div>
-            {% if form.errors %}
-                <p class="alert alert-danger">{% trans "Your username and password didn't match. Please try again." %}</p>
-            {% endif %}
-            <div class="mb-3">
-                <input type="text" name="username" class="form-control" placeholder="{% trans "Username" %}"
-                       autocomplete="username" required autofocus>
-            </div>
-            <div class="mb-3">
-                <div class="input-group">
-                    <input type="password" name="password" class="form-control" placeholder="{% trans "Password" %}"
-                           autocomplete="current-password" required>
-                    <button form="loginform" class="btn btn-outline-secondary" type="submit"><i
-                            class="fa fa-chevron-right"></i></button>
+{% block super_content %}
+    <div class="d-flex justify-content-center align-items-center vh-100">
+        <div class="col-3">
+            <form id="loginform" class="text-center rounded-5 bg-white shadow-lg p-5" role="form" method="POST">
+                {% csrf_token %}
+                <div class="mb-5">
+                    <span class="fs-1 text-black ">Team</span><span class="fs-1 text-accent">Vault</span>
                 </div>
-            </div>
-            {% if google_auth_enabled %}
-                <p class="text-center">{% trans "or" %}</p>
-                <div class="d-grid">
-                    <a class="btn btn-outline-secondary btn-lg"
-                       href="{% url "social:begin" "google-oauth2" %}?{{ request.GET.urlencode }}">
-                        <i class="fa-brands fa-google"></i> &nbsp;
-                        {% trans "Sign in with Google" %}
-                    </a>
+                {% if form.errors %}
+                    <p class="alert alert-danger">{% trans "Your username and password didn't match. Please try again." %}</p>
+                {% endif %}
+                <div class="mb-2">
+                    <input type="text" name="username" class="form-control" placeholder="{% trans "Username" %}"
+                           autocomplete="username" required autofocus>
                 </div>
-            {% endif %}
-        </form>
+                <div class="mb-3">
+                    <div class="input-group">
+                        <input type="password" name="password" class="form-control" placeholder="{% trans "Password" %}"
+                               autocomplete="current-password" required>
+                        <button form="loginform" class="btn btn-outline-accent" type="submit"><i
+                                class="fa fa-chevron-right"></i></button>
+                    </div>
+                </div>
+                {% if google_auth_enabled %}
+                    <p class="text-center">{% trans "or" %}</p>
+                    <div class="d-grid">
+                        <a class="btn btn-outline-accent btn-lg"
+                           href="{% url "social:begin" "google-oauth2" %}?{{ request.GET.urlencode }}">
+                            <i class="fa-brands fa-google"></i> &nbsp;
+                            {% trans "Sign in with Google" %}
+                        </a>
+                    </div>
+                {% endif %}
+            </form>
+        </div>
     </div>
 {% endblock %}
 {% block footer %}{% endblock %}

@@ -4,12 +4,18 @@
 {% block navbar %}{% endblock %}
 {% block title %}{% trans "Logout" %}{% endblock %}
 
-{% block content %}
-    <div class="login-wrapper">
-        <div class="logout">
-            <div class="login-icon">{% trans "TeamVault" %}</div>
-            {% trans "Logged out." %}&nbsp;
-            <a href="{% url 'accounts.login' %}">{% trans "Log in again?" %}</a>
+{% block super_content %}
+    <div class="d-flex justify-content-center align-items-center vh-100">
+        <div class="col-3">
+            <div class="text-center rounded-5 bg-white shadow-lg p-5">
+                <div class="mb-2">
+                    <span class="fs-1 text-black ">Team</span><span class="fs-1 text-accent">Vault</span>
+                </div>
+                <div class="mb-4">
+                    <span>{% trans "Logged out." %}</span>
+                </div>
+                <a href="{% url 'accounts.login' %}">{% trans "Log in again?" %}</a>
+            </div>
         </div>
     </div>
 {% endblock %}

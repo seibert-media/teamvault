@@ -62,9 +62,11 @@
 
 {% block navbar %}{% include 'base_nav.html' %}{% endblock %}
 
-<div class="container-fluid mt-5">
-    {% block content %}{% endblock %}
-</div>
+{% block super_content %}
+    <div class="container-fluid mt-5">
+        {% block content %}{% endblock %}
+    </div>
+{% endblock %}
 
 {% block footer %}
     <div class="container p-5">
