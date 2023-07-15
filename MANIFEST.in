@@ -5,6 +5,7 @@ include MANIFEST.in
 include README.md
 recursive-include teamvault *.css
 recursive-include teamvault *.html
+recursive-include teamvault *.json
 recursive-include teamvault *.txt
 recursive-include teamvault *.xml
 recursive-include teamvault/static *

@@ -1,2 +1,4 @@
-/teamvault.cfg
+teamvault.cfg
 webpack-stats.json
+teamvault/static_collected/
+teamvault/static/bundled/

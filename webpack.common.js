@@ -1,32 +1,17 @@
 const path = require('path');
 const BundleTracker = require('webpack-bundle-tracker');
-const webpack = require("webpack");
 
 module.exports = {
   context: __dirname,
   entry: './teamvault/static/js/index.js',
-  mode: 'development',
   output: {
     path: path.resolve('./teamvault/static/bundled/'),
-    publicPath: 'http://localhost:3000/dist/',
     filename: "[name]-[fullhash].js",
     chunkFilename: "[name]-[fullhash].js"
   },
   plugins: [
     new BundleTracker({path: __dirname + '/teamvault', filename: 'webpack-stats.json'}),
   ],
-  optimization: {
-    minimize: false,
-    usedExports: false,
-  },
-  devServer: {
-    static: path.resolve('./teamvault/static/bundled/'),
-    hot: true,
-    port: 3000,
-    headers:  {
-      "Access-Control-Allow-Origin": "*",
-    }
-  },
   resolve: {
     extensions: ['*', '.js']
   },

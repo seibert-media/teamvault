@@ -42,9 +42,7 @@
   "version": "1.0.0",
   "description": "Teamvault",
   "scripts": {
-    "build": "webpack --mode=development",
-    "build:dev": "webpack --mode=development",
-    "build:prod": "webpack --mode=production --node-env=production",
-    "serve": "webpack serve"
+    "build": "webpack --config webpack.prod.js",
+    "serve": "webpack serve --config webpack.dev.js"
   }
 }
