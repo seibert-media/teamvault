@@ -20,21 +20,6 @@ class UnconfiguredSettingsError(Exception):
         ).format(environ['TEAMVAULT_CONFIG_FILE'])
 
 
-def configure_password_generator(config, settings):
-    settings.PASSWORD_LENGTH = int(config.get("teamvault", "password_length"))
-    settings.PASSWORD_DIGITS = int(config.get("teamvault", "password_digits"))
-    settings.PASSWORD_UPPER = int(config.get("teamvault", "password_upper"))
-    settings.PASSWORD_LOWER = int(config.get("teamvault", "password_lower"))
-    settings.PASSWORD_SPECIAL = int(config.get("teamvault", "password_special"))
-
-    char_sum = settings.PASSWORD_SPECIAL + settings.PASSWORD_LOWER + settings.PASSWORD_UPPER + settings.PASSWORD_DIGITS
-
-    if char_sum > settings.PASSWORD_LENGTH:
-        raise ImproperlyConfigured(_(
-            'The sum of characters defined in password settings exceeds the value set in password_length setting'
-        ))
-
-
 def configure_base_url(config, settings):
     settings.BASE_URL = config.get("teamvault", "base_url")
     settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
@@ -81,6 +66,21 @@ def configure_hashid(config):
         int(get_from_config(config, "hashid", "min_length", "6")),
         b64decode(config.get("hashid", "salt").encode()).decode('utf-8'),
     )
+
+
+def configure_password_generator(config, settings):
+    settings.PASSWORD_LENGTH = int(get_from_config(config, "password_generator", "length", 16))
+    settings.PASSWORD_DIGITS = int(get_from_config(config, "password_generator", "digits", 2))
+    settings.PASSWORD_UPPER = int(get_from_config(config, "password_generator", "upper", 2))
+    settings.PASSWORD_LOWER = int(get_from_config(config, "password_generator", "lower", 2))
+    settings.PASSWORD_SPECIAL = int(get_from_config(config, "password_generator", "special", 2))
+
+    char_sum = settings.PASSWORD_SPECIAL + settings.PASSWORD_LOWER + settings.PASSWORD_UPPER + settings.PASSWORD_DIGITS
+
+    if char_sum > settings.PASSWORD_LENGTH:
+        raise ImproperlyConfigured(_(
+            'The sum of characters defined in password settings exceeds the value set in password_length setting'
+        ))
 
 
 def configure_google_auth(config, settings):
@@ -340,6 +340,13 @@ session_expire_at_browser_close = True
 session_cookie_secure = False
 time_zone = UTC
 
+#[password_generator]
+#length = 16
+#digits = 2
+#upper = 2
+#lower = 2
+#special = 2
+
 [django]
 # This key has been generated for you, there is no need to change it
 secret_key = {django_key}
@@ -377,6 +384,7 @@ salt = {hashid_salt}
 #allowed_domains = example.com, another.example.com
 #oauth2_key = 123456789.apps.googleusercontent.com
 #oauth2_secret = ******************
+#use_avatars = True
     """.format(
         django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
         hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),
