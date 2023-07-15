@@ -21,8 +21,7 @@
     "lodash": "^4.17.21",
     "notyf": "^3.10.0",
     "select2": "4.0.13",
-    "select2-bootstrap-5-theme": "^1.3.0",
-    "webpack-merge": "^5.9.0"
+    "select2-bootstrap-5-theme": "^1.3.0"
   },
   "devDependencies": {
     "@babel/core": "^7.22.9",
@@ -37,7 +36,8 @@
     "webpack": "^5.87.0",
     "webpack-bundle-tracker": "^2.0.1",
     "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^4.15.1"
+    "webpack-dev-server": "^4.15.1",
+    "webpack-merge": "^5.9.0"
   },
   "version": "1.0.0",
   "description": "Teamvault",
