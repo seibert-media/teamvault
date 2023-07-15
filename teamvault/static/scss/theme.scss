@@ -1,6 +1,9 @@
 @import "bootstrap/scss/functions";
 @import "bootstrap/scss/variables";
 
+// disable RFS for more consistent styling
+$enable-rfs: false;
+
 $accent: rgb(248, 89, 44);
 $danger: rgb(255, 51, 51);
 $dark: rgb(47, 45, 53);
