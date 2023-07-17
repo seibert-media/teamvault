@@ -1,4 +1,5 @@
 teamvault.cfg
 webpack-stats.json
+dist/
 teamvault/static_collected/
 teamvault/static/bundled/
