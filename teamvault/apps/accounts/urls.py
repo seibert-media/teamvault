@@ -5,17 +5,17 @@ from . import views
 
 urlpatterns = (
     path(
-        'login',
+        'login/',
         LoginView.as_view(template_name="accounts/login.html"),
         name='accounts.login',
     ),
     path(
-        'logout',
+        'logout/',
         LogoutView.as_view(template_name="accounts/logout.html"),
         name='accounts.logout',
     ),
     path(
-        'users',
+        'users/',
         views.users,
         name='accounts.user-list',
     ),
