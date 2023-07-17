@@ -17,6 +17,7 @@
                             {% bootstrap_field form.default_sharing_groups show_label="skip" %}
                         </div>
                     </div>
+                    {% bootstrap_field form.hide_deleted_secrets checkbox_style="switch" %}
                     <button type="submit" class="btn btn-outline-accent px-3">
                         {% translate "Save" %}
                     </button>

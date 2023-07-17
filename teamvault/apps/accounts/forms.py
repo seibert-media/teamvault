@@ -9,5 +9,5 @@ class UserSettingsForm(forms.ModelForm):
         self.fields['default_sharing_groups'].queryset = self.fields['default_sharing_groups'].queryset.order_by('name')
 
     class Meta:
-        fields = ['default_sharing_groups']
+        fields = ['default_sharing_groups', 'hide_deleted_secrets']
         model = UserSettings

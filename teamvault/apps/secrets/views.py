@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
+from django.core.exceptions import ObjectDoesNotExist
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import pluralize
@@ -373,6 +374,13 @@ class SecretList(ListView):
             queryset = Secret.get_search_results(self.request.user, self.request.GET['search'])
         else:
             queryset = Secret.get_all_visible_to_user(self.request.user)
+
+        try:
+            if '3' not in self.request.GET.get('status', []) and self.request.user.profile.hide_deleted_secrets:
+                queryset = queryset.exclude(status=Secret.STATUS_DELETED)
+        except ObjectDoesNotExist:
+            pass
+
         self.filter = SecretFilter(self.request.GET, queryset)
         return self.filter.qs
 
