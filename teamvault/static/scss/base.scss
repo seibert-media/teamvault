@@ -59,16 +59,6 @@ h1 {
   }
 }
 
-.secret-list tr td:last-child {
-  white-space: nowrap;
-  width: 1px;
-}
-
-label.form-label, div.form-label > label, .col-form-label {
-  font-weight: 700;
-  white-space: nowrap;
-}
-
 .card .card-body .table tr:last-child {
   border-bottom-style: hidden;
 }
@@ -99,6 +89,14 @@ kbd {
 @include media-breakpoint-down(xl) {
   .modal-xl {
     --bs-modal-width: 88%
+  }
+}
+
+form {
+  input, textarea {
+    &:placeholder-shown {
+      background-color: var(--bs-gray-100);
+    }
   }
 }
 

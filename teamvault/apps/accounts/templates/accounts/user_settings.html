@@ -11,10 +11,7 @@
                     {% csrf_token %}
                     <div class="row mb-3">
                         <div class="col-11">
-                            <label class="h5" for="{{ form.default_sharing_groups.id_for_label }}">
-                                {{ form.default_sharing_groups.label }}
-                            </label>
-                            {% bootstrap_field form.default_sharing_groups show_label="skip" %}
+                            {% bootstrap_field form.default_sharing_groups label_class="h5" %}
                         </div>
                     </div>
                     {% bootstrap_field form.hide_deleted_secrets checkbox_style="switch" %}

@@ -22,6 +22,10 @@ class SecretForm(forms.ModelForm):
         initial=Secret.ACCESS_POLICY_DISCOVERABLE,
         widget=RadioSelect(),
     )
+    description = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={'cols': '15', 'rows': '4'})
+    )
 
 
 class CCForm(SecretForm):
@@ -68,7 +72,6 @@ class FileForm(SecretForm):
         # Note: There's also custom handling for files with a file size above the FILE_UPLOAD_MAX_MEMORY_SIZE limit
         #  in the corresponding view
         allow_empty_file=False,
-        help_text=_('This file will be stored securely.'),
         required=False,
     )
 
@@ -89,12 +92,10 @@ class PasswordForm(SecretForm):
         max_length=255,
         required=False,
         label='URL',
-        help_text=_('This field will also be considered when searching.')
     )
     username = forms.CharField(
         max_length=255,
         required=False,
-        help_text=_('This field will also be considered when searching.')
     )
 
     def clean_password(self):
