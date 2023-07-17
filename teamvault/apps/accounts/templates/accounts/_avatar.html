@@ -7,7 +7,7 @@
          data-bs-title="{{ tooltip_title }}"
             {% endif %}
     >
-{% else %}
+{% elif user.first_name and user.last_name %}
     <svg xmlns="http://www.w3.org/2000/svg" class="avatar {{ classes }}"
             {% if tooltip_title %}
          data-bs-toggle="tooltip"
@@ -19,4 +19,8 @@
             {{ user.first_name.0.capitalize }}{{ user.last_name.0.capitalize }}
         </text>
     </svg>
+{% else %}
+    <div class="rounded-circle border border-5" style="background-color: var(--bs-border-color)">
+        <i class="fa fa-user-secret fa-lg fa-fw lh-1"></i>
+    </div>
 {% endif %}

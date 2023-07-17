@@ -23,6 +23,7 @@ body {
 
 a {
   text-decoration: none;
+  color: #377fae;
 }
 
 .background {
@@ -34,10 +35,6 @@ a {
   background-position: 50% 50%;
   background: var(--bs-body-bg);
   z-index: -999;
-}
-
-header {
-  background-color: var(--tv-color-nav-bg);
 }
 
 .dropdown-menu i {
@@ -90,6 +87,12 @@ kbd {
 .list-group-hover .list-group-item {
   &:hover {
     background-color: var(--bs-list-group-action-active-bg);
+  }
+}
+
+@include media-breakpoint-down(lg) {
+  .modal-lg {
+    --bs-modal-width: 88%
   }
 }
 

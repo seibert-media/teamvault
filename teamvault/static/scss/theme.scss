@@ -4,19 +4,23 @@
 // disable RFS for more consistent styling
 $enable-rfs: false;
 
-$accent: rgb(248, 89, 44);
-$danger: rgb(255, 51, 51);
-$dark: rgb(47, 45, 53);
-$info: rgb(40, 156, 221);
-$main: rgb(26, 28, 34);
-$secondary: rgb(47, 45, 53);
-$success: rgb(19, 202, 92);
-$tertiary: rgb(66, 66, 66);
-$warning: rgb(255, 191, 61);
+$accent: #f8592c;
+$danger: #ff3333;
+$custom-dark: #2f2d35;
+$info: #289cdd;
+$main: #1a1c22;
+$success: #13ca5c;
+$tertiary: #424242;
+$warning: #ffbf3d;
 
 $custom-colors: (
         "accent": $accent,
+        "danger": $danger,
+        "custom-dark": $custom-dark,
+        "info": $info,
+        "success": $success,
         "tertiary": $tertiary,
+        "warning": $warning,
 );
 
 // Merge the maps
@@ -25,11 +29,5 @@ $badge-font-weight: 500;
 @import "bootstrap/scss/bootstrap";
 
 :root {
-  --tv-color-accent: rgb(248, 89, 44);
-  --tv-color-alert: rgb(255, 51, 51);
-  --tv-color-border: $gray-100;
-  --tv-color-main: rgb(26, 28, 34);
-  --tv-color-nav-bg: var(--tv-color-main);
   --tv-color-secondary-txt: rgb(130, 129, 136);
-  --tv-color-secondary: rgb(47, 45, 53);
 }
