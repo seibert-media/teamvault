@@ -318,10 +318,14 @@ class SecretDetail(DetailView):
             'api.secret-revision_data',
             kwargs={'hashid': secret.current_revision.hashid},
         )
+
+        context['needs_changing'] = False
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
             if context['readable'] == AccessPermissionTypes.SUPERUSER_ALLOWED:
                 context['su_access'] = True
+            if secret.status == Secret.STATUS_NEEDS_CHANGING:
+                context['needs_changing'] = True
         return context
 
     def get_object(self, queryset=None):
