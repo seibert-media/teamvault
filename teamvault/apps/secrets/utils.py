@@ -1,6 +1,10 @@
 import secrets
 import string
 
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import get_template, TemplateDoesNotExist
+from django.utils import translation
+
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 
 
@@ -29,3 +33,30 @@ class CappedMemoryFileUploadHandler(MemoryFileUploadHandler):
             # raise StopUpload(connection_reset=True)
             raise SkipFile()
         super(CappedMemoryFileUploadHandler, self).receive_data_chunk(raw_data, start)
+
+
+def send_mail(users_to, subject, template, context=None, lang="en", attachments=None):
+    if context is None:
+        context = {}
+    if attachments is None:
+        attachments = []
+    translation.activate(lang)
+    text_mail = get_template(template + ".txt").render(context)
+
+    msg = EmailMultiAlternatives(
+        subject,
+        text_mail,
+        'teamvault@seibert-media.net',
+        [user.email for user in users_to],
+    )
+
+    # try:
+    #     html_mail = get_template(template + ".html").render(context)
+    #     msg.attach_alternative(html_mail, "text/html")
+    # except TemplateDoesNotExist:
+    #     pass
+
+    for filename, data, content_type in attachments:
+        msg.attach(filename, data, content_type)
+    print(text_mail)
+    msg.send()

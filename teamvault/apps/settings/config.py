@@ -20,6 +20,25 @@ class UnconfiguredSettingsError(Exception):
         ).format(environ['TEAMVAULT_CONFIG_FILE'])
 
 
+def configure_automatic_cleanup(config, settings):
+    settings.DAYS_UNTIL_ACCESS_REVOKE = int(config.get("teamvault", "days_until_access_revoke"))
+
+
+def configure_password_generator(config, settings):
+    settings.PASSWORD_LENGTH = int(config.get("teamvault", "password_length"))
+    settings.PASSWORD_DIGITS = int(config.get("teamvault", "password_digits"))
+    settings.PASSWORD_UPPER = int(config.get("teamvault", "password_upper"))
+    settings.PASSWORD_LOWER = int(config.get("teamvault", "password_lower"))
+    settings.PASSWORD_SPECIAL = int(config.get("teamvault", "password_special"))
+
+    char_sum = settings.PASSWORD_SPECIAL + settings.PASSWORD_LOWER + settings.PASSWORD_UPPER + settings.PASSWORD_DIGITS
+
+    if char_sum > settings.PASSWORD_LENGTH:
+        raise ImproperlyConfigured(_(
+            'The sum of characters defined in password settings exceeds the value set in password_length setting'
+        ))
+
+
 def configure_base_url(config, settings):
     settings.BASE_URL = config.get("teamvault", "base_url")
     settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]

@@ -8,6 +8,7 @@ class SettingsConfig(AppConfig):
         from django.conf import settings
         from . import config, webpack
         parsed_config = config.get_config()
+        config.configure_automatic_cleanup(parsed_config, settings)
         config.configure_base_url(parsed_config, settings)
         config.configure_debugging(parsed_config, settings)
         config.configure_ldap_auth(parsed_config, settings)
