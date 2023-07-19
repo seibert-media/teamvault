@@ -5,7 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
 from django.shortcuts import get_object_or_404, render
 from django.template.defaultfilters import pluralize
@@ -413,10 +413,10 @@ class SecretShareList(CreateView):
 
     def get_context_data(self, *, object_list=None, **kwargs):
         secret = get_object_or_404(Secret, hashid=self.kwargs[self.slug_url_kwarg])
-        secret.check_access(self.request.user)
 
         context = {
             'secret': secret,
+            'shareable': secret.is_shareable_by_user(self.request.user),
             'shares': {
                 'groups': self.group_shares,
                 'users': self.user_shares,
@@ -427,6 +427,9 @@ class SecretShareList(CreateView):
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
         secret.check_access(self.request.user)
+        if not secret.is_shareable_by_user(self.request.user):
+            raise PermissionDenied()
+
         obj = form.save(commit=False)
         obj.secret = secret
         obj.save()
@@ -443,8 +446,7 @@ class SecretShareList(CreateView):
             secret=secret,
         )
 
-        shared_with_object = form.cleaned_data['group'] if form.cleaned_data['group'] else form.cleaned_data['user']
-        messages.success(self.request, _('Shared secret with {}'.format(shared_with_object)))
+        messages.success(self.request, _('Shared secret with {}'.format(obj.shared_entity_name)))
 
         # Clear cache
         delattr(self, 'group_shares')
@@ -454,7 +456,7 @@ class SecretShareList(CreateView):
         context.update({
             'form': self.get_form_class()(),  # create a new blank form
             'show_object': {
-                'id': shared_with_object.id,
+                'id': obj.shared_entity.id,
                 'type': 'group' if form.cleaned_data['group'] else 'user',
             }
         })

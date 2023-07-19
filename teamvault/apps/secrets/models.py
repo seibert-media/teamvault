@@ -9,7 +9,7 @@ from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import Q, Case, When, Value, BooleanField
+from django.db.models import BooleanField, Case, Q, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
@@ -26,7 +26,8 @@ from ..audit.models import LogEntry
 class AccessPermissionTypes(Enum):
     NOT_ALLOWED = 0
     ALLOWED = 1
-    SUPERUSER_ALLOWED = 2
+    TEMPORARILY_ALLOWED = 2
+    SUPERUSER_ALLOWED = 3
 
 
 def validate_url(value):
@@ -330,17 +331,26 @@ class Secret(HashIDModel):
 
     def is_readable_by_user(self, user):
         if self.status != self.STATUS_DELETED:
-            if (
-                self.access_policy == self.ACCESS_POLICY_ANY or
-                self.share_data.with_expiry_state().filter(
-                    Q(user=user) | Q(group__user=user)
-                ).exclude(is_expired=True).exists()
-            ):
+            shares = self.share_data.with_expiry_state().filter(
+                Q(user=user) | Q(group__user=user)
+            ).exclude(is_expired=True)
+
+            if self.access_policy == self.ACCESS_POLICY_ANY or shares.filter(granted_until__isnull=True).exists():
                 return AccessPermissionTypes.ALLOWED
 
-        if user.is_superuser:
-            return AccessPermissionTypes.SUPERUSER_ALLOWED
+            if user.is_superuser:
+                return AccessPermissionTypes.SUPERUSER_ALLOWED
+
+            if shares.exclude(granted_until__isnull=True).exists():
+                return AccessPermissionTypes.TEMPORARILY_ALLOWED
+
         return AccessPermissionTypes.NOT_ALLOWED
+
+    def is_shareable_by_user(self, user):
+        read_permission = self.is_readable_by_user(user)
+        if read_permission in [AccessPermissionTypes.ALLOWED, AccessPermissionTypes.SUPERUSER_ALLOWED]:
+            return True
+        return False
 
     def is_visible_to_user(self, user):
         if self.status != self.STATUS_DELETED:
