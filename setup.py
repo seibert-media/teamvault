@@ -35,6 +35,9 @@ setup(
         "Topic :: Security",
     ],
     install_requires=[  # pipenv requirements
+        "setuptools==68.0.0 ; python_version >= '3.7'",
+        "wheel==0.40.0",
+
         "asgiref==3.7.2 ; python_version >= '3.7'",
         "brotli==1.0.9",
         "certifi==2023.5.7 ; python_version >= '3.6'",
@@ -51,6 +54,7 @@ setup(
         "djangorestframework==3.14.0",
         "gunicorn==20.1.0",
         "hashids==1.3.1",
+        "huey==2.4.5",
         "idna==3.4 ; python_version >= '3.5'",
         "oauthlib==3.2.2 ; python_version >= '3.6'",
         "psycopg2==2.9.6",
