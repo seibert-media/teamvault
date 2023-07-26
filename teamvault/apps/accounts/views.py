@@ -12,6 +12,7 @@ from django.views.generic import DetailView, ListView, UpdateView
 from .forms import UserSettingsForm
 from .models import UserSettings as UserSettingsModel
 from ..audit.auditlog import log
+from ..audit.models import AuditLogCategoryChoices
 from ..secrets.models import Secret, SecretRevision
 
 
@@ -94,7 +95,13 @@ def user_activate(request, uid, deactivate=False):
                     secret=secret.name,
                     user=user.username,
                 )
-                log(msg, actor=request.user, secret=secret, user=user)
+                log(
+                    msg,
+                    actor=request.user,
+                    category=AuditLogCategoryChoices.USER_DEACTIVATED,
+                    secret=secret,
+                    user=user,
+                )
         log(
             _("{actor} deactivated {user}, {secrets} secrets marked for changing").format(
                 actor=request.user.username,
@@ -102,6 +109,7 @@ def user_activate(request, uid, deactivate=False):
                 secrets=len(secrets),
             ),
             actor=request.user,
+            category=AuditLogCategoryChoices.USER_DEACTIVATED,
             user=user,
         )
     else:
@@ -111,6 +119,7 @@ def user_activate(request, uid, deactivate=False):
                 user=user.username,
             ),
             actor=request.user,
+            category=AuditLogCategoryChoices.USER_ACTIVATED,
             user=user,
         )
     return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'uid': user.id}))

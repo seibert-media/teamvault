@@ -20,7 +20,7 @@ from hashids import Hashids
 
 from .exceptions import PermissionError
 from ..audit.auditlog import log
-from ..audit.models import LogEntry
+from ..audit.models import LogEntry, AuditLogCategoryChoices
 
 
 class AccessPermissionTypes(Enum):
@@ -200,6 +200,7 @@ class Secret(HashIDModel):
             log(
                 _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
                 actor=user,
+                category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
                 level='warning',
                 secret=self,
             )
@@ -212,24 +213,19 @@ class Secret(HashIDModel):
             ))
 
         if read_allowed == AccessPermissionTypes.SUPERUSER_ALLOWED:
+            category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
             log_message = _("{user} used superuser privileges to read '{name}'")
         else:
+            category = AuditLogCategoryChoices.SECRET_READ
             log_message = _("{user} read '{name}'")
 
-        if self.needs_changing() and read_allowed:
-            log(_(
-                f'{user.username} was reminded to update {self.name}'
-            ),
-                actor=user,
-                level='info',
-                secret=self,
-            )
         log(
             log_message.format(
                 name=self.name,
                 user=user.username,
             ),
             actor=user,
+            category=category,
             level='info',
             secret=self,
             secret_revision=self.current_revision,
@@ -306,18 +302,22 @@ class Secret(HashIDModel):
         return secrets
 
     @classmethod
-    def get_search_results(cls, user, term, limit=None):
+    def get_search_results(cls, user, term, limit=None, substr_search=True):
         base_queryset = cls.get_all_visible_to_user(user)
         name_hits = base_queryset.filter(name__icontains=term)
         fulltext_hits = cls.get_all_visible_to_user(
             user,
             queryset=cls.objects.filter(search_index=term),
         )
-        substr_hits = base_queryset.filter(
-            models.Q(filename__icontains=term) |
-            models.Q(url__icontains=term) |
-            models.Q(username__icontains=term)
-        )
+
+        substr_hits = Secret.objects.none()
+        if substr_search:
+            substr_hits = base_queryset.filter(
+                models.Q(filename__icontains=term) |
+                models.Q(url__icontains=term) |
+                models.Q(username__icontains=term) |
+                models.Q(hashid__exact=term)
+            )
         if limit:
             name_hits = name_hits[:limit]
             fulltext_hits = fulltext_hits[:limit]
@@ -422,6 +422,7 @@ class Secret(HashIDModel):
                 user=user.username,
             ),
             actor=user,
+            category=AuditLogCategoryChoices.SECRET_CHANGED,
             level='info',
             secret=self,
             secret_revision=self.current_revision,

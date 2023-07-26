@@ -18,3 +18,8 @@
     display: flex;
   }
 }
+
+// Fix misaligned clear button
+.select2-container .select2-selection--single .select2-selection__clear {
+  position: absolute;
+}

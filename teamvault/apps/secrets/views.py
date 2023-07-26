@@ -22,6 +22,7 @@ from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
 from .models import AccessPermissionTypes, Secret, SharedSecretData
 from ..accounts.models import UserSettings
 from ..audit.auditlog import log
+from ..audit.models import AuditLogCategoryChoices
 
 ACCESS_STR_IDS = {
     'ACCESS_POLICY_ANY': str(Secret.ACCESS_POLICY_ANY),
@@ -250,6 +251,7 @@ def secret_delete(request, hashid):
             user=request.user.username,
         ),
             actor=request.user,
+            category=AuditLogCategoryChoices.SECRET_CHANGED,
             level='info',
             secret=secret,
             secret_revision=secret.current_revision,
@@ -269,7 +271,7 @@ def secret_restore(request, hashid):
     secret.check_access(request.user)
     if request.method == 'POST':
         log(_(
-            "{user} restore '{name}' ({id}:{revision})"
+            "{user} restored '{name}' ({id}:{revision})"
         ).format(
             id=secret.id,
             name=secret.name,
@@ -277,6 +279,7 @@ def secret_restore(request, hashid):
             user=request.user.username,
         ),
             actor=request.user,
+            category=AuditLogCategoryChoices.SECRET_CHANGED,
             level='info',
             secret=secret,
             secret_revision=secret.current_revision,
@@ -442,6 +445,7 @@ class SecretShareList(CreateView):
                 time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
             ),
             actor=self.request.user,
+            category=AuditLogCategoryChoices.SECRET_SHARED,
             level='warning',
             secret=secret,
         )
@@ -535,6 +539,7 @@ def secret_search(request):
             'icon': icon,
             'meta': metadata,
             'name': secret.name,
+            'hashid': secret.hashid,
             'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
         })
     return JsonResponse({'count': raw_results.count(), 'results': search_results})

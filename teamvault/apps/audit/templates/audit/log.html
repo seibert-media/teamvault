@@ -6,33 +6,91 @@
 {% block title %}{% trans "Audit log" %}{% endblock %}
 {% block content %}
     <div class="row justify-content-center">
-        <div class="col-lg-9">
-            <h1 class="mb-3">
-                {% if secret %}
-                    {% blocktrans with name=secret.name %}Audit log for secret '{{ name }}'{% endblocktrans %}
-                {% elif user %}
-                    {% blocktrans with name=user.username %}Audit log for user '{{ name }}'{% endblocktrans %}
-                {% else %}
-                    {% trans "Audit log" %}
-                {% endif %}
-            </h1>
-            <div class="card">
-                <div class="card-body table-responsive">
-                    <table class="table table-hover">
-                        {% for entry in log_entries %}
-                            <tr>
-                                <td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
-                                <td>{% if entry.secret %}
-                                    <a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}
-                                </td>
-                                <td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
-                                <td>{{ entry.message }}</td>
-                            </tr>
-                        {% endfor %}
-                    </table>
+        <div class="col-12 col-lg-10">
+            <div class="row mb-3">
+                <h2>
+                    {% translate "Audit log" %}
+                </h2>
+            </div>
+            {% include 'helpers/filter.html' %}
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-body table-responsive">
+                            <table class="table table-hover">
+                                <thead class="fs-5">
+                                <tr>
+                                    <td>Time</td>
+                                    <td>Actor</td>
+                                    <td>User</td>
+                                    <td>Secret</td>
+                                    <td>Message</td>
+                                    <td>Category</td>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {% for entry in log_entries %}
+                                    <tr>
+                                        <td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
+                                        <td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
+                                        <td>{{ entry.user }}</td>
+                                        <td>{% if entry.secret %}
+                                            <a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}
+                                        </td>
+                                        <td>{{ entry.message }}</td>
+                                    <td>{{ entry.category }}</td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
             {% include "pagination.html" %}
         </div>
     </div>
+{% endblock %}
+
+{% block additionalJS %}
+    <script>
+        $("#id_actor").select2({
+            dropdownParent: document.getElementById('filter-modal'),
+            placeholder: "{% translate "Actor" %}",
+            allowClear: true,
+        });
+        $("#id_user").select2({
+            dropdownParent: document.getElementById('filter-modal'),
+            placeholder: "{% translate "User" %}",
+            allowClear: true,
+        });
+        $("#id_secret").select2({
+            dropdownParent: document.getElementById('filter-modal'),
+            multiple: false,
+            placeholder: "{% translate "Secret" %}",
+            allowClear: true,
+            delay: 250,
+            minimumInputLength: 3,
+            ajax: {
+                url: '{% url "secrets.secret-search" %}',
+                dataType: "json",
+                data: function ({term}) {
+                    return {
+                        q: term
+                    };
+                },
+                processResults: function (data) {
+                    let results = []
+                    data.results.forEach(item => results.push({
+                        id: item['hashid'],
+                        text: item['name']
+                    }))
+                    return {
+                        count: data.count,
+                        results: results
+                    };
+                }
+            }
+        });
+    </script>
 {% endblock %}
