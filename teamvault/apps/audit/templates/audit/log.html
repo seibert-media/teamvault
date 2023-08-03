@@ -12,7 +12,8 @@
                 {% translate "Audit log" %}
             </h2>
 
-            {% include 'helpers/filter.html' %}
+            {% comment %}{% include 'helpers/filter.html' %}{% endcomment %}
+            {% render_filter request filter %}
 
             <div class="card">
                 <div class="card-body">

@@ -1,7 +1,5 @@
-from urllib.parse import urlencode
-
 from django import template
-
+from django.shortcuts import render
 
 register = template.Library()
 
@@ -13,13 +11,7 @@ def querystring(request, **kwargs):
     """
     querydict = request.GET.copy()
     for k, v in kwargs.items():
-        if '__' in k:
-            k, subk = k.split('__')
-            querylist = querydict.getlist(k)
-            if v is None:
-                querylist.remove(subk)
-            querydict.setlist(k, querylist)
-        elif v is not None:
+        if v is not None:
             querydict[k] = str(v)
         elif k in querydict:
             querydict.pop(k)
@@ -31,11 +23,12 @@ def querystring(request, **kwargs):
 
 
 @register.simple_tag()
-def querystring_remove(request, key, value):
+def querystring_remove_item(request, key, value):
     """
-    Removes a param from a list in a querystring.
+    Removes item from a list in a querystring.
     """
     querydict = request.GET.copy()
+    print(key, value)
 
     if value in querydict.getlist(key, []):
         querylist = querydict.getlist(key)
@@ -44,11 +37,17 @@ def querystring_remove(request, key, value):
 
     qs = querydict.urlencode(safe='/')
 
-    print(querydict)
     if qs:
         return '?' + qs
     else:
         return ''
+
+
+@register.inclusion_tag('filter/base.html')
+def render_filter(request, filter_obj):
+    print(request.GET)
+    print(filter_obj)
+    return {'filter': filter_obj}
 
 
 @register.filter

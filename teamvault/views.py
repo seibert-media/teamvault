@@ -42,18 +42,21 @@ class FilterMixin(ContextMixin):
 
         for field, field_data in bound_filter_data.items():
             if field_data:
-                field_label = new_filter_form.fields[field].label
                 initial[field] = field_data
-                if isinstance(field_data, (tuple, list)):
-                    active_filters[field_label] = field_data
-                else:
+                if not isinstance(field_data, (tuple, list)):
                     # filter_items needs to be a list for us to iterate over
-                    active_filters[field_label] = [field_data]
+                    field_data = [field_data]
+
+                active_filters[field] = {
+                    'label': new_filter_form.fields[field].label,
+                    'filter_items': field_data,
+                }
 
         new_filter_form.initial = initial
         new_filter_form = self.manipulate_filter_form(bound_filter_data, new_filter_form)
         context.update({
             'active_filters': active_filters,
             'filter_form': new_filter_form,
+            'filter': self._bound_filter,
         })
         return context
