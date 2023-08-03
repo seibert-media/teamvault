@@ -113,3 +113,37 @@ form {
   text-align: center;
   width: 40px;
 }
+
+th > a {
+  color: var(--bs-accent);
+  text-decoration: none;
+}
+
+th.asc > a::after {
+  padding-left: 0.5rem;
+  content: quote($fa-var-arrow-down-a-z);
+  font-family: 'Font Awesome 6 Free', serif;
+  font-size: $small-font-size;
+}
+
+th.desc > a::after {
+  padding-left: 0.5rem;
+  content: quote($fa-var-arrow-up-z-a);
+  font-family: 'Font Awesome 6 Free', serif;
+  text-decoration: none;
+  font-size: $small-font-size;
+}
+
+th.orderable:not(.asc, .desc) {
+  font-weight: 500;
+
+  > a::after {
+    opacity: 25%;
+    padding-left: 0.5rem;
+    content: quote($fa-var-sort);
+    font-family: 'Font Awesome 6 Free', serif;
+    font-weight: 600;
+    text-decoration: none;
+    font-size: $small-font-size;
+  }
+}

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_bootstrap5',
+    'django_tables2',
     'rest_framework',
     'social_django',
     'teamvault.apps.accounts.AccountsConfig',

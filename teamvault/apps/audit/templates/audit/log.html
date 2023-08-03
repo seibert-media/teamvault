@@ -1,50 +1,52 @@
 {% extends "base.html" %}
 {% load humanize %}
+{% load render_table from django_tables2 %}
 {% load i18n %}
 {% load static %}
 {% load smart_pagination %}
 {% block title %}{% trans "Audit log" %}{% endblock %}
 {% block content %}
     <div class="row justify-content-center">
-        <div class="col-12 col-lg-10">
-            <div class="row mb-3">
-                <h2>
-                    {% translate "Audit log" %}
-                </h2>
-            </div>
+        <div class="col-12 col-xl-10">
+            <h2 class="mb-3">
+                {% translate "Audit log" %}
+            </h2>
+
             {% include 'helpers/filter.html' %}
-            <div class="row">
-                <div class="col-12">
-                    <div class="card">
-                        <div class="card-body table-responsive">
-                            <table class="table table-hover">
-                                <thead class="fs-5">
+
+            <div class="card">
+                <div class="card-body">
+                    {% render_table table %}
+                    {% comment %}
+                        <table class="table table-hover">
+                            <thead class="fs-5">
+                            <tr>
+                                <td>Time</td>
+                                <td>Actor</td>
+                                <td>User</td>
+                                <td>Secret</td>
+                                <td>Message</td>
+                                <td>Category</td>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for entry in log_entries %}
                                 <tr>
-                                    <td>Time</td>
-                                    <td>Actor</td>
-                                    <td>User</td>
-                                    <td>Secret</td>
-                                    <td>Message</td>
-                                    <td>Category</td>
-                                </tr>
-                                </thead>
-                                <tbody>
-                                {% for entry in log_entries %}
-                                    <tr>
-                                        <td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
-                                        <td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
-                                        <td>{{ entry.user }}</td>
-                                        <td>{% if entry.secret %}
-                                            <a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}
-                                        </td>
-                                        <td>{{ entry.message }}</td>
+                                    <td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
+                                    <td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
+                                    <td>{{ entry.user }}</td>
+                                    <td>
+                                        {% if entry.secret %}
+                                            <a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ entry.message }}</td>
                                     <td>{{ entry.category }}</td>
-                                    </tr>
-                                {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                        {% endcomment %}
                 </div>
             </div>
             {% include "pagination.html" %}

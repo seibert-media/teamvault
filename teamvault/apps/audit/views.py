@@ -1,18 +1,21 @@
 from django.contrib.auth.decorators import user_passes_test
 from django.db.models import Q
 from django.views.generic import ListView
+from django_tables2 import SingleTableMixin
 
 from .filters import AuditLogFilter
 from .models import LogEntry
+from .tables import LogEntryTable
 from ..secrets.models import Secret
 from ...views import FilterMixin
 
 
-class LogEntryList(ListView, FilterMixin):
+class LogEntryList(ListView, SingleTableMixin, FilterMixin):
     filter = None
     filter_class = AuditLogFilter
     context_object_name = 'log_entries'
-    paginate_by = 100
+    paginate_by = 10
+    table_class = LogEntryTable
     template_name = "audit/log.html"
 
     def get_queryset(self):
