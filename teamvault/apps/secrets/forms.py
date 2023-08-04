@@ -10,9 +10,11 @@ from .models import Secret, SharedSecretData
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
-    'description',
     'access_policy',
+    'description',
+    'grant_description',
     'needs_changing_on_leave',
+    'shared_groups_on_add',
 ]
 
 
@@ -26,6 +28,26 @@ class SecretForm(forms.ModelForm):
         required=False,
         widget=forms.Textarea(attrs={'cols': '15', 'rows': '4'})
     )
+    shared_groups_on_add = forms.ModelMultipleChoiceField(
+        # TODO: Only include all groups where the user is member?
+        help_text=_('Default groups you configured in your settings will be selected automatically.'),
+        label=_('Share with groups'),
+        queryset=Group.objects.all().order_by('name'),
+        required=False,
+    )
+    grant_description = forms.CharField(
+        label=_('Reason'),
+        required=False,  # see clean() below
+        widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data['shared_groups_on_add'] and not cleaned_data['grant_description']:
+            self.add_error(
+                'grant_description',
+                _('Please provide a valid reason to share this secret with the groups selected above.')
+            )
 
 
 class CCForm(SecretForm):

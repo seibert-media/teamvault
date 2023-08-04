@@ -24,11 +24,6 @@ from ..accounts.models import UserSettings
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 
-ACCESS_STR_IDS = {
-    'ACCESS_POLICY_ANY': str(Secret.ACCESS_POLICY_ANY),
-    'ACCESS_POLICY_DISCOVERABLE': str(Secret.ACCESS_POLICY_DISCOVERABLE),
-    'ACCESS_POLICY_HIDDEN': str(Secret.ACCESS_POLICY_HIDDEN),
-}
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
     'file': FileForm,
@@ -108,17 +103,23 @@ class SecretAdd(CreateView):
             })
         secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
 
-        # Create default share objects
+        # Create share objects
         secret.share_data.create(user=self.request.user)
-        try:
-            secret.share_data.bulk_create(
-                [
-                    SharedSecretData(group=group, secret=secret, granted_by=self.request.user)
-                    for group in self.request.user.profile.default_sharing_groups.all()
-                ]
-            )
-        except UserSettings.DoesNotExist:
-            pass
+        if form.cleaned_data['access_policy'] != Secret.ACCESS_POLICY_ANY:
+            try:
+                secret.share_data.bulk_create(
+                    [
+                        SharedSecretData(
+                            grant_description=form.cleaned_data['grant_description'],
+                            granted_by=self.request.user,
+                            group=group,
+                            secret=secret,
+                        )
+                        for group in form.cleaned_data['shared_groups_on_add']
+                    ]
+                )
+            except UserSettings.DoesNotExist:
+                pass
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
@@ -127,8 +128,11 @@ class SecretAdd(CreateView):
             context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError:
             raise Http404
-        context.update(ACCESS_STR_IDS)
         return context
+
+    def get_initial(self):
+        obj, _created = UserSettings.objects.get_or_create(user=self.request.user)
+        return {'shared_groups_on_add': obj.default_sharing_groups.all()}
 
     def get_form_class(self):
         return CONTENT_TYPE_FORMS[self.kwargs['content_type']]
@@ -192,7 +196,6 @@ class SecretEdit(UpdateView):
     def get_context_data(self, **kwargs):
         context = super(SecretEdit, self).get_context_data(**kwargs)
         context['pretty_content_type'] = self.object.get_content_type_display()
-        context.update(ACCESS_STR_IDS)
         return context
 
     def get_form_class(self):
