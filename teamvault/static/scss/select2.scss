@@ -23,3 +23,7 @@
 .select2-container .select2-selection--single .select2-selection__clear {
   position: absolute;
 }
+
+.select2-selection__choice__remove {
+  cursor: pointer;
+}
