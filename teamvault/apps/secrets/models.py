@@ -1,5 +1,4 @@
 from datetime import timedelta
-from enum import Enum
 from hashlib import sha256
 from operator import itemgetter
 
@@ -23,7 +22,7 @@ from ..audit.auditlog import log
 from ..audit.models import LogEntry, AuditLogCategoryChoices
 
 
-class AccessPermissionTypes(Enum):
+class AccessPermissionTypes(models.IntegerChoices):
     NOT_ALLOWED = 0
     ALLOWED = 1
     TEMPORARILY_ALLOWED = 2
