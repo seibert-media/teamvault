@@ -518,9 +518,9 @@ def secret_search(request):
 
     # sort readable passwords to top...
     for secret in filtered_secrets:
+        metadata = ''
+        icon = "lock-open"
         if secret.is_readable_by_user(request.user):
-            icon = "lock-open"
-            metadata = ''
             if secret.content_type == secret.CONTENT_PASSWORD:
                 icon = "user"
                 metadata = getattr(secret, 'username')
@@ -535,13 +535,14 @@ def secret_search(request):
 
     # and others to the bottom
     for secret in unreadable_secrets:
-        sorted_secrets.append((secret, "lock"))
+        sorted_secrets.append((secret, "lock", ''))
 
     for secret, icon, metadata in sorted_secrets:
         search_results.append({
             'icon': icon,
             'meta': metadata,
             'name': secret.name,
+            'locked': True if icon == 'lock' else False,
             'hashid': secret.hashid,
             'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
         })

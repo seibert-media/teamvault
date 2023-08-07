@@ -85,8 +85,11 @@
   &[aria-selected="true"], &:hover {
     background-color: var(--bs-list-group-action-active-bg);
 
-    .search-modal-result-action {
-      visibility: visible;
+    .search-modal-result-action > svg {
+      display: flex;
+    }
+    .search-modal-result-action > i {
+      display: none;
     }
   }
 }
@@ -116,7 +119,10 @@
 .search-modal-result-action {
   display: flex;
   justify-content: end;
-  visibility: hidden;
+
+  > svg {
+    display: none;
+  }
 }
 
 .search-modal-actions {
