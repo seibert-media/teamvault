@@ -290,6 +290,12 @@ def configure_session(config):
     return age, expire, secure
 
 
+def configure_superuser_reads(config, settings):
+    settings.ALLOW_SUPERUSER_READS = False
+    if get_from_config(config, "teamvault", "allow_superuser_reads", "True").lower() in ("1", "enabled", "true", "yes"):
+        settings.ALLOW_SUPERUSER_READS = True
+
+
 def configure_teamvault_secret_key(config, settings):
     from .models import Setting
 
@@ -348,6 +354,7 @@ session_cookie_age = 3600
 session_expire_at_browser_close = True
 session_cookie_secure = False
 time_zone = UTC
+# allow_superuser_reads = False
 
 #[password_generator]
 #length = 16

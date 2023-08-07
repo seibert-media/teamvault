@@ -242,7 +242,7 @@ class Secret(HashIDModel):
 
     @classmethod
     def get_all_readable_by_user(cls, user):
-        if user.is_superuser:
+        if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
             return cls.objects.all()
 
         allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
@@ -337,7 +337,7 @@ class Secret(HashIDModel):
             if self.access_policy == self.ACCESS_POLICY_ANY or shares.filter(granted_until__isnull=True).exists():
                 return AccessPermissionTypes.ALLOWED
 
-            if user.is_superuser:
+            if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
                 return AccessPermissionTypes.SUPERUSER_ALLOWED
 
             if shares.exclude(granted_until__isnull=True).exists():
@@ -347,9 +347,12 @@ class Secret(HashIDModel):
 
     def is_shareable_by_user(self, user):
         read_permission = self.is_readable_by_user(user)
-        if read_permission in [AccessPermissionTypes.ALLOWED, AccessPermissionTypes.SUPERUSER_ALLOWED]:
-            return True
-        return False
+        if read_permission == AccessPermissionTypes.ALLOWED:
+            return AccessPermissionTypes.ALLOWED
+
+        if user.is_superuser:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+        return AccessPermissionTypes.NOT_ALLOWED
 
     def is_visible_to_user(self, user):
         if self.status != self.STATUS_DELETED:

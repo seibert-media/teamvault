@@ -321,6 +321,7 @@ class SecretDetail(DetailView):
         secret = self.get_object()
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['readable'] = secret.is_readable_by_user(self.request.user)
+        context['shareable'] = secret.is_shareable_by_user(self.request.user)
         context['secret_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'hashid': secret.current_revision.hashid},
