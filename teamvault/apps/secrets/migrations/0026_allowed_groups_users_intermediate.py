@@ -9,14 +9,11 @@ def copy_shared_secrets_data(apps, schema_editor):
     secret_model = apps.get_model('secrets', 'Secret')
     shared_secret_data_model = apps.get_model('secrets', 'SharedSecretData')
 
-    secret_data = secret_model.objects.all().exclude(
-        allowed_users__isnull=False,
-        allowed_groups__isnull=False,
-    ).only(
+    secret_data = secret_model.objects.all().only(
         'id',
         'allowed_users',
         'allowed_groups'
-    ).prefetch_related('allowed_groups', 'allowed_users')
+    )
 
     user_shares = []
     group_shares = []
