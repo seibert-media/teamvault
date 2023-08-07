@@ -354,7 +354,6 @@ secret_detail = login_required(SecretDetail.as_view())
 @require_http_methods(["GET"])
 def secret_metadata(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    secret.check_access(request.user)
     share_data = secret.share_data.with_expiry_state().filter(is_expired=False)
     context = {
         'allowed_groups': share_data.groups(),
