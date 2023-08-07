@@ -25,6 +25,8 @@ $custom-colors: (
 
 // Merge the maps
 $theme-colors: map-merge($theme-colors, $custom-colors);
+
+$alert-border-width: 0;
 $badge-font-weight: 500;
 @import "bootstrap/scss/bootstrap";
 
