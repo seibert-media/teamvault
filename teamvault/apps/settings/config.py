@@ -292,7 +292,7 @@ def configure_session(config):
 
 def configure_superuser_reads(config, settings):
     settings.ALLOW_SUPERUSER_READS = False
-    if get_from_config(config, "teamvault", "allow_superuser_reads", "True").lower() in ("1", "enabled", "true", "yes"):
+    if get_from_config(config, "teamvault", "allow_superuser_reads", "False").lower() in ("1", "enabled", "true", "yes"):
         settings.ALLOW_SUPERUSER_READS = True
 
 
