@@ -492,12 +492,27 @@ secret_share_list = login_required(SecretShareList.as_view())
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
     share_data.secret.check_access(request.user)
+    secret = share_data.secret
+    entity_type = share_data.shared_entity_type
+    entity_name = share_data.shared_entity_name
     share_data.delete()
+
     messages.success(
         request,
         _('Successfully removed {} from allowed {}'.format(
             share_data.shared_entity_name, pluralize(share_data.shared_entity_type)
         ))
+    )
+    log(
+        _("{user} removed access of {shared_entity_type} '{name}'").format(
+            shared_entity_type=entity_type,
+            name=entity_name,
+            user=request.user.username,
+        ),
+        actor=request.user,
+        category=AuditLogCategoryChoices.SECRET_SHARED,
+        level='warning',
+        secret=secret,
     )
     response = HttpResponse(status=200)
     trigger_client_event(response, 'refreshMetadata')
