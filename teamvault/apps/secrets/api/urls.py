@@ -1,7 +1,7 @@
 from django.urls import path
 
-from .api import SecretDetail, SecretList, SecretRevisionDetail, data_get, generate_password_view
-
+from .views import SecretDetail, SecretList, SecretRevisionDetail, SecretShare, SecretShareDetail, data_get, \
+    generate_password_view
 
 urlpatterns = (
     path(
@@ -13,6 +13,16 @@ urlpatterns = (
         'secrets/<str:hashid>/',
         SecretDetail.as_view(),
         name='api.secret_detail',
+    ),
+    path(
+        'secrets/<str:hashid>/shares/',
+        SecretShare.as_view(),
+        name='api.secret_share',
+    ),
+    path(
+        'secrets/<str:hashid>/shares/<int:pk>',
+        SecretShareDetail.as_view(),
+        name='api.secret_share_detail',
     ),
     path(
         'secret-revisions/<str:hashid>/',

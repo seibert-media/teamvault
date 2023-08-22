@@ -1,18 +1,13 @@
-from base64 import b64decode, b64encode
-from json import dumps, loads
+from base64 import b64decode
+from json import dumps
 
-from django.shortcuts import get_object_or_404
-from rest_framework import generics
+from django.contrib.auth.models import Group, User
+from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
-from rest_framework import status
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
+from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
 
-from .models import Secret, SecretRevision
-from .utils import generate_password
-
-from django.conf import settings
+from ..models import Secret, SecretRevision, SharedSecretData
 
 ACCESS_POLICY_REPR = {
     Secret.ACCESS_POLICY_ANY: "any",
@@ -109,7 +104,6 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SecretSerializer(serializers.HyperlinkedModelSerializer):
-    # FIXME: Allowed_users and Allowed_groups via /share
     api_url = serializers.HyperlinkedIdentityField(
         lookup_field='hashid',
         view_name='api.secret_detail',
@@ -168,11 +162,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError("missing secret field (e.g. 'password')")
 
         instance = self.Meta.model.objects.create(**validated_data)
-
-        # instance.allowed_groups.set(allowed_groups)
-        # instance.allowed_users.set(allowed_users)
         instance.content_type = content_type
         instance._data = data
+        instance.shared_users.add(instance.created_by)
         return instance
 
     def to_internal_value(self, data):
@@ -247,78 +239,60 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         )
 
 
-class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
-    model = Secret
-    serializer_class = SecretSerializer
+class SharedSecretDataSerializer(serializers.ModelSerializer):
+    granted_by = serializers.SlugRelatedField(
+        default=serializers.CurrentUserDefault(),
+        read_only=True,
+        slug_field='username',
+    )
+    grant_description = serializers.CharField(
+        allow_null=False,
+    )
+    granted_until = serializers.DateTimeField(
+        allow_null=True,
+    )
+    group = serializers.SlugRelatedField(
+        allow_null=True,
+        queryset=Group.objects.all().order_by('name'),
+        required=False,
+        slug_field='name',
+    )
+    secret = serializers.SlugRelatedField(
+        read_only=True,
+        slug_field='hashid',
+    )
+    user = serializers.SlugRelatedField(
+        allow_null=True,
+        queryset=User.objects.exclude(is_active=False).order_by('username'),
+        required=False,
+        slug_field='username',
+    )
 
-    def destroy(self, request, *args, **kwargs):
-        obj = self.get_object()
-        obj.status = Secret.STATUS_DELETED
-        obj.save()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def validate(self, data):
+        if (data['group'] and data['user']) or (not data['group'] and not data['user']):
+            raise serializers.ValidationError('Choose exactly one group *or* one user to share the secret with.')
 
-    def get_object(self):
-        obj = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
-        if not obj.is_visible_to_user(self.request.user):
-            self.permission_denied(self.request)
-        return obj
-
-    def perform_update(self, serializer):
-        instance = serializer.save()
-        if hasattr(instance, '_data'):
-            instance.set_data(self.request.user, instance._data)
-            del instance._data
-
-
-class SecretList(generics.ListCreateAPIView):
-    model = Secret
-    serializer_class = SecretSerializer
-
-    def get_queryset(self):
-        if 'search' in self.request.query_params:
-            return Secret.get_search_results(
-                self.request.user,
-                self.request.query_params['search'],
-            )
+        secret = self.context['secret']
+        if data['group']:
+            entity_type = 'group'
+            entity_name = data['group']
         else:
-            return Secret.get_all_visible_to_user(self.request.user)
+            entity_type = 'user'
+            entity_name = data['user']
 
-    def perform_create(self, serializer):
-        instance = serializer.save(created_by=self.request.user)
-        if hasattr(instance, '_data'):
-            instance.set_data(self.request.user, instance._data, skip_access_check=True)
-            del instance._data
+        if SharedSecretData.objects.filter(secret=secret, **{entity_type: entity_name}).exists():
+            raise ValidationError(
+                _(f'Secret {secret} was already shared with {entity_type} {entity_name}.').format(
+                    secret=secret, entity_type=entity_type, entity_name=entity_name
+                ),
+                code='unique'
+            )
+        return data
 
-
-class SecretRevisionDetail(generics.RetrieveAPIView):
-    model = SecretRevision
-    serializer_class = SecretRevisionSerializer
-
-    def get_object(self):
-        obj = get_object_or_404(SecretRevision, hashid=self.kwargs['hashid'])
-        obj.secret.check_access(self.request.user)
-        return obj
-
-
-@api_view(['GET'])
-def data_get(request, hashid):
-    secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
-    secret_revision.secret.check_access(request.user)
-    data = secret_revision.secret.get_data(request.user)
-    if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:
-        return Response({'password': data})
-    elif secret_revision.secret.content_type == Secret.CONTENT_FILE:
-        return Response({'file': b64encode(data).decode('ascii')})
-    elif secret_revision.secret.content_type == Secret.CONTENT_CC:
-        return Response(loads(data))
-
-
-@api_view(['GET'])
-def generate_password_view(*_args, **_kwargs):
-    return Response(generate_password(
-        settings.PASSWORD_LENGTH,
-        settings.PASSWORD_DIGITS,
-        settings.PASSWORD_UPPER,
-        settings.PASSWORD_LOWER,
-        settings.PASSWORD_SPECIAL
-    ))
+    class Meta:
+        model = SharedSecretData
+        fields = ['id', 'grant_description', 'granted_on', 'granted_until', 'group', 'user', 'granted_by', 'secret']
+        read_only_fields = (
+            'id',
+            'granted_by'
+        )
