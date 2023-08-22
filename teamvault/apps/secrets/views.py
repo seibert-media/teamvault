@@ -492,7 +492,9 @@ secret_share_list = login_required(SecretShareList.as_view())
 @require_http_methods(['DELETE'])
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
-    share_data.secret.check_access(request.user)
+    if not share_data.secret.is_shareable_by_user(request.user):
+        raise PermissionDenied()
+
     secret = share_data.secret
     entity_type = share_data.shared_entity_type
     entity_name = share_data.shared_entity_name
