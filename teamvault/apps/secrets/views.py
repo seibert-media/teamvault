@@ -437,6 +437,7 @@ class SecretShareList(CreateView):
             raise PermissionDenied()
 
         obj = form.save(commit=False)
+        obj.granted_by = self.request.user
         obj.secret = secret
         obj.save()
 
