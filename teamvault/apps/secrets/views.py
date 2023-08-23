@@ -432,7 +432,6 @@ class SecretShareList(CreateView):
 
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
-        secret.check_access(self.request.user)
         if not secret.is_shareable_by_user(self.request.user):
             raise PermissionDenied()
 
