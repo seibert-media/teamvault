@@ -1,5 +1,5 @@
 <div class="d-flex column-gap-2 row-gap-2 align-items-center flex-row flex-wrap fs-xs">
-    <div class="text-secondary opacity-75 d-inline-block me-1">{{ filter_name|capfirst }}:</div>
+    <div class="text-secondary opacity-75 d-inline-block">{{ filter_name|capfirst }}:</div>
 
     {% for field_item in filter_items %}
         {% include "helpers/filter_item.html" with filter_item_name=field_item %}
