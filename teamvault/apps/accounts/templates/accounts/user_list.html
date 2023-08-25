@@ -21,10 +21,10 @@
                         {% for user in users %}
                             <tr>
                                 <td>
-                                    <a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.username }}</a>
+                                    <a href="{% url 'accounts.user-detail' username=user.username %}">{{ user.username }}</a>
                                 </td>
                                 <td>
-                                    <a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.email }}</a>
+                                    <a href="{% url 'accounts.user-detail' username=user.username %}">{{ user.email }}</a>
                                 </td>
                                 <td>
                                     {% if user.is_active %}

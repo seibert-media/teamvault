@@ -12,7 +12,7 @@
                     </button>
                     <h3 class="modal-title" id="modal-deactivate-label">{% trans "Confirm deactivation" %}</h3>
                 </div>
-                <form role="form" method="POST" action="{% url "accounts.user-deactivate" uid=user.id %}">
+                <form role="form" method="POST" action="{% url "accounts.user-deactivate" username=user.username %}">
                     {% csrf_token %}
                     <div class="modal-body">
                         <div class="alert alert-info">
@@ -38,7 +38,7 @@
                     </button>
                     <h3 class="modal-title" id="modal-deactivate-label">{% trans "Confirm reactivation" %}</h3>
                 </div>
-                <form role="form" method="POST" action="{% url "accounts.user-reactivate" uid=user.id %}">
+                <form role="form" method="POST" action="{% url "accounts.user-reactivate" username=user.username %}">
                     {% csrf_token %}
                     <div class="modal-body">
                     </div>

@@ -48,13 +48,10 @@ users = user_passes_test(lambda u: u.is_superuser)(UserList.as_view())
 
 class UserDetail(DetailView):
     context_object_name = 'user'
-    template_name = "accounts/user_detail.html"
-
-    def get_object(self):
-        return get_object_or_404(
-            User,
-            id=self.kwargs['uid'],
-        )
+    model = User
+    slug_field = 'username'
+    slug_url_kwarg = 'username'
+    template_name = 'accounts/user_detail.html'
 
 
 user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())
@@ -62,10 +59,10 @@ user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["POST"])
-def user_activate(request, uid, deactivate=False):
+def user_activate(request, username, deactivate=False):
     user = get_object_or_404(
         User,
-        id=uid,
+        username=username,
         is_active=deactivate,
     )
     user.is_active = not deactivate

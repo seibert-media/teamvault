@@ -20,17 +20,17 @@ urlpatterns = (
         name='accounts.user-list',
     ),
     path(
-        'users/<str:uid>/',
+        'users/<str:username>/',
         views.user_detail,
         name='accounts.user-detail',
     ),
     path(
-        'users/<str:uid>/reactivate',
+        'users/<str:username>/reactivate',
         views.user_activate,
         name='accounts.user-reactivate',
     ),
     path(
-        'users/<str:uid>/deactivate',
+        'users/<str:username>/deactivate',
         views.user_activate,
         {'deactivate': True},
         name='accounts.user-deactivate',
