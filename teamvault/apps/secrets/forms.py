@@ -28,6 +28,13 @@ class SecretForm(forms.ModelForm):
         required=False,
         widget=forms.Textarea(attrs={'cols': '15', 'rows': '4'})
     )
+    needs_changing_on_leave = forms.BooleanField(
+        help_text=_("This secret will be marked as 'needs changing' when a user who accessed it is deactivated."),
+        initial=True,
+        label=_('Needs changing'),
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
     shared_groups_on_create = forms.ModelMultipleChoiceField(
         help_text=_('Default groups you configured in your settings will be selected automatically.'),
         label=_('Share with groups'),
