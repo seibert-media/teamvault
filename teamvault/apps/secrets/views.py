@@ -80,8 +80,7 @@ class SecretAdd(CreateView):
         secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
         secret.created_by = self.request.user
 
-        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
-                     'username'):
+        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url', 'username'):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
@@ -115,7 +114,7 @@ class SecretAdd(CreateView):
                             group=group,
                             secret=secret,
                         )
-                        for group in form.cleaned_data['shared_groups_on_add']
+                        for group in form.cleaned_data['shared_groups_on_create']
                     ]
                 )
             except UserSettings.DoesNotExist:
@@ -132,7 +131,7 @@ class SecretAdd(CreateView):
 
     def get_initial(self):
         obj, _created = UserSettings.objects.get_or_create(user=self.request.user)
-        return {'shared_groups_on_add': obj.default_sharing_groups.all()}
+        return {'shared_groups_on_create': obj.default_sharing_groups.all()}
 
     def get_form_class(self):
         return CONTENT_TYPE_FORMS[self.kwargs['content_type']]

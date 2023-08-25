@@ -14,7 +14,7 @@ GENERIC_FIELDS_FOOTER = [
     'description',
     'grant_description',
     'needs_changing_on_leave',
-    'shared_groups_on_add',
+    'shared_groups_on_create',
 ]
 
 
@@ -28,8 +28,7 @@ class SecretForm(forms.ModelForm):
         required=False,
         widget=forms.Textarea(attrs={'cols': '15', 'rows': '4'})
     )
-    shared_groups_on_add = forms.ModelMultipleChoiceField(
-        # TODO: Only include all groups where the user is member?
+    shared_groups_on_create = forms.ModelMultipleChoiceField(
         help_text=_('Default groups you configured in your settings will be selected automatically.'),
         label=_('Share with groups'),
         queryset=Group.objects.all().order_by('name'),
@@ -43,7 +42,7 @@ class SecretForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data['shared_groups_on_add'] and not cleaned_data['grant_description']:
+        if cleaned_data['shared_groups_on_create'] and not cleaned_data['grant_description']:
             self.add_error(
                 'grant_description',
                 _('Please provide a valid reason to share this secret with the groups selected above.')
