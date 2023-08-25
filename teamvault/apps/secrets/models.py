@@ -337,11 +337,11 @@ class Secret(HashIDModel):
             if self.access_policy == self.ACCESS_POLICY_ANY or shares.filter(granted_until__isnull=True).exists():
                 return AccessPermissionTypes.ALLOWED
 
+            if shares.exists():
+                return AccessPermissionTypes.TEMPORARILY_ALLOWED
+
             if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
                 return AccessPermissionTypes.SUPERUSER_ALLOWED
-
-            if shares.exclude(granted_until__isnull=True).exists():
-                return AccessPermissionTypes.TEMPORARILY_ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
 
