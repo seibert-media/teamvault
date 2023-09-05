@@ -530,7 +530,7 @@ class SharedSecretData(models.Model):
 
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
+        on_delete=models.PROTECT,
         null=True,
         related_name='+',
     )
