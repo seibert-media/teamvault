@@ -9,21 +9,21 @@ from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, UpdateView
 
-from .forms import UserSettingsForm
-from .models import UserSettings as UserSettingsModel
+from .forms import UserProfileForm
+from .models import UserProfile as UserProfileModel
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 from ..secrets.models import Secret, SecretRevision
 
 
-class UserSettings(UpdateView):
-    form_class = UserSettingsForm
-    model = UserSettingsModel
+class UserProfile(UpdateView):
+    form_class = UserProfileForm
+    model = UserProfileModel
     template_name = "accounts/user_settings.html"
     success_url = reverse_lazy('accounts.user-settings')
 
     def get_object(self, *args, **kwargs):
-        return UserSettingsModel.objects.get_or_create(user=self.request.user)[0]
+        return UserProfileModel.objects.get_or_create(user=self.request.user)[0]
 
     def form_valid(self, form):
         response = super().form_valid(form)
@@ -31,7 +31,7 @@ class UserSettings(UpdateView):
         return response
 
 
-user_settings = login_required(UserSettings.as_view())
+user_settings = login_required(UserProfile.as_view())
 
 
 class UserList(ListView):

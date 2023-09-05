@@ -20,7 +20,7 @@ from django_htmx.http import trigger_client_event
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
 from .models import AccessPermissionTypes, Secret, SharedSecretData
-from ..accounts.models import UserSettings
+from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 
@@ -117,7 +117,7 @@ class SecretAdd(CreateView):
                         for group in form.cleaned_data['shared_groups_on_create']
                     ]
                 )
-            except UserSettings.DoesNotExist:
+            except UserProfile.DoesNotExist:
                 pass
         return HttpResponseRedirect(secret.get_absolute_url())
 
@@ -130,7 +130,7 @@ class SecretAdd(CreateView):
         return context
 
     def get_initial(self):
-        obj, _created = UserSettings.objects.get_or_create(user=self.request.user)
+        obj, _created = UserProfile.objects.get_or_create(user=self.request.user)
         return {'shared_groups_on_create': obj.default_sharing_groups.all()}
 
     def get_form_class(self):

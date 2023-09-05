@@ -3,7 +3,7 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
-class UserSettings(models.Model):
+class UserProfile(models.Model):
     # Since our static files are not served by some webserver but by TeamVault (/Whitenoise) directly
     # to keep the installation overhead low, we'd have to do the same thing with media files.
     # Static files will get replaced with each teamvault deployment, media files should not.
