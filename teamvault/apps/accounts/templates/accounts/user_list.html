@@ -46,43 +46,7 @@
                     </table>
                 </div>
             </div>
-            {% if is_paginated %}
-                <ul class="pagination">
-                    {% if page_obj.has_previous %}
-                        <li>
-                            <a href="?page={{ page_obj.previous_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">
-                                <i class="fa fa-chevron-left"></i>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="disabled">
-                            <a href="#"><i class="fa fa-chevron-left"></i></a>
-                        </li>
-                    {% endif %}
-                    {% for page in paginator.page_range|smart_pages:page_obj.number %}
-                        {% if page_obj.number == page %}
-                            <li class="active">
-                                <a href="#">{{ page }} <span class="sr-only">(current)</span></a>
-                            </li>
-                        {% else %}
-                            <li>
-                                <a href="?page={{ page }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">{{ page }}</a>
-                            </li>
-                        {% endif %}
-                    {% endfor %}
-                    {% if page_obj.has_next %}
-                        <li>
-                            <a href="?page={{ page_obj.next_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">
-                                <i class="fa fa-chevron-right"></i>
-                            </a>
-                        </li>
-                    {% else %}
-                        <li class="disabled">
-                            <a href="#"><i class="fa fa-chevron-right"></i></a>
-                        </li>
-                    {% endif %}
-                </ul>
-            {% endif %}
+            {% include "pagination.html" %}
         </div>
     </div>
 {% endblock %}

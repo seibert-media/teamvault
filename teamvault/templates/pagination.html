@@ -20,9 +20,7 @@
                 {% for page in paginator.page_range|smart_pages:page_obj.number %}
                     {% if page_obj.number == page %}
                         <li class="active">
-                            <a class="page-link" href="#">
-                                {{ page }} <span class="sr-only">(current)</span>
-                            </a>
+                            <span class="page-link">{{ page }}</span>
                         </li>
                     {% else %}
                         <li class="page-item">
