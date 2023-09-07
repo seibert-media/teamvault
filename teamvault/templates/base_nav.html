@@ -53,34 +53,37 @@
                 </button>
             </div>
 
-            <!-- Admin & User actions -->
-            <div class="col-12 col-lg-auto me-lg-4 my-2 d-flex justify-content-center justify-content-lg-end align-items-center">
-                <div class="dropdown dropdown-center text-center text-lg-end">
-                    <button class="btn btn-accent btn-sm text-nowrap"
-                            role="button"
-                            data-bs-toggle="dropdown"
-                            aria-expanded="false">
-                        <i class="fa fa-gear fa-fw"></i>
-                        {% translate "Administration" %}
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" aria-labelledby="adminmenu"
-                        style="top: 7px">
-                        <li>
-                            <a class="dropdown-item align-items-center d-inline-flex gap-2"
-                               href="{% url 'audit.log' %}">
-                                <i class="fa fa-users-line fa-fw"></i> {% trans "Audit log" %}
-                            </a>
-                        </li>
-                        <li class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item align-items-center d-inline-flex gap-2"
-                               href="{% url 'accounts.user-list' %}">
-                                <i class="fa fa-users fa-fw"></i> {% trans "Users" %}
-                            </a>
-                        </li>
-                    </ul>
+            <!-- Administration -->
+            {% if request.user.is_superuser %}
+                <div class="col-12 col-lg-auto me-lg-4 my-2 d-flex justify-content-center justify-content-lg-end align-items-center">
+                    <div class="dropdown dropdown-center text-center text-lg-end">
+                        <button class="btn btn-accent btn-sm text-nowrap"
+                                role="button"
+                                data-bs-toggle="dropdown"
+                                aria-expanded="false">
+                            <i class="fa fa-gear fa-fw"></i>
+                            {% translate "Administration" %}
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" aria-labelledby="adminmenu"
+                            style="top: 7px">
+                            <li>
+                                <a class="dropdown-item align-items-center d-inline-flex gap-2"
+                                   href="{% url 'audit.log' %}">
+                                    <i class="fa fa-users-line fa-fw"></i> {% trans "Audit log" %}
+                                </a>
+                            </li>
+                            <li class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item align-items-center d-inline-flex gap-2"
+                                   href="{% url 'accounts.user-list' %}">
+                                    <i class="fa fa-users fa-fw"></i> {% trans "Users" %}
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
                 </div>
-            </div>
+            {% endif %}
+            <!-- User actions -->
             <div class="col-12 col-lg-auto my-2 mb-3 mb-lg-2 d-flex justify-content-center justify-content-lg-end align-items-center">
                 <div class="dropdown-center">
                     <a href="#" class="d-flex text-decoration-none"
