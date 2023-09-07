@@ -36,7 +36,7 @@ user_settings = login_required(UserProfile.as_view())
 
 class UserList(ListView):
     context_object_name = 'users'
-    paginate_by = 100
+    paginate_by = 25
     template_name = "accounts/user_list.html"
 
     def get_queryset(self):

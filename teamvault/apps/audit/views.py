@@ -12,7 +12,7 @@ class LogEntryList(ListView, FilterMixin):
     filter = None
     filter_class = AuditLogFilter
     context_object_name = 'log_entries'
-    paginate_by = 100
+    paginate_by = 25
     template_name = "audit/log.html"
 
     def get_queryset(self):
