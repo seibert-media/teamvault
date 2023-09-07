@@ -16,21 +16,21 @@
 </div>
 
 <div class="modal fade" id="filter-modal" tabindex="-1" aria-labelledby="filter-modal-label" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-md-down">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg modal-fullscreen-md-down">
         <div class="modal-content">
             <div class="modal-body mx-5 mt-4 mb-3">
                 <form role="form" method="GET">
-                    <div class="row mb-3">
+                    <div class="row">
                         <div class="col-12 d-grid gap-3">
                             <h3 class="mb-3">{% translate "Filter" %}</h3>
-                            <div class="row mb-5 gap-3">
-                                <div class="col-6">
+                            <div class="row gap-3">
+                                <div class="col-10">
                                     {% bootstrap_form filter_form %}
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <button type="submit" class="btn btn-accent px-3 mt-3">
+                    <button type="submit" class="btn btn-accent px-3 mt-2">
                         {% translate "Apply" %}
                     </button>
                 </form>
