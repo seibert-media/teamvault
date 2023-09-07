@@ -340,8 +340,8 @@ class Secret(HashIDModel):
             if shares.exists():
                 return AccessPermissionTypes.TEMPORARILY_ALLOWED
 
-            if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
-                return AccessPermissionTypes.SUPERUSER_ALLOWED
+        if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
 
