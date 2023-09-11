@@ -16,7 +16,10 @@ gunicorn = "*"
 hashids = "*"
 psycopg2 = "*"
 pytz = "*"
+requests = "*"
 social-auth-app-django = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
 
-[dev-packages]
+# Required for building and publishing
+build = "*"
+twine = "*"
