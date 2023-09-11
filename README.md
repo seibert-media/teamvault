@@ -4,7 +4,7 @@ TeamVault is an open-source web-based shared password manager for behind-the-fir
 
 ## Installation
 
-	apt-get install libffi-dev libldap2-dev libpq-dev libsasl2-dev python3.6-dev postgresql-contrib
+	apt-get install libffi-dev libldap2-dev libpq-dev libsasl2-dev python3.X-dev postgresql-contrib
 	pip install teamvault
 	teamvault setup
 	vim /etc/teamvault.conf
@@ -47,9 +47,12 @@ Now create a virtual environment to install and configure TeamVault in:
 
 Now open http://localhost:8000
 
-## Make a new release
-1. Change version in ```setup.py``` & commit your changes.
-2. Run ```python setup.py check``` and fix any errors
-3. Run ```python setup.py sdist``` to create a new package
-4. Upload package to PyPI
-5. Add a new GitHub release
+## Release process
+1. Install the "build" and "twine" packages via pip
+2. Bump the version in ```teamvault/__version__.py```
+3. Update CHANGELOG.md with the new version and current date
+4. Make a release commit with the changes made above
+5. Push the commit
+6. Run ```./build.sh``` to create a new package
+7. Sign and push the artifacts to PyPI (```twine upload -s dist/*```)
+8. Add a new GitHub release

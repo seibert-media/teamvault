@@ -9,8 +9,8 @@ from sys import argv
 import django
 from django.core.management import execute_from_command_line, get_commands
 
-from . import VERSION_STRING
-from .apps.settings.config import create_default_config, UnconfiguredSettingsError
+from teamvault.__version__ import __version__
+from teamvault.apps.settings.config import create_default_config, UnconfiguredSettingsError
 
 
 def build_parser():
@@ -18,7 +18,7 @@ def build_parser():
     parser.add_argument(
         "--version",
         action='version',
-        version=VERSION_STRING,
+        version=__version__,
     )
     subparsers = parser.add_subparsers(
         title=_("subcommands"),

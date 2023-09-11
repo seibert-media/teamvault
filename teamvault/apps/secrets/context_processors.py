@@ -1,5 +1,5 @@
-from ... import VERSION_STRING
+from teamvault.__version__ import __version__
 
 
 def version(request):
-    return {'version': VERSION_STRING}
+    return {'version': __version__}

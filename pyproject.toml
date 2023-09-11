@@ -1,0 +1,67 @@
+[build-system]
+requires = ["setuptools >= 68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "teamvault"
+description = "Keep your passwords behind the firewall"
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [{ name = "//SEIBERT/MEDIA GmbH" }]
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+    "Natural Language :: English",
+    "Operating System :: POSIX :: Linux",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Office/Business",
+    "Topic :: Security",
+]
+dynamic = ["version"]
+keywords = ["password", "safe", "manager", "sharing"]
+dependencies = [
+    "cryptography==41.0.2",
+    "django-auth-ldap==4.3.0",
+    "django-bootstrap5==23.3",
+    "django-filter==23.2",
+    "django-htmx==1.16.0",
+    "django-webpack-loader==2.0.1",
+    "django==4.2.3",
+    "djangorestframework==3.14.0",
+    "gunicorn==20.1.0",
+    "hashids==1.3.1",
+    "psycopg2==2.9.6",
+    "pytz==2023.3",
+    "requests",
+    "social-auth-app-django==5.2.0",
+    "whitenoise[brotli]==6.5.0",
+]
+
+[project.scripts]
+teamvault = "teamvault.cli:main"
+
+[project.urls]
+Source = "https://github.com/seibert-media/teamvault"
+
+[tool.setuptools.dynamic]
+version = { attr = "teamvault.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+exclude = ["node_modules"]
+
+[tool.black]
+line-length = 119
+target-versions = ["py37", "py38", "py39", "py310", "py311"]
+
+[tool.isort]
+profile = "black"
+line_length = 119
+skip = "migrations"
