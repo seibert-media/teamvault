@@ -24,7 +24,7 @@
 
     function refreshTooltips() {
         let tooltipTriggerList = htmx.findAll('[data-bs-toggle="tooltip"]');
-        [...tooltipTriggerList].map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl, tooltipOptions));
+        [...tooltipTriggerList].map(tooltipTriggerEl => bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl, tooltipOptions));
     }
 
     document.addEventListener('htmx:load', () => {
