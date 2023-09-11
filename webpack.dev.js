@@ -19,4 +19,9 @@ module.exports = merge(common, {
       "Access-Control-Allow-Origin": "*",
     }
   },
+
+  // Temporary fix until https://github.com/twbs/bootstrap/pull/39030 is merged
+  ignoreWarnings: [{
+    'message': /Deprecation Passing percentage units to the global abs/,
+  }]
 });
