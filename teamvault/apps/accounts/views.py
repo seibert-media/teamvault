@@ -7,10 +7,10 @@ from django.shortcuts import get_object_or_404
 from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
-from django.views.generic import DetailView, ListView, UpdateView
+from django.views.generic import DetailView, ListView, UpdateView, CreateView
 
-from .forms import UserProfileForm
-from .models import UserProfile as UserProfileModel
+from .forms import UserProfileForm, UserTokenForm
+from .models import UserProfile as UserProfileModel, UserToken
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 from ..secrets.models import Secret, SecretRevision
@@ -32,6 +32,29 @@ class UserProfile(UpdateView):
 
 
 user_settings = login_required(UserProfile.as_view())
+
+
+class UserTokens(CreateView):
+    context_object_name = 'tokens'
+    form_class = UserTokenForm
+    model = UserToken
+    success_url = reverse_lazy('accounts.user-tokens')
+    template_name = "accounts/user_tokens.html"
+
+    def get_queryset(self):
+        return self.request.user.tokens.all().order_by('-last_used', '-created')
+
+    def get_context_data(self, **kwargs):
+        return super().get_context_data(**{self.context_object_name: self.get_queryset()})
+
+    def form_valid(self, form):
+        obj = form.save(commit=False)
+        obj.user = self.request.user
+        obj.save()
+        return HttpResponseRedirect(self.success_url)
+
+
+user_tokens = login_required(UserTokens.as_view())
 
 
 class UserList(ListView):

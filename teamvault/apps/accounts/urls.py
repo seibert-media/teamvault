@@ -36,6 +36,11 @@ urlpatterns = (
         name='accounts.user-deactivate',
     ),
     path(
+        'api-tokens/',
+        views.user_tokens,
+        name='accounts.user-tokens',
+    ),
+    path(
         'settings/',
         views.user_settings,
         name='accounts.user-settings',

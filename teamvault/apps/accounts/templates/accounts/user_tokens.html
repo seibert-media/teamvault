@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+{% block title %}{% translate "API Tokens" %}{% endblock %}
+{% block content %}
+    <div class="container-xxl">
+        <div class="row justify-content-between mb-3">
+            <div class="col">
+                <h2>{% translate "API Tokens" %}</h2>
+            </div>
+            <div class="col text-end">
+                <button class="btn btn-accent" data-bs-toggle="modal" data-bs-target="#add-token-modal">
+                    <i class="fa fa-fw fa-plus"></i> {% translate "Create" %}
+                </button>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body m-3 me-1 py-1">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead class="fs-5">
+                        <tr>
+                            <td>{% translate "Keys" %}</td>
+                            <td>{% translate "Write" %}</td>
+                            <td>{% translate "Created" %}</td>
+                            <td>{% translate "Expires" %}</td>
+                            <td>{% translate "Last used" %}</td>
+                            <td class="text-center">{% translate "Actions" %}</td>
+                        </tr>
+                        </thead>
+                        <tbody class="small">
+                        {% for token in tokens %}
+                            <tr class="align-middle">
+                                <td>
+                                    <div class="row">
+                                        <span>{{ token.label }}</span>
+                                    </div>
+                                    <div class="row">
+                                        <div class="small text-nowrap">
+                                            <div class="key-details text-secondary">
+                                                <span class="key">{{ token.key }}</span>
+                                                <i class="ps-1 fa fa-fw fa-copy fa-sm text-success-emphasis copy-key"
+                                                   style="cursor: pointer"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    {% if token.write_enabled %}
+                                        <i class="fa fa-fw fa-check text-success"></i>
+                                    {% else %}
+                                        <i class="fa fa-fw fa-times text-danger"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span data-bs-toggle="tooltip" data-bs-placement="top"
+                                          title="{{ token.created|date:"Y-m-d H:i:s e" }}">
+                                        {{ token.created|timesince }} {% translate "ago" %}
+                                    </span>
+                                </td>
+                                {% if token.expires %}
+                                    <td>
+                                        <span data-bs-toggle="tooltip" data-bs-placement="top"
+                                              title="{{ token.expires|date:"Y-m-d H:i:s e" }}">
+                                            {% translate "in" %} {{ token.expires|timeuntil }}
+                                        </span>
+                                    </td>
+                                {% else %}
+                                    <td>{% translate "Never" %}</td>
+                                {% endif %}
+                                {% if token.last_used %}
+                                    <td>
+                                        <span data-bs-toggle="tooltip" data-bs-placement="top"
+                                              title="{{ token.last_used|date:"Y-m-d H:i:s e" }}">
+                                            {{ token.last_used|timesince }} {% translate "ago" %}
+                                        </span>
+                                    </td>
+                                {% else %}
+                                    <td>{% translate "Never" %}</td>
+                                {% endif %}
+                                <td class="text-end text-center">
+                                    <button class="btn btn-outline-light text-dark border border-0 py-1 my-1"
+                                            data-bs-toggle="dropdown" type="button">
+                                        <i class="fa fa-lg fa-ellipsis opacity-100"></i>
+                                    </button>
+                                    <div class="dropdown-menu dropdown-menu-end">
+                                        <!-- EDIT TODO -->
+                                        <a class="dropdown-item" href="#">
+                                            {% translate "Edit" %}
+                                        </a>
+                                        <!-- DELETE TODO -->
+                                        <a class="dropdown-item" href="#">
+                                            {% translate "Delete" %}
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="add-token-modal" tabindex="-1" aria-labelledby="add-token-modal-label"
+         aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-body mx-5 mt-4 mb-3">
+                    <form role="form" method="POST">
+                        {% csrf_token %}
+                        <div class="row justify-content-between mb-4">
+                            <div class="col">
+                                <h3>{% translate "Create API Token" %}</h3>
+                            </div>
+                            <div class="col">
+                                <button type="button" class="btn-close fa-pull-right" data-bs-dismiss="modal"
+                                        aria-label="Close">
+                                </button>
+                            </div>
+                        </div>
+                        <div class="row gap-3">
+                            {% bootstrap_form form %}
+                        </div>
+                        <button type="submit" class="btn btn-outline-accent px-3 mt-2">
+                            {% translate "Create token" %}
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block additionalJS %}
+    <script>
+        let keys = document.querySelectorAll('.key-details');
+        [...keys].map(key => {
+            key.querySelector('.copy-key').addEventListener('click', () => {
+                const keyText = key.querySelector('.key').textContent
+                navigator.clipboard.writeText(keyText);
+                notyf.success("{% translate "Key has been copied to your clipboard." %}");
+            })
+        });
+    </script>
+{% endblock %}
