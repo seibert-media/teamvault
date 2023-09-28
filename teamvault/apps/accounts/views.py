@@ -119,4 +119,4 @@ def user_activate(request, username, deactivate=False):
             category=AuditLogCategoryChoices.USER_ACTIVATED,
             user=user,
         )
-    return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'uid': user.id}))
+    return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': user.username}))
