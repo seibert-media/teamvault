@@ -408,7 +408,7 @@ class SecretShareList(CreateView):
     @cached_property
     def user_shares(self):
         if not self.queryset:
-            self.queryset = self.get_queryset()
+            self.queryset = self.get_queryset().with_expiry_state()
         return self.queryset.users()
 
     def get_queryset(self):
