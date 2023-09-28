@@ -260,6 +260,7 @@ def secret_delete(request, hashid):
         )
         secret.status = Secret.STATUS_DELETED
         secret.save()
+        messages.success(request, _('Successfully deleted secret'))
         return HttpResponseRedirect(
             reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
     else:
@@ -288,8 +289,8 @@ def secret_restore(request, hashid):
         )
         secret.status = Secret.STATUS_OK
         secret.save()
-        return HttpResponseRedirect(
-            reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
+        messages.success(request, _('Successfully restored secret'))
+        return redirect(secret.get_absolute_url())
     else:
         return render(request, "secrets/secret_restore.html", {'secret': secret})
 
