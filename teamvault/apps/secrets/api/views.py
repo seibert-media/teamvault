@@ -66,7 +66,7 @@ class SecretRevisionDetail(generics.RetrieveAPIView):
 
     def get_object(self):
         obj = get_object_or_404(SecretRevision, hashid=self.kwargs['hashid'])
-        obj.secret.check_access(self.request.user)
+        obj.secret.check_read_access(self.request.user)
         return obj
 
 
@@ -140,7 +140,7 @@ class SecretShareDetail(generics.RetrieveDestroyAPIView):
 @api_view(['GET'])
 def data_get(request, hashid):
     secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
-    secret_revision.secret.check_access(request.user)
+    secret_revision.secret.check_read_access(request.user)
     data = secret_revision.secret.get_data(request.user)
     if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:
         return Response({'password': data})

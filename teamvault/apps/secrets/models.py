@@ -174,7 +174,7 @@ class Secret(HashIDModel):
     def __repr__(self):
         return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
 
-    def check_access(self, user):
+    def check_read_access(self, user):
         if not self.is_visible_to_user(user):
             raise Http404
 
@@ -182,6 +182,15 @@ class Secret(HashIDModel):
         if not readable:
             raise PermissionDenied()
         return readable
+
+    def check_share_access(self, user):
+        if not self.is_visible_to_user(user):
+            raise Http404
+
+        shareable = self.is_shareable_by_user(user)
+        if not shareable:
+            raise PermissionDenied()
+        return shareable
 
     @property
     def full_url(self):

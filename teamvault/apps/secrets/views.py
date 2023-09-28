@@ -7,7 +7,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404, render, redirect
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
 from django.utils.functional import cached_property
@@ -229,7 +229,7 @@ class SecretEdit(UpdateView):
 
     def get_object(self, queryset=None):
         secret = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
-        secret.check_access(self.request.user)
+        secret.check_read_access(self.request.user)
         return secret
 
     def get_template_names(self):
@@ -242,7 +242,7 @@ secret_edit = login_required(SecretEdit.as_view())
 @login_required
 def secret_delete(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    secret.check_access(request.user)
+    secret.check_read_access(request.user)
     if request.method == 'POST':
         log(_(
             "{user} deleted '{name}' ({id}:{revision})"
@@ -270,7 +270,7 @@ def secret_delete(request, hashid):
 @user_passes_test(lambda u: u.is_superuser)
 def secret_restore(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    secret.check_access(request.user)
+    secret.check_share_access(request.user)
     if request.method == 'POST':
         log(_(
             "{user} restored '{name}' ({id}:{revision})"
@@ -300,7 +300,7 @@ def secret_download(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
     if secret.content_type != Secret.CONTENT_FILE:
         raise Http404
-    secret.check_access(request.user)
+    secret.check_read_access(request.user)
 
     response = HttpResponse(secret.get_data(request.user))
     response['Content-Disposition'] = \
