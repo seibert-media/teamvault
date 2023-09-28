@@ -44,7 +44,7 @@
             </div>
             <div class="col-md-4 mt-md-0 mt-3">
                 <div class="mb-3">
-                    <a href="{% url 'audit.log' %}?user={{ user.username }}" class="btn btn-lg btn-light">
+                    <a href="{% url 'audit.log' %}?actor={{ user.username }}" class="btn btn-lg btn-light">
                         <i class="fa fa-address-card fa-fw" aria-hidden="true"></i> {% trans "View audit log" %}
                     </a>
                 </div>
