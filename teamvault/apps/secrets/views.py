@@ -338,9 +338,6 @@ class SecretDetail(DetailView):
                 context['su_access'] = True
             if secret.status == Secret.STATUS_NEEDS_CHANGING and password_update_alert_activated:
                 context['needs_changing'] = True
-                context['password_update_alert_activated'] = CONFIG['teamvault']['password_update_alert_activated']
-            else:
-                context['password_update_alert_activated'] = CONFIG['teamvault']['password_update_alert_activated']
         return context
 
     def get_object(self, queryset=None):
