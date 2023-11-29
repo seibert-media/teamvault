@@ -275,8 +275,10 @@ def configure_max_file_size(config, settings):
 
 
 def configure_password_update_alert(config, settings):
+    equivalent_true_values = ["1", "true", "enabled", "yes"]
+
     password_update_alert_value = get_from_config(config, "teamvault", "password_update_alert_activated", False)
-    settings.PASSWORD_UPDATE_ALERT_ACTIVATED = str(password_update_alert_value).lower() == "true"
+    settings.PASSWORD_UPDATE_ALERT_ACTIVATED = str(password_update_alert_value).lower() in equivalent_true_values
 
 
 def configure_session(config):
