@@ -23,9 +23,7 @@ from .models import AccessPermissionTypes, Secret, SharedSecretData
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ..settings.config import get_config
-
-CONFIG = get_config()
+from django.conf import settings
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
@@ -329,18 +327,14 @@ class SecretDetail(DetailView):
             'api.secret-revision_data',
             kwargs={'hashid': secret.current_revision.hashid},
         )
-        password_update_alert_activated = CONFIG['teamvault'].getboolean('password_update_alert_activated', fallback=False)
 
-        context['needs_changing'] = False
+        context['show_password_update_alert'] = False
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
             if context['readable'] == AccessPermissionTypes.SUPERUSER_ALLOWED:
                 context['su_access'] = True
-            if secret.status == Secret.STATUS_NEEDS_CHANGING and password_update_alert_activated:
-                context['needs_changing'] = True
-                context['password_update_alert_activated'] = CONFIG['teamvault']['password_update_alert_activated']
-            else:
-                context['password_update_alert_activated'] = CONFIG['teamvault']['password_update_alert_activated']
+            if secret.status == Secret.STATUS_NEEDS_CHANGING and settings.PASSWORD_UPDATE_ALERT_ACTIVATED:
+                context['show_password_update_alert'] = True
         return context
 
     def get_object(self, queryset=None):
