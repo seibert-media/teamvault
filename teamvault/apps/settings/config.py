@@ -274,6 +274,13 @@ def configure_max_file_size(config, settings):
     settings.FILE_UPLOAD_MAX_MEMORY_SIZE = settings.TEAMVAULT_MAX_FILE_SIZE
 
 
+def configure_password_update_alert(config, settings):
+    equivalent_true_values = ["1", "true", "enabled", "yes"]
+
+    password_update_alert_value = get_from_config(config, "teamvault", "password_update_alert_activated", False)
+    settings.PASSWORD_UPDATE_ALERT_ACTIVATED = str(password_update_alert_value).lower() in equivalent_true_values
+
+
 def configure_session(config):
     """
     Called directly from the Django settings module.

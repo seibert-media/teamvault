@@ -23,6 +23,7 @@ from .models import AccessPermissionTypes, Secret, SharedSecretData
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
+from django.conf import settings
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
@@ -327,13 +328,13 @@ class SecretDetail(DetailView):
             kwargs={'hashid': secret.current_revision.hashid},
         )
 
-        context['needs_changing'] = False
+        context['show_password_update_alert'] = False
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
             if context['readable'] == AccessPermissionTypes.SUPERUSER_ALLOWED:
                 context['su_access'] = True
-            if secret.status == Secret.STATUS_NEEDS_CHANGING:
-                context['needs_changing'] = True
+            if secret.status == Secret.STATUS_NEEDS_CHANGING and settings.PASSWORD_UPDATE_ALERT_ACTIVATED:
+                context['show_password_update_alert'] = True
         return context
 
     def get_object(self, queryset=None):
