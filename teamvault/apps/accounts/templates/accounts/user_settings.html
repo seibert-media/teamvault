@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% load django_bootstrap5 %}
+{% load i18n %}
+{% block title %}{% translate "Settings" %}{% endblock %}
+{% block content %}
+    <div class="container-xxl">
+        <h2 class="mb-3">{% translate "Settings" %}</h2>
+        <div class="card">
+            <div class="card-body mx-5 mt-4 mb-3">
+                <form role="form" method="POST" action="{% url "accounts.user-settings" %}">
+                    {% csrf_token %}
+                    <div class="row mb-3">
+                        <div class="col-11">
+                            {% bootstrap_field form.default_sharing_groups label_class="h5" %}
+                        </div>
+                    </div>
+                    {% bootstrap_field form.hide_deleted_secrets checkbox_style="switch" %}
+                    <button type="submit" class="btn btn-outline-accent px-3 mt-3">
+                        {% translate "Save" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+{% block additionalJS %}
+    <script>
+        $('#id_default_sharing_groups').select2()
+    </script>
+{% endblock %}

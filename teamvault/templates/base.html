@@ -1,38 +1,81 @@
 {% load i18n %}
+{% load render_bundle from webpack_loader %}
+{% load webpack_static from webpack_loader %}
+
 {% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<title>{% trans "TeamVault" %} &middot; {% block "title" %}{% endblock %}</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 
-	<link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
+    <title>{% trans "TeamVault" %} &middot; {% block title %}{% endblock %}</title>
 
-	<link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400" rel="stylesheet">
-	<link href="https://fonts.googleapis.com/css?family=Ubuntu+Mono" rel="stylesheet">
+    <link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
 
-	<link href="{% static 'bundled/font-awesome/css/font-awesome.min.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet">
-	<link href="{% static 'css/bootstrap-overrides.css' %}" rel="stylesheet">
-	<link href="{% static 'css/typeaheadjs.css' %}" rel="stylesheet">
-	<link href="{% static 'css/base.css' %}" rel="stylesheet">
-	<link href="{% static 'css/login.css' %}" rel="stylesheet">
-	<link href="{% static 'css/secrets.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/select2/select2.css' %}" rel="stylesheet">
-	<link href="{% static 'bundled/select2-bootstrap/select2-bootstrap.css' %}" rel="stylesheet">
+    {% render_bundle 'main' %}
 
-	<script src="{% static 'bundled/jquery/dist/jquery.min.js' %}"></script>
-	<script src="{% static 'bundled/underscore/underscore-min.js' %}"></script>
-	<script src="{% static 'bundled/bootstrap/dist/js/bootstrap.min.js' %}"></script>
-	<script src="{% static 'bundled/card/dist/jquery.card.js' %}"></script>
-	<script src="{% static 'bundled/password-generator/dist/password-generator.min.js' %}"></script>
-	<script src="{% static 'bundled/select2/select2.min.js' %}"></script>
-	<script src="{% static 'bundled/typeahead.js/dist/typeahead.bundle.min.js' %}"></script>
-	<script src="{% static 'bundled/clipboard/dist/clipboard.min.js' %}"></script>
-	<script src="{% static 'bundled/zxcvbn/dist/zxcvbn.js' %}"></script>
+    {% block head %}{% endblock %}
 </head>
-<body>
-	<div class="background"></div>
-	{% block "global_content" %}{% endblock %}
+
+<body data-bs-no-jquery>
+<script>
+    const tooltipOptions = {container: 'body', html: true, trigger: 'hover'}
+
+    function refreshTooltips() {
+        let tooltipTriggerList = htmx.findAll('[data-bs-toggle="tooltip"]');
+        [...tooltipTriggerList].map(tooltipTriggerEl => bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl, tooltipOptions));
+    }
+
+    document.addEventListener('htmx:load', () => {
+        refreshTooltips()
+    })
+</script>
+<script>
+    function triggerNotyf(type, message) {
+        window.notyf.open({
+            dismissible: true,
+            message: message,
+            type: type,
+        })
+    }
+
+    {% if messages %}
+        document.addEventListener('DOMContentLoaded', () => {
+            {% for message in messages %}
+                triggerNotyf("{{ message.level_tag }}", "{{ message }}");
+            {% endfor %}
+        })
+    {% endif %}
+
+    // listener for htmx message events
+    document.addEventListener('django.contrib.messages', event => {
+        // event.detail contains the message_list we defined in our htmx_message_middleware
+        for (const msg of event['detail']['message_list']) {
+            triggerNotyf(msg.level, msg.message)
+        }
+    });
+</script>
+
+<div class="background"></div>
+
+{% block navbar %}{% include 'base_nav.html' %}{% endblock %}
+
+{% block super_content %}
+    <div class="container-fluid mt-5">
+        {% block content %}{% endblock %}
+    </div>
+{% endblock %}
+
+{% block footer %}
+    <div class="container p-5">
+        <footer class="text-center text-muted">
+            TeamVault {{ version }} &nbsp; &middot; &nbsp; &copy; 2014-2023 //SEIBERT/MEDIA GmbH
+        </footer>
+    </div>
+{% endblock %}
+
+{% block additionalJS %}
+{% endblock %}
 </body>
 </html>

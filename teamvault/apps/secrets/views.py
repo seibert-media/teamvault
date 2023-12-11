@@ -2,27 +2,29 @@ from json import dumps, loads
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
+from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
-from django.core.exceptions import PermissionDenied
-from django.http import HttpResponse, HttpResponseRedirect, Http404
-from django.shortcuts import get_object_or_404, render
+from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonResponse
+from django.shortcuts import get_object_or_404, render, redirect
+from django.template.defaultfilters import pluralize
 from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.utils.functional import cached_property
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
-import django_filters
+from django_htmx.http import trigger_client_event
 
+from .filters import SecretFilter
+from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
+from .models import AccessPermissionTypes, Secret, SharedSecretData
+from ..accounts.models import UserProfile
 from ..audit.auditlog import log
-from .forms import CCForm, FileForm, PasswordForm
-from .models import AccessRequest, Secret
+from ..audit.models import AuditLogCategoryChoices
+from django.conf import settings
 
-ACCESS_STR_IDS = {
-    'ACCESS_POLICY_ANY': str(Secret.ACCESS_POLICY_ANY),
-    'ACCESS_POLICY_REQUEST': str(Secret.ACCESS_POLICY_REQUEST),
-    'ACCESS_POLICY_HIDDEN': str(Secret.ACCESS_POLICY_HIDDEN),
-}
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
     'file': FileForm,
@@ -42,106 +44,6 @@ CONTENT_TYPE_NAMES = {
 }
 
 
-def _patch_post_data(POST, fields):
-    """
-    Select2 passes in selected values as CSV instead of as a real
-    multiple value field, so we need to split them before any validation
-    takes place.
-    """
-    POST = POST.copy()
-    for csv_field in fields:
-        if POST.getlist(csv_field) == ['']:
-            del POST[csv_field]
-        else:
-            POST.setlist(
-                csv_field,
-                POST.getlist(csv_field)[0].split(","),
-            )
-    return POST
-
-
-@login_required
-def access_request_create(request, hashid):
-    secret = Secret.objects.get(hashid=hashid)
-    if not secret.is_visible_to_user(request.user):
-        raise Http404
-    try:
-        AccessRequest.objects.get(
-            requester=request.user,
-            secret=secret,
-            status=AccessRequest.STATUS_PENDING,
-        )
-    except AccessRequest.DoesNotExist:
-        if request.method == 'POST' and not secret.is_readable_by_user(request.user):
-            access_request = AccessRequest()
-            access_request.reason_request = request.POST['reason']
-            access_request.requester = request.user
-            access_request.secret = secret
-            access_request.save()
-            access_request.assign_reviewers()
-    return HttpResponseRedirect(secret.get_absolute_url())
-
-
-@login_required
-@require_http_methods(["POST"])
-def access_request_review(request, hashid, action):
-    access_request = get_object_or_404(
-        AccessRequest,
-        hashid=hashid,
-        status=AccessRequest.STATUS_PENDING,
-    )
-    if not request.user.is_superuser and request.user not in access_request.reviewers.all():
-        raise PermissionDenied()
-
-    if action == 'allow':
-        access_request.approve(request.user)
-    else:
-        access_request.reject(request.user, reason=request.POST.get('reason', None))
-
-    return HttpResponseRedirect(reverse('secrets.access_request-list'))
-
-
-class AccessRequestDetail(DetailView):
-    context_object_name = 'access_request'
-    model = AccessRequest
-    slug_field = 'hashid'
-    slug_url_kwarg = 'hashid'
-    template_name = "secrets/accessrequest_detail.html"
-
-    def get_object(self):
-        if self.request.user.is_superuser:
-            return get_object_or_404(
-                AccessRequest,
-                hashid=self.kwargs['hashid'],
-                status=AccessRequest.STATUS_PENDING,
-            )
-        else:
-            return get_object_or_404(
-                AccessRequest,
-                hashid=self.kwargs['hashid'],
-                reviewers=self.request.user,
-                status=AccessRequest.STATUS_PENDING,
-            )
-access_request_detail = login_required(AccessRequestDetail.as_view())
-
-
-class AccessRequestList(ListView):
-    context_object_name = 'access_requests'
-    template_name = "secrets/accessrequests_list.html"
-
-    def get_context_data(self, **kwargs):
-        queryset = self.get_queryset()
-        context = super(AccessRequestList, self).get_context_data(**kwargs)
-        context['reviewable'] = queryset.exclude(requester=self.request.user)
-        context['pending_review'] = queryset.filter(requester=self.request.user)
-        return context
-
-    def get_queryset(self):
-        queryset = AccessRequest.get_all_readable_by_user(self.request.user)
-        return queryset.filter(status=AccessRequest.STATUS_PENDING)
-access_request_list = login_required(AccessRequestList.as_view())
-
-
 class Dashboard(TemplateView):
     template_name = "secrets/dashboard.html"
 
@@ -152,6 +54,8 @@ class Dashboard(TemplateView):
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
         context['recently_used_secrets'] = Secret.get_most_recently_used_for_user(self.request.user)
         return context
+
+
 dashboard = login_required(Dashboard.as_view())
 
 
@@ -163,6 +67,8 @@ class OpenSearch(TemplateView):
         context = super(OpenSearch, self).get_context_data(**kwargs)
         context['base_url'] = settings.BASE_URL
         return context
+
+
 opensearch = OpenSearch.as_view()
 
 
@@ -175,20 +81,10 @@ class SecretAdd(CreateView):
         secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
         secret.created_by = self.request.user
 
-        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
-                     'username'):
+        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url', 'username'):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        for attr in ('notify_on_access_request',):
-            if form.cleaned_data[attr]:
-                getattr(secret, attr).add(self.request.user)
-            else:
-                getattr(secret, attr).remove(self.request.user)
-
-        for attr in ('allowed_groups', 'allowed_users'):
-            getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
             plaintext_data = form.cleaned_data['password']
@@ -207,6 +103,23 @@ class SecretAdd(CreateView):
             })
         secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
 
+        # Create share objects
+        secret.share_data.create(user=self.request.user)
+        if form.cleaned_data['access_policy'] != Secret.ACCESS_POLICY_ANY:
+            try:
+                secret.share_data.bulk_create(
+                    [
+                        SharedSecretData(
+                            grant_description=form.cleaned_data['grant_description'],
+                            granted_by=self.request.user,
+                            group=group,
+                            secret=secret,
+                        )
+                        for group in form.cleaned_data['shared_groups_on_create']
+                    ]
+                )
+            except UserProfile.DoesNotExist:
+                pass
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
@@ -215,24 +128,32 @@ class SecretAdd(CreateView):
             context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError:
             raise Http404
-        context.update(ACCESS_STR_IDS)
         return context
+
+    def get_initial(self):
+        obj, _created = UserProfile.objects.get_or_create(user=self.request.user)
+        return {'shared_groups_on_create': obj.default_sharing_groups.all()}
 
     def get_form_class(self):
         return CONTENT_TYPE_FORMS[self.kwargs['content_type']]
 
-    def get_template_names(self):
-        return "secrets/secret_addedit_{}.html".format(self.kwargs['content_type'])
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=form_class)
+        # handle files with sizes above FILE_UPLOAD_MAX_MEMORY_SIZE setting
+        if (
+                self.content_type == 'file'
+                and self.request.method == 'POST'
+                and not self.request.upload_handlers[0].activated
+        ):
+            form.add_error(
+                f'file', f'File size too big. Allowed file size: {settings.FILE_UPLOAD_MAX_MEMORY_SIZE} bytes'
+            )
+        return form
 
-    def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(
-            request.POST,
-            (
-                'allowed_groups',
-                'allowed_users',
-            ),
-        )
-        return super(SecretAdd, self).post(request, *args, **kwargs)
+    def get_template_names(self):
+        return "secrets/addedit_content/{}.html".format(self.kwargs['content_type'])
+
+
 secret_add = login_required(SecretAdd.as_view())
 
 
@@ -244,20 +165,10 @@ class SecretEdit(UpdateView):
     def form_valid(self, form):
         secret = self.object
 
-        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url',
-                     'username'):
+        for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url', 'username'):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        for attr in ('notify_on_access_request',):
-            if form.cleaned_data[attr]:
-                getattr(secret, attr).add(self.request.user)
-            else:
-                getattr(secret, attr).remove(self.request.user)
-
-        for attr in ('allowed_groups', 'allowed_users'):
-            getattr(secret, attr).set(form.cleaned_data[attr])
 
         if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
             plaintext_data = form.cleaned_data['password']
@@ -285,11 +196,23 @@ class SecretEdit(UpdateView):
     def get_context_data(self, **kwargs):
         context = super(SecretEdit, self).get_context_data(**kwargs)
         context['pretty_content_type'] = self.object.get_content_type_display()
-        context.update(ACCESS_STR_IDS)
         return context
 
     def get_form_class(self):
         return CONTENT_TYPE_FORMS[CONTENT_TYPE_IDENTIFIERS[self.object.content_type]]
+
+    def get_form(self, form_class=None):
+        form = super().get_form(form_class=form_class)
+        # handle files with sizes above FILE_UPLOAD_MAX_MEMORY_SIZE setting
+        if (
+                self.content_type == 'file'
+                and self.request.method == 'POST'
+                and not self.request.upload_handlers[0].activated
+        ):
+            form.add_error(
+                f'file', f'File size too big. Allowed file size: {settings.FILE_UPLOAD_MAX_MEMORY_SIZE} bytes'
+            )
+        return form
 
     def get_initial(self):
         if self.object.content_type == Secret.CONTENT_CC:
@@ -307,45 +230,40 @@ class SecretEdit(UpdateView):
 
     def get_object(self, queryset=None):
         secret = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
-        secret.check_access(self.request.user)
+        secret.check_read_access(self.request.user)
         return secret
 
     def get_template_names(self):
-        return "secrets/secret_addedit_{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
+        return "secrets/addedit_content/{}.html".format(CONTENT_TYPE_IDENTIFIERS[self.object.content_type])
 
-    def post(self, request, *args, **kwargs):
-        request.POST = _patch_post_data(
-            request.POST,
-            (
-                'allowed_groups',
-                'allowed_users',
-            ),
-        )
-        return super(SecretEdit, self).post(request, *args, **kwargs)
+
 secret_edit = login_required(SecretEdit.as_view())
 
 
 @login_required
 def secret_delete(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    secret.check_access(request.user)
+    secret.check_read_access(request.user)
     if request.method == 'POST':
         log(_(
-                "{user} deleted '{name}' ({id}:{revision})"
-            ).format(
-                id=secret.id,
-                name=secret.name,
-                revision=secret.current_revision.id,
-                user=request.user.username,
-            ),
+            "{user} deleted '{name}' ({id}:{revision})"
+        ).format(
+            id=secret.id,
+            name=secret.name,
+            revision=secret.current_revision.id,
+            user=request.user.username,
+        ),
             actor=request.user,
+            category=AuditLogCategoryChoices.SECRET_CHANGED,
             level='info',
             secret=secret,
             secret_revision=secret.current_revision,
         )
         secret.status = Secret.STATUS_DELETED
         secret.save()
-        return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
+        messages.success(request, _('Successfully deleted secret'))
+        return HttpResponseRedirect(
+            reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
     else:
         return render(request, "secrets/secret_delete.html", {'secret': secret})
 
@@ -354,24 +272,26 @@ def secret_delete(request, hashid):
 @user_passes_test(lambda u: u.is_superuser)
 def secret_restore(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    secret.check_access(request.user)
+    secret.check_share_access(request.user)
     if request.method == 'POST':
         log(_(
-                "{user} restore '{name}' ({id}:{revision})"
-            ).format(
-                id=secret.id,
-                name=secret.name,
-                revision=secret.current_revision.id,
-                user=request.user.username,
-            ),
+            "{user} restored '{name}' ({id}:{revision})"
+        ).format(
+            id=secret.id,
+            name=secret.name,
+            revision=secret.current_revision.id,
+            user=request.user.username,
+        ),
             actor=request.user,
+            category=AuditLogCategoryChoices.SECRET_CHANGED,
             level='info',
             secret=secret,
             secret_revision=secret.current_revision,
         )
         secret.status = Secret.STATUS_OK
         secret.save()
-        return HttpResponseRedirect(reverse('secrets.secret-list') + "?" + urlencode([("search", secret.name.encode('utf-8'))]))
+        messages.success(request, _('Successfully restored secret'))
+        return redirect(secret.get_absolute_url())
     else:
         return render(request, "secrets/secret_restore.html", {'secret': secret})
 
@@ -382,7 +302,7 @@ def secret_download(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
     if secret.content_type != Secret.CONTENT_FILE:
         raise Http404
-    secret.check_access(request.user)
+    secret.check_read_access(request.user)
 
     response = HttpResponse(secret.get_data(request.user))
     response['Content-Disposition'] = \
@@ -396,61 +316,63 @@ class SecretDetail(DetailView):
     model = Secret
     slug_field = 'hashid'
     slug_url_kwarg = 'hashid'
-    template_name = "secrets/secret_detail.html"
 
     def get_context_data(self, **kwargs):
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['readable'] = secret.is_readable_by_user(self.request.user)
+        context['shareable'] = secret.is_shareable_by_user(self.request.user)
         context['secret_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'hashid': secret.current_revision.hashid},
         )
+
+        context['show_password_update_alert'] = False
         if context['readable']:
             context['placeholder'] = secret.current_revision.length * "•"
-        else:
-            try:
-                context['access_request'] = AccessRequest.objects.get(
-                    secret=secret,
-                    status=AccessRequest.STATUS_PENDING,
-                    requester=self.request.user,
-                )
-            except AccessRequest.DoesNotExist:
-                context['access_request'] = None
+            if context['readable'] == AccessPermissionTypes.SUPERUSER_ALLOWED:
+                context['su_access'] = True
+            if secret.status == Secret.STATUS_NEEDS_CHANGING and settings.PASSWORD_UPDATE_ALERT_ACTIVATED:
+                context['show_password_update_alert'] = True
         return context
 
-    def get_object(self):
+    def get_object(self, queryset=None):
         object = super(SecretDetail, self).get_object()
         if not object.is_visible_to_user(self.request.user):
             raise Http404
         return object
+
+    def get_template_names(self):
+        content_type = CONTENT_TYPE_IDENTIFIERS[self.object.content_type]
+        return f'secrets/detail_content/{content_type}.html'
+
+
 secret_detail = login_required(SecretDetail.as_view())
 
 
-class SecretFilter(django_filters.FilterSet):
-    order = django_filters.OrderingFilter(
-        choices=(
-            ('last_changed', _("Last changed")),
-            ('last_read', _("Last read")),
-        ),
-    )
-
-    class Meta:
-        model = Secret
-        fields = {
-            'last_changed': ['gt', 'gte', 'lt', 'lte'],
-            'last_read': ['gt', 'gte', 'lt', 'lte'],
-        }
+@login_required
+@require_http_methods(["GET"])
+def secret_metadata(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
+    share_data = secret.share_data.with_expiry_state().filter(is_expired=False)
+    context = {
+        'allowed_groups': share_data.groups(),
+        'allowed_users': share_data.users(),
+        'secret': secret,
+    }
+    return render(request, context=context, template_name='secrets/detail_content/meta.html')
 
 
 class SecretList(ListView):
     context_object_name = 'secrets'
+    filter = None
     paginate_by = 25
     template_name = "secrets/secret_list.html"
 
     def get_context_data(self, **kwargs):
         context = super(SecretList, self).get_context_data(**kwargs)
+        context['filter'] = self.filter
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
         return context
 
@@ -459,35 +381,187 @@ class SecretList(ListView):
             queryset = Secret.get_search_results(self.request.user, self.request.GET['search'])
         else:
             queryset = Secret.get_all_visible_to_user(self.request.user)
-        filtered = SecretFilter(self.request.GET, queryset)
-        return filtered.qs
+
+        try:
+            if '3' not in self.request.GET.get('status', []) and self.request.user.profile.hide_deleted_secrets:
+                queryset = queryset.exclude(status=Secret.STATUS_DELETED)
+        except ObjectDoesNotExist:
+            pass
+
+        self.filter = SecretFilter(self.request.GET, queryset)
+        return self.filter.qs
+
+
 secret_list = login_required(SecretList.as_view())
+
+
+class SecretShareList(CreateView):
+    form_class = SecretShareForm
+    slug_field = 'secret__hashid'
+    slug_url_kwarg = 'hashid'
+    template_name = 'secrets/share_content/share_list_modal.html'
+
+    @cached_property
+    def group_shares(self):
+        if not self.queryset:
+            self.queryset = self.get_queryset().with_expiry_state()
+        return self.queryset.groups()
+
+    @cached_property
+    def user_shares(self):
+        if not self.queryset:
+            self.queryset = self.get_queryset().with_expiry_state()
+        return self.queryset.users()
+
+    def get_queryset(self):
+        return SharedSecretData.objects.filter(
+            secret__hashid=self.kwargs[self.slug_url_kwarg]
+        ).prefetch_related('secret', 'user', 'group')
+
+    def get_context_data(self, *, object_list=None, **kwargs):
+        secret = get_object_or_404(Secret, hashid=self.kwargs[self.slug_url_kwarg])
+
+        context = {
+            'secret': secret,
+            'shareable': secret.is_shareable_by_user(self.request.user),
+            'shares': {
+                'groups': self.group_shares,
+                'users': self.user_shares,
+            },
+        }
+        return super().get_context_data(**context)
+
+    def form_valid(self, form):
+        secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
+        if not secret.is_shareable_by_user(self.request.user):
+            raise PermissionDenied()
+
+        obj = form.save(commit=False)
+        obj.granted_by = self.request.user
+        obj.secret = secret
+        obj.save()
+
+        log(
+            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
+                shared_entity_type=obj.shared_entity_type,
+                name=obj.shared_entity_name,
+                user=self.request.user.username,
+                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
+            ),
+            actor=self.request.user,
+            category=AuditLogCategoryChoices.SECRET_SHARED,
+            level='warning',
+            secret=secret,
+        )
+
+        messages.success(self.request, _('Shared secret with {}'.format(obj.shared_entity_name)))
+
+        # Clear cache
+        delattr(self, 'group_shares')
+        delattr(self, 'user_shares')
+
+        context = self.get_context_data()
+        context.update({
+            'form': self.get_form_class()(),  # create a new blank form
+            'show_object': {
+                'id': obj.shared_entity.id,
+                'type': 'group' if form.cleaned_data['group'] else 'user',
+            }
+        })
+        response = self.render_to_response(context=context)
+        trigger_client_event(response, 'refreshMetadata')
+        return response
+
+    def get_form_class(self):
+        form_class = super(SecretShareList, self).get_form_class()
+
+        # Exclude groups and users which the secret was already shared with
+        form_class.base_fields['group'].queryset = Group.objects.all().exclude(
+            name__in=self.group_shares.values_list('group__name', flat=True)
+        ).order_by('name')
+        form_class.base_fields['user'].queryset = User.objects.filter(is_active=True).order_by('username').exclude(
+            username__in=self.user_shares.values_list('user__username', flat=True)
+        ).order_by('username')
+        return form_class
+
+
+secret_share_list = login_required(SecretShareList.as_view())
+
+
+@login_required
+@require_http_methods(['DELETE'])
+def secret_share_delete(request, hashid, share_id):
+    share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
+    if not share_data.secret.is_shareable_by_user(request.user):
+        raise PermissionDenied()
+
+    secret = share_data.secret
+    entity_type = share_data.shared_entity_type
+    entity_name = share_data.shared_entity_name
+    share_data.delete()
+
+    messages.success(
+        request,
+        _('Successfully removed {} from allowed {}'.format(
+            share_data.shared_entity_name, pluralize(share_data.shared_entity_type)
+        ))
+    )
+    log(
+        _("{user} removed access of {shared_entity_type} '{name}'").format(
+            shared_entity_type=entity_type,
+            name=entity_name,
+            user=request.user.username,
+        ),
+        actor=request.user,
+        category=AuditLogCategoryChoices.SECRET_SHARED,
+        level='warning',
+        secret=secret,
+    )
+    response = HttpResponse(status=200)
+    trigger_client_event(response, 'refreshMetadata')
+    trigger_client_event(response, 'refreshShareData')
+    return response
 
 
 @login_required
 @require_http_methods(["GET"])
 def secret_search(request):
     search_term = request.GET['q']
-    search_result = []
-    filtered_secrets = list(Secret.get_search_results(request.user, search_term, limit=10))
+    search_limit = request.GET.get('limit', 15)
+    search_results = []
+    raw_results = Secret.get_search_results(request.user, search_term)
+    filtered_secrets = list(raw_results[:search_limit])
     unreadable_secrets = filtered_secrets[:]
     sorted_secrets = []
 
     # sort readable passwords to top...
     for secret in filtered_secrets:
+        metadata = ''
+        icon = "lock-open"
         if secret.is_readable_by_user(request.user):
-            sorted_secrets.append((secret, "unlock"))
+            if secret.content_type == secret.CONTENT_PASSWORD:
+                icon = "user"
+                metadata = getattr(secret, 'username')
+            elif secret.content_type == secret.CONTENT_FILE:
+                icon = "file"
+                metadata = getattr(secret, 'filename')
+            elif secret.content_type == secret.CONTENT_CC:
+                icon = "credit-card"
+                metadata = getattr(secret, 'description')
+            sorted_secrets.append((secret, icon, metadata))
             unreadable_secrets.remove(secret)
 
     # and others to the bottom
     for secret in unreadable_secrets:
-        sorted_secrets.append((secret, "lock"))
+        sorted_secrets.append((secret, "lock", ''))
 
-    for secret, icon in sorted_secrets:
-        search_result.append({
-            'name': secret.name,
-            'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
+    for secret, icon, metadata in sorted_secrets:
+        search_results.append({
             'icon': icon,
+            'meta': metadata,
+            'name': secret.name,
+            'locked': True if icon == 'lock' else False,
+            'hashid': secret.hashid,
+            'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
         })
-
-    return HttpResponse(dumps(search_result), content_type="application/json")
+    return JsonResponse({'count': raw_results.count(), 'results': search_results})

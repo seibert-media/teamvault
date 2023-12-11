@@ -1,5 +1,24 @@
 from django.conf import settings
 from django.db import models
+from django.db.models import TextChoices
+from django.utils.translation import gettext_lazy as _
+
+
+class AuditLogCategoryChoices(TextChoices):
+    SECRET_READ = 'secret_read', _('secret_read')
+    SECRET_ELEVATED_SUPERUSER_READ = 'secret_elevated_superuser_read', _('secret_elevated_superuser_read')
+    SECRET_PERMISSION_VIOLATION = 'secret_permission_violation', _('secret_permission_violation')
+    SECRET_CHANGED = 'secret_changed', _('secret_changed')
+    SECRET_NEEDS_CHANGING_REMINDER = 'secret_needs_changing_reminder', _('secret_needs_changing_reminder')
+    SECRET_SHARED = 'secret_shared', _('secret_shared')
+    SECRET_SUPERUSER_SHARED = 'secret_superuser_shared', _('secret_superuser_shared')
+    SECRET_ACCESS_REQUEST = 'secret_legacy_access_requests', _('secret_legacy_access_requests')
+
+    USER_ACTIVATED = 'user_activated', _('user_activated')
+    USER_DEACTIVATED = 'user_deactivated', _('user_deactivated')
+    USER_SETTINGS_CHANGED = 'user_settings_changed', _('user_settings_changed')
+
+    MISCELLANEOUS = 'miscellaneous', _('miscellaneous')
 
 
 class LogEntry(models.Model):
@@ -9,6 +28,11 @@ class LogEntry(models.Model):
         blank=True,
         null=True,
         related_name='logged_actions',
+    )
+    category = models.CharField(
+        choices=AuditLogCategoryChoices.choices,
+        default=AuditLogCategoryChoices.MISCELLANEOUS,
+        max_length=64,
     )
     group = models.ForeignKey(
         'auth.Group',

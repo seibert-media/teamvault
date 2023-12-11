@@ -1,5 +1,5 @@
 from base64 import b64decode, b64encode
-from configparser import SafeConfigParser
+from configparser import ConfigParser
 from gettext import gettext as _
 from hashlib import sha1
 from os import environ, umask
@@ -9,7 +9,15 @@ from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
+from django.core.exceptions import ImproperlyConfigured
 from django.db.utils import ProgrammingError
+
+
+class UnconfiguredSettingsError(Exception):
+    def __str__(self):
+        return _(
+            "missing config file at {} (set env var TEAMVAULT_CONFIG_FILE to use a different path)"
+        ).format(environ['TEAMVAULT_CONFIG_FILE'])
 
 
 def configure_base_url(config, settings):
@@ -58,6 +66,21 @@ def configure_hashid(config):
         int(get_from_config(config, "hashid", "min_length", "6")),
         b64decode(config.get("hashid", "salt").encode()).decode('utf-8'),
     )
+
+
+def configure_password_generator(config, settings):
+    settings.PASSWORD_LENGTH = int(get_from_config(config, "password_generator", "length", 16))
+    settings.PASSWORD_DIGITS = int(get_from_config(config, "password_generator", "digits", 2))
+    settings.PASSWORD_UPPER = int(get_from_config(config, "password_generator", "upper", 2))
+    settings.PASSWORD_LOWER = int(get_from_config(config, "password_generator", "lower", 2))
+    settings.PASSWORD_SPECIAL = int(get_from_config(config, "password_generator", "special", 2))
+
+    char_sum = settings.PASSWORD_SPECIAL + settings.PASSWORD_LOWER + settings.PASSWORD_UPPER + settings.PASSWORD_DIGITS
+
+    if char_sum > settings.PASSWORD_LENGTH:
+        raise ImproperlyConfigured(_(
+            'The sum of characters defined in password settings exceeds the value set in password_length setting'
+        ))
 
 
 def configure_google_auth(config, settings):
@@ -116,6 +139,12 @@ def configure_google_auth(config, settings):
         domain.strip() for domain in
         config.get("auth_google", "allowed_domains").split(",")
     ]
+
+    settings.GOOGLE_AUTH_AVATARS = get_from_config(config, "auth_google", "use_avatars", True)
+    if settings.GOOGLE_AUTH_AVATARS:
+        settings.SOCIAL_AUTH_PIPELINE += ('teamvault.apps.accounts.utils.save_google_avatar',)
+    else:
+        settings.SOCIAL_AUTH_PIPELINE += ('teamvault.apps.accounts.utils.save_gravatar',)
 
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config.get("auth_google", "oauth2_key")
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config.get("auth_google", "oauth2_secret")
@@ -201,7 +230,7 @@ def configure_logging(config):
     level = 'INFO'
 
     if get_from_config(config, "teamvault", "insecure_debug_mode", "no").lower() in \
-        ("1", "enabled", "true", "yes"):
+            ("1", "enabled", "true", "yes"):
         level = 'DEBUG'
 
     LOGGING = {
@@ -222,7 +251,7 @@ def configure_logging(config):
         'loggers': {
             'django': {
                 'handlers': ['console'],
-                'level': level,
+                'level': 'INFO',
             },
             'django_auth_ldap': {
                 'handlers': ['console'],
@@ -245,6 +274,13 @@ def configure_max_file_size(config, settings):
     settings.FILE_UPLOAD_MAX_MEMORY_SIZE = settings.TEAMVAULT_MAX_FILE_SIZE
 
 
+def configure_password_update_alert(config, settings):
+    equivalent_true_values = ["1", "true", "enabled", "yes"]
+
+    password_update_alert_value = get_from_config(config, "teamvault", "password_update_alert_activated", False)
+    settings.PASSWORD_UPDATE_ALERT_ACTIVATED = str(password_update_alert_value).lower() in equivalent_true_values
+
+
 def configure_session(config):
     """
     Called directly from the Django settings module.
@@ -259,6 +295,12 @@ def configure_session(config):
     secure = secure.lower() in ("1", "enabled", "true", "yes")
 
     return age, expire, secure
+
+
+def configure_superuser_reads(config, settings):
+    settings.ALLOW_SUPERUSER_READS = False
+    if get_from_config(config, "teamvault", "allow_superuser_reads", "False").lower() in ("1", "enabled", "true", "yes"):
+        settings.ALLOW_SUPERUSER_READS = True
 
 
 def configure_teamvault_secret_key(config, settings):
@@ -291,6 +333,15 @@ def configure_time_zone(config):
     return get_from_config(config, "teamvault", "time_zone", "UTC")
 
 
+def configure_whitenoise(settings):
+    if not settings.DEBUG:
+        settings.STORAGES = {
+            'staticfiles': {
+                'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+            }
+        }
+
+
 def create_default_config(filename):
     if exists(filename):
         raise RuntimeError("not overwriting existing path {}".format(filename))
@@ -310,6 +361,14 @@ session_cookie_age = 3600
 session_expire_at_browser_close = True
 session_cookie_secure = False
 time_zone = UTC
+# allow_superuser_reads = False
+
+#[password_generator]
+#length = 16
+#digits = 2
+#upper = 2
+#lower = 2
+#special = 2
 
 [django]
 # This key has been generated for you, there is no need to change it
@@ -348,6 +407,7 @@ salt = {hashid_salt}
 #allowed_domains = example.com, another.example.com
 #oauth2_key = 123456789.apps.googleusercontent.com
 #oauth2_secret = ******************
+#use_avatars = True
     """.format(
         django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
         hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),
@@ -363,19 +423,14 @@ salt = {hashid_salt}
 
 def get_config():
     if not isfile(environ['TEAMVAULT_CONFIG_FILE']):
-        raise RuntimeError(
-            _("missing config file at {} "
-              "(set env var TEAMVAULT_CONFIG_FILE to use a different path)").format(
-                environ['TEAMVAULT_CONFIG_FILE'],
-            )
-        )
+        raise UnconfiguredSettingsError()
 
     with open(environ['TEAMVAULT_CONFIG_FILE']) as f:
-        # SafeConfigParser.read() will not complain if it can't read the
+        # ConfigParser.read() will not complain if it can't read the
         # file, so we need to read it once ourselves to get a proper IOError
         f.read()
 
-    config = SafeConfigParser()
+    config = ConfigParser()
     config.read(environ['TEAMVAULT_CONFIG_FILE'])
     return config
 

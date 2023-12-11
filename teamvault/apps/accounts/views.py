@@ -1,76 +1,74 @@
-from json import dumps
-
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth.decorators import user_passes_test
-from django.contrib.auth.models import User, Group
+from django.contrib import messages
+from django.contrib.auth.decorators import user_passes_test, login_required
+from django.contrib.auth.models import User
 from django.db import transaction
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponseRedirect
 from django.shortcuts import get_object_or_404
-from django.urls import reverse
-from django.utils.translation import ugettext_lazy as _
+from django.urls import reverse, reverse_lazy
+from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
-from django.views.generic import DetailView, ListView
+from django.views.generic import DetailView, ListView, UpdateView
 
+from .forms import UserProfileForm
+from .models import UserProfile as UserProfileModel
 from ..audit.auditlog import log
+from ..audit.models import AuditLogCategoryChoices
 from ..secrets.models import Secret, SecretRevision
 
 
-@login_required
-def search_groups(request):
-    search_term = request.GET['q']
-    search_result = {'results': []}
-    groups = Group.objects.filter(name__icontains=search_term)
-    for group in groups:
-        search_result['results'].append({'id': group.id, 'text': group.name})
-    return HttpResponse(dumps(search_result), content_type="application/json")
+class UserProfile(UpdateView):
+    form_class = UserProfileForm
+    model = UserProfileModel
+    template_name = "accounts/user_settings.html"
+    success_url = reverse_lazy('accounts.user-settings')
+
+    def get_object(self, *args, **kwargs):
+        return UserProfileModel.objects.get_or_create(user=self.request.user)[0]
+
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        messages.success(self.request, _('Successfully updated settings.'))
+        return response
 
 
-@login_required
-def search_users(request):
-    search_term = request.GET['q']
-    search_result = {'results': []}
-    users = User.objects.filter(
-        is_active=True,
-        username__icontains=search_term,
-    )
-    for user in users:
-        search_result['results'].append({'id': user.id, 'text': user.username})
-    return HttpResponse(dumps(search_result), content_type="application/json")
+user_settings = login_required(UserProfile.as_view())
 
 
 class UserList(ListView):
     context_object_name = 'users'
-    paginate_by = 100
+    paginate_by = 25
     template_name = "accounts/user_list.html"
 
     def get_queryset(self):
         return User.objects.order_by('username')
+
+
 users = user_passes_test(lambda u: u.is_superuser)(UserList.as_view())
 
 
 class UserDetail(DetailView):
     context_object_name = 'user'
-    template_name = "accounts/user_detail.html"
+    model = User
+    slug_field = 'username'
+    slug_url_kwarg = 'username'
+    template_name = 'accounts/user_detail.html'
 
-    def get_object(self):
-        return get_object_or_404(
-            User,
-            id=self.kwargs['uid'],
-        )
+
 user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())
 
 
 @user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["POST"])
-def user_activate(request, uid, deactivate=False):
+def user_activate(request, username, deactivate=False):
     user = get_object_or_404(
         User,
-        id=uid,
+        username=username,
         is_active=deactivate,
     )
     user.is_active = not deactivate
     user.save()
     if deactivate:
+        user.groups.clear()
         accessed_revs = SecretRevision.objects.filter(
             accessed_by=user,
         ).exclude(
@@ -94,7 +92,13 @@ def user_activate(request, uid, deactivate=False):
                     secret=secret.name,
                     user=user.username,
                 )
-                log(msg, actor=request.user, secret=secret, user=user)
+                log(
+                    msg,
+                    actor=request.user,
+                    category=AuditLogCategoryChoices.USER_DEACTIVATED,
+                    secret=secret,
+                    user=user,
+                )
         log(
             _("{actor} deactivated {user}, {secrets} secrets marked for changing").format(
                 actor=request.user.username,
@@ -102,6 +106,7 @@ def user_activate(request, uid, deactivate=False):
                 secrets=len(secrets),
             ),
             actor=request.user,
+            category=AuditLogCategoryChoices.USER_DEACTIVATED,
             user=user,
         )
     else:
@@ -111,6 +116,7 @@ def user_activate(request, uid, deactivate=False):
                 user=user.username,
             ),
             actor=request.user,
+            category=AuditLogCategoryChoices.USER_ACTIVATED,
             user=user,
         )
-    return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'uid': user.id}))
+    return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': user.username}))

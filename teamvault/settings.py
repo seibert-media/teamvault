@@ -5,21 +5,25 @@ from .apps.settings.config import (
     configure_django_secret_key,
     configure_hashid,
     configure_logging,
+    configure_password_generator,
     configure_session,
     configure_time_zone,
     get_config,
+    get_from_config,
 )
 
 CONFIG = get_config()
 PROJECT_ROOT = realpath(dirname(__file__))
 
-### Django
+# Django
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
 DATABASES = configure_database(CONFIG)
+
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
 FILE_UPLOAD_HANDLERS = (
     "teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler",
@@ -36,13 +40,14 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'django_gravatar',
+    'django_bootstrap5',
     'rest_framework',
     'social_django',
     'teamvault.apps.accounts.AccountsConfig',
     'teamvault.apps.audit.AuditConfig',
     'teamvault.apps.secrets.SecretsConfig',
     'teamvault.apps.settings.SettingsConfig',
+    'webpack_loader',
 ]
 
 LANGUAGE_CODE = "en-us"
@@ -65,6 +70,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'teamvault.middleware.htmx_message_middleware',
 ]
 
 ROOT_URLCONF = "teamvault.urls"
@@ -86,16 +92,15 @@ STATICFILES_DIRS = (
     join(PROJECT_ROOT, "static"),
 )
 
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [join(PROJECT_ROOT, "templates"),],
+        'DIRS': [join(PROJECT_ROOT, "templates"), ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
                 'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
                 'django.template.context_processors.csrf',
                 'django.template.context_processors.debug',
                 'django.template.context_processors.i18n',
@@ -103,7 +108,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.template.context_processors.static',
                 'teamvault.apps.accounts.context_processors.google_auth_enabled',
-                'teamvault.apps.secrets.context_processors.access_request_count',
                 'teamvault.apps.secrets.context_processors.version',
             ],
         },
@@ -115,16 +119,13 @@ TEST_RUNNER = 'django.test.runner.DiscoverRunner'
 TIME_ZONE = configure_time_zone(CONFIG)
 
 USE_I18N = False
-USE_L10N = True
 USE_THOUSAND_SEPARATOR = False
 USE_TZ = True
 
-### Hashid
-
+# HashID
 HASHID_MIN_LENGTH, HASHID_SALT = configure_hashid(CONFIG)
 
-### REST Framework
-
+# Django REST Framework
 REST_FRAMEWORK = {
     'DEFAULT_MODEL_SERIALIZER_CLASS':
         'rest_framework.serializers.HyperlinkedModelSerializer',
@@ -135,6 +136,14 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 25,
 }
 
-### Social Auth
+# Social Auth
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
 
-SOCIAL_AUTH_POSTGRES_JSONFIELD = True
+# Django-Bootstrap5
+BOOTSTRAP5 = {
+    'horizontal_field_class': 'col-xl-8',
+    'horizontal_label_class': 'col-xl-2',
+    'required_css_class': 'required',
+    'success_css_class': 'is-valid',
+    'error_css_class': 'is-invalid',
+}

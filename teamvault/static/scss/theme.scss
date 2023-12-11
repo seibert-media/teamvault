@@ -1,0 +1,39 @@
+@import "bootstrap/scss/functions";
+@import "bootstrap/scss/variables";
+
+// disable RFS for more consistent styling
+$enable-rfs: false;
+
+$accent: #f8592c;
+$danger: #ff3333;
+$custom-dark: #2f2d35;
+$info: #289cdd;
+$main: #1a1c22;
+$success: #13ca5c;
+$tertiary: #424242;
+$warning: #ffbf3d;
+
+$custom-colors: (
+        "accent": $accent,
+        "danger": $danger,
+        "custom-dark": $custom-dark,
+        "info": $info,
+        "success": $success,
+        "tertiary": $tertiary,
+        "warning": $warning,
+);
+
+// Merge the maps
+$theme-colors: map-merge($theme-colors, $custom-colors);
+
+$alert-border-width: 0;
+$badge-font-weight: 400;
+@import "bootstrap/scss/bootstrap";
+
+:root {
+  --tv-color-secondary-txt: rgb(130, 129, 136);
+}
+
+.fs-xs {
+  font-size: 0.75rem;
+}

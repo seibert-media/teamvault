@@ -1,102 +1,123 @@
-{% extends "base_nav.html" %}
+{% extends "base.html" %}
 {% load i18n %}
-{% block "title" %}{% trans "Manage user" %}{% endblock %}
-{% block "content" %}
-<div class="modal fade" id="modal-deactivate" tabindex="-1" role="dialog" aria-labelledby="modal-deactivate-label" aria-hidden="true">
-	<div class="modal-dialog">
-		<div class="modal-content">
-			<div class="modal-header">
-				<button type="button" class="close" data-dismiss="modal">
-					<span aria-hidden="true">&times;</span><span class="sr-only">{% trans "Close" %}</span>
-				</button>
-				<h3 class="modal-title" id="modal-deactivate-label">{% trans "Confirm deactivation" %}</h3>
-			</div>
-			<form role="form" method="POST" action="{% url "accounts.user-deactivate" uid=user.id %}">
-				{% csrf_token %}
-				<div class="modal-body">
-					<div class="alert alert-info">
-						<i class="fa fa-info-circle"></i>&nbsp;
-						{% trans "Any secrets accessed by this user will be marked for changing." %}
-					</div>
-				</div>
-				<div class="modal-footer">
-					<button type="submit" class="btn btn-lg btn-danger"><i class="fa fa-lock"></i> &nbsp; {% trans "Deactivate" %}</button>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
-<div class="modal fade" id="modal-reactivate" tabindex="-1" role="dialog" aria-labelledby="modal-deactivate-label" aria-hidden="true">
-	<div class="modal-dialog">
-		<div class="modal-content">
-			<div class="modal-header">
-				<button type="button" class="close" data-dismiss="modal">
-					<span aria-hidden="true">&times;</span><span class="sr-only">{% trans "Close" %}</span>
-				</button>
-				<h3 class="modal-title" id="modal-deactivate-label">{% trans "Confirm reactivation" %}</h3>
-			</div>
-			<form role="form" method="POST" action="{% url "accounts.user-reactivate" uid=user.id %}">
-				{% csrf_token %}
-				<div class="modal-body">
-				</div>
-				<div class="modal-footer">
-					<button type="submit" class="btn btn-lg btn-success"><i class="fa fa-unlock"></i> &nbsp; {% trans "Reactivate" %}</button>
-				</div>
-			</form>
-		</div>
-	</div>
-</div>
+{% block title %}{% trans "Manage user" %}{% endblock %}
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>
+                    {% trans "Manage user" %}
+                </h1>
+                <br><br>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <table class="table table-hover">
+                        <tr>
+                            <td>{% trans "Username" %}</td>
+                            <td>{{ user.username }}</td>
+                        </tr>
+                        <tr>
+                            <td>{% trans "Email" %}</td>
+                            <td>{{ user.email }}</td>
+                        </tr>
+                        <tr>
+                            <td>{% trans "Created" %}</td>
+                            <td>{{ user.date_joined|date:"Y-m-d H:i:s e" }}</td>
+                        </tr>
+                        <tr>
+                            <td>{% trans "Last login" %}</td>
+                            <td>{{ user.last_login|date:"Y-m-d H:i:s e" }}</td>
+                        </tr>
+                        <tr>
+                            <td>{% trans "Groups" %}</td>
+                            <td>
+                                {% for group in user.groups.all|dictsort:"name" %}
+                                    {{ group.name }}<br>
+                                {% endfor %}
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="col-md-4 mt-md-0 mt-3">
+                <div class="mb-3">
+                    <a href="{% url 'audit.log' %}?actor={{ user.username }}" class="btn btn-lg btn-light">
+                        <i class="fa fa-address-card fa-fw" aria-hidden="true"></i> {% trans "View audit log" %}
+                    </a>
+                </div>
+                <div>
+                    {% if user.is_active %}
+                        <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal"
+                                data-bs-target="#modal-deactivate"><i
+                                class="fa fa-lock fa-fw"></i> {% trans "Deactivate" %}</button>
+                    {% else %}
+                        <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal"
+                                data-bs-target="#modal-reactivate"><i
+                                class="fa fa-lock-open fa-fw"></i> {% trans "Reactivate" %}</button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 
-<div class="container">
-	<div class="row">
-		<div class="col-md-12">
-			<h1>
-				{% trans "Manage user" %}
-			</h1>
-			<br><br>
-		</div>
-	</div>
-	<div class="row">
-		<div class="col-md-8">
-			<div class="panel panel-default">
-				<table class="table table-hover">
-					<tr>
-						<td>{% trans "Username" %}</td>
-						<td>{{ user.username }}</td>
-					</tr>
-					<tr>
-						<td>{% trans "Email" %}</td>
-						<td>{{ user.email }}</td>
-					</tr>
-					<tr>
-						<td>{% trans "Created" %}</td>
-						<td>{{ user.date_joined|date:"Y-m-d H:i:s e" }}</td>
-					</tr>
-					<tr>
-						<td>{% trans "Last login" %}</td>
-						<td>{{ user.last_login|date:"Y-m-d H:i:s e" }}</td>
-					</tr>
-					<tr>
-						<td>{% trans "Groups" %}</td>
-						<td>
-							{% for group in user.groups.all|dictsort:"name" %}
-							{{ group.name }}<br>
-							{% endfor %}
-						</td>
-					</tr>
-				</table>
-			</div>
-		</div>
-		<div class="col-md-4">
-			<a href="{% url 'audit.log' %}?user={{ user.username }}" class="btn btn-lg btn-default">
-				<i class="fa fa-address-card-o" aria-hidden="true"></i>&nbsp; {% trans "View audit log" %}
-			</a><br><br>
-			{% if user.is_active %}
-			<button type="button" class="btn btn-danger btn-lg" data-toggle="modal" data-target="#modal-deactivate"><i class="fa fa-lock"></i>&nbsp; {% trans "Deactivate" %}</button>
-			{% else %}
-			<button type="button" class="btn btn-success btn-lg" data-toggle="modal" data-target="#modal-reactivate"><i class="fa fa-unlock"></i>&nbsp; {% trans "Reactivate" %}</button>
-			{% endif %}
-		</div>
-	</div>
-</div>
+    {% if user.is_active %}
+        <div class="modal fade" id="modal-deactivate" tabindex="-1" role="dialog"
+             aria-labelledby="modal-deactivate-label"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="modal-deactivate-label">{% trans "Confirm deactivation" %}</h4>
+                        <button type="button" class="btn-close fa-pull-right" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <form role="form" method="POST"
+                          action="{% url "accounts.user-deactivate" username=user.username %}">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                <i class="fa fa-info-circle fa-fw"></i> {% trans "Any secrets accessed by this user will be marked for changing." %}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn btn-danger">
+                                <i class="fa fa-lock fa-fw"></i> {% trans "Deactivate" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="modal fade" id="modal-reactivate" tabindex="-1" role="dialog"
+             aria-labelledby="modal-reactivate-label"
+             aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h4 class="modal-title" id="modal-reactivate-label">{% trans "Confirm reactivation" %}</h4>
+                        <button type="button" class="btn-close fa-pull-right" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                    </div>
+                    <form role="form" method="POST"
+                          action="{% url "accounts.user-reactivate" username=user.username %}">
+                        {% csrf_token %}
+                        <div class="modal-body">
+                            <div class="alert alert-info">
+                                {% trans "Do you really wish to reactivate this user?" %}
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn btn-success">
+                                <i class="fa fa-lock-open fa-fw"></i> {% trans "Reactivate" %}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    {% endif %}
 {% endblock %}

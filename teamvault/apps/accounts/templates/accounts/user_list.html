@@ -1,69 +1,52 @@
-{% extends "base_nav.html" %}
+{% extends "base.html" %}
 {% load i18n %}
 {% load smart_pagination %}
-{% block "title" %}{% trans "Users" %}{% endblock %}
-{% block "content" %}
-<div class="container">
-	<div class="row">
-		<div class="col-md-12">
-			<h1>
-			{% trans "Users" %}
-			</h1>
-			<br><br>
-			<div class="panel panel-default">
-				<table class="table table-hover">
-				<tr>
-				<th>{% trans "Username" %}</th>
-				<th>{% trans "Email" %}</th>
-				<th>{% trans "Active" %}</th>
-				<th>{% trans "Admin" %}</th>
-				<th>{% trans "Last login" %}</th>
-				</tr>
-					{% for user in users %}
-					<tr>
-					<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.username }}</a></td>
-					<td><a href="{% url 'accounts.user-detail' uid=user.id %}">{{ user.email }}</a></td>
-					<td>
-						{% if user.is_active %}
-						<span class="text-success-bright"><i class="fa fa-check"></i></span>
-						{% else %}
-						<span class="text-danger-bright"><i class="fa fa-times"></i></span>
-						{% endif %}
-					</td>
-					<td>
-						{% if user.is_superuser %}
-						<span class="text-success-bright"><i class="fa fa-check"></i></span>
-						{% else %}
-						<span class="text-danger-bright"><i class="fa fa-times"></i></span>
-						{% endif %}
-					</td>
-					<td>{{ user.last_login|date:"Y-m-d H:i:s e" }}</td>
-					</tr>
-					{% endfor %}
-				</table>
-			</div>
-			{% if is_paginated %}
-			<ul class="pagination">
-				{% if page_obj.has_previous %}
-				<li><a href="?page={{ page_obj.previous_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}"><i class="fa fa-chevron-left"></i></a></li>
-				{% else %}
-				<li class="disabled"><a href="#"><i class="fa fa-chevron-left"></i></a></li>
-				{% endif %}
-				{% for page in paginator.page_range|smart_pages:page_obj.number %}
-				{% if page_obj.number == page %}
-				<li class="active"><a href="#">{{ page }} <span class="sr-only">(current)</span></a></li>
-				{% else %}
-				<li><a href="?page={{ page }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}">{{ page }}</a></li>
-				{% endif %}
-				{% endfor %}
-				{% if page_obj.has_next %}
-				<li><a href="?page={{ page_obj.next_page_number }}{% if user_search_term %}&search={{ user_search_term_url }}{% endif %}"><i class="fa fa-chevron-right"></i></a></li>
-				{% else %}
-				<li class="disabled"><a href="#"><i class="fa fa-chevron-right"></i></a></li>
-				{% endif %}
-			</ul>
-			{% endif %}
-		</div>
-	</div>
-</div>
+{% block title %}{% trans "Users" %}{% endblock %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <h1>
+                {% trans "Users" %}
+            </h1>
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table class="table table-hover">
+                        <tr>
+                            <th>{% trans "Username" %}</th>
+                            <th>{% trans "Email" %}</th>
+                            <th>{% trans "Active" %}</th>
+                            <th>{% trans "Admin" %}</th>
+                            <th>{% trans "Last login" %}</th>
+                        </tr>
+                        {% for user in users %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'accounts.user-detail' username=user.username %}">{{ user.username }}</a>
+                                </td>
+                                <td>
+                                    <a href="{% url 'accounts.user-detail' username=user.username %}">{{ user.email }}</a>
+                                </td>
+                                <td>
+                                    {% if user.is_active %}
+                                        <i class="fa fa-check text-success-bright"></i>
+                                    {% else %}
+                                        <i class="fa fa-times text-danger-bright"></i>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if user.is_superuser %}
+                                        <i class="fa fa-check text-success-bright"></i>
+                                    {% else %}
+                                        <i class="fa fa-times text-danger-bright"></i>
+                                    {% endif %}
+                                </td>
+                                <td>{{ user.last_login|date:"Y-m-d H:i:s e" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+            {% include "pagination.html" %}
+        </div>
+    </div>
 {% endblock %}

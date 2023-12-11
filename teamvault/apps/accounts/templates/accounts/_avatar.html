@@ -1,0 +1,26 @@
+{% if user.profile.avatar %}
+    <img src="data: image/jpeg; base64,{{ user.profile.avatar.tobytes.decode }}" alt="{{ user.username }} avatar"
+         class="avatar {{ classes }}"
+            {% if tooltip_title %}
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         data-bs-title="{{ tooltip_title }}"
+            {% endif %}
+    >
+{% elif user.first_name and user.last_name %}
+    <svg xmlns="http://www.w3.org/2000/svg" class="avatar {{ classes }}"
+            {% if tooltip_title %}
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         data-bs-title="{{ tooltip_title }}"
+            {% endif %}
+    >
+        <text x="50%" y="50%" dy=".1em" fill="#fff" text-anchor="middle" dominant-baseline="middle">
+            {{ user.first_name.0.capitalize }}{{ user.last_name.0.capitalize }}
+        </text>
+    </svg>
+{% else %}
+    <div class="rounded-circle border border-5" style="background-color: var(--bs-border-color)">
+        <i class="fa fa-user-secret fa-lg fa-fw lh-1"></i>
+    </div>
+{% endif %}

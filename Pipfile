@@ -7,14 +7,19 @@ name = "pypi"
 cryptography = "*"
 django = "*"
 django-auth-ldap = "*"
-"django-gravatar2" = "*"
+django-bootstrap5 = "*"
+django-filter = "*"
+django-htmx = "*"
+django-webpack-loader = "*"
 djangorestframework = "*"
 gunicorn = "*"
 hashids = "*"
-"psycopg2" = "*"
+psycopg2 = "*"
 pytz = "*"
-django-filter = "*"
-whitenoise = {extras = ["brotli"], version = "*"}
+requests = "*"
 social-auth-app-django = "*"
+whitenoise = {extras = ["brotli"], version = "*"}
 
-[dev-packages]
+# Required for building and publishing
+build = "*"
+twine = "*"

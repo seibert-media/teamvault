@@ -1,2 +1,7 @@
-/teamvault.cfg
-/teamvault/static_collected
+*.egg-info/
+build/
+dist/
+teamvault.cfg
+teamvault/static/bundled/
+teamvault/static_collected/
+teamvault/webpack-stats.json

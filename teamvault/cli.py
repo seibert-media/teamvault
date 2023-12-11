@@ -9,8 +9,8 @@ from sys import argv
 import django
 from django.core.management import execute_from_command_line, get_commands
 
-from . import VERSION_STRING
-from .apps.settings.config import create_default_config
+from teamvault.__version__ import __version__
+from teamvault.apps.settings.config import create_default_config, UnconfiguredSettingsError
 
 
 def build_parser():
@@ -18,7 +18,7 @@ def build_parser():
     parser.add_argument(
         "--version",
         action='version',
-        version=VERSION_STRING,
+        version=__version__,
     )
     subparsers = parser.add_subparsers(
         title=_("subcommands"),
@@ -28,12 +28,20 @@ def build_parser():
     environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
     environ.setdefault("TEAMVAULT_CONFIG_FILE", "/etc/teamvault.cfg")
 
-    django.setup()
-    commands = [k for k in get_commands()]
-
     # teamvault plumbing
+    unconfigured_settings = False
+    try:
+        django.setup()
+    except UnconfiguredSettingsError:
+        unconfigured_settings = True
+
+    commands = [k for k in get_commands()]
+    plumbing_help = f'One of: {",".join(commands)}'
+    if unconfigured_settings:
+        plumbing_help += " - To see all available commands, configure teamvault settings with \"teamvault setup\""
+
     parser_plumbing = subparsers.add_parser("plumbing")
-    parser_plumbing.add_argument('plumbing_command', nargs=REMAINDER, help='one of ' + ', '.join(commands))
+    parser_plumbing.add_argument('plumbing_command', nargs=REMAINDER, help=plumbing_help)
     parser_plumbing.set_defaults(func=plumbing)
 
     # teamvault run

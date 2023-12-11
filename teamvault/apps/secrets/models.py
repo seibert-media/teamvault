@@ -1,7 +1,6 @@
 from datetime import timedelta
 from hashlib import sha256
 from operator import itemgetter
-from random import sample
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -9,18 +8,25 @@ from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
+from django.db.models import BooleanField, Case, Q, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
 from django.urls import reverse
 from django.utils.timezone import now
-from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import gettext_lazy as _
 from hashids import Hashids
 
-from ...utils import send_mail
-from ..audit.auditlog import log
-from ..audit.models import LogEntry
 from .exceptions import PermissionError
+from ..audit.auditlog import log
+from ..audit.models import LogEntry, AuditLogCategoryChoices
+
+
+class AccessPermissionTypes(models.IntegerChoices):
+    NOT_ALLOWED = 0
+    ALLOWED = 1
+    TEMPORARILY_ALLOWED = 2
+    SUPERUSER_ALLOWED = 3
 
 
 def validate_url(value):
@@ -46,12 +52,6 @@ class HashIDModel(models.Model):
             # save the hashid
             super(HashIDModel, self).save(*args, **kwargs)
         if not self.hashid:
-            # We cannot use the same salt for every model because
-            # 1. sequentially create lots of secrets
-            # 2. note the hashid of each secrets
-            # 3. you can now enumerate access requests by using the same
-            #    hashids
-            # it's not a huge deal, but let's avoid it anyway
             hasher = Hashids(
                 min_length=settings.HASHID_MIN_LENGTH,
                 salt=self.HASHID_NAMESPACE + settings.HASHID_SALT,
@@ -63,233 +63,14 @@ class HashIDModel(models.Model):
         return super(HashIDModel, self).save(*args, **kwargs)
 
 
-class AccessRequest(HashIDModel):
-    HASHID_NAMESPACE = "AccessRequest"
-
-    STATUS_PENDING = 1
-    STATUS_REJECTED = 2
-    STATUS_APPROVED = 3
-    STATUS_CHOICES = (
-        (STATUS_PENDING, _("pending")),
-        (STATUS_REJECTED, _("rejected")),
-        (STATUS_APPROVED, _("approved")),
-    )
-
-    closed = models.DateTimeField(
-        blank=True,
-        null=True,
-    )
-    closed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        models.PROTECT,
-        blank=True,
-        null=True,
-        related_name='access_requests_closed',
-    )
-    created = models.DateTimeField(auto_now_add=True)
-    reason_request = models.TextField(
-        blank=True,
-        null=True,
-    )
-    reason_rejected = models.TextField(
-        blank=True,
-        null=True,
-    )
-    requester = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        models.PROTECT,
-        related_name='access_requests_created',
-    )
-    reviewers = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        related_name='access_requests_reviewed',
-    )
-    secret = models.ForeignKey(
-        'Secret',
-        models.PROTECT,
-        related_name='access_requests',
-    )
-    status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_PENDING,
-    )
-
-    class Meta:
-        ordering = ('-created',)
-
-    def __repr__(self):
-        return "<AccessRequest {user}@'{name}' ({id})>".format(
-            id=self.hashid,
-            name=self.secret.name,
-            user=self.requester,
-        )
-
-    @classmethod
-    def get_all_readable_by_user(cls, user):
-        if user.is_superuser:
-            return cls.objects.all()
-        return (
-            cls.objects.filter(requester=user) |
-            cls.objects.filter(reviewers=user)
-        )
-
-    def approve(self, reviewer):
-        if self.status != self.STATUS_PENDING:
-            raise PermissionDenied(_("Can't approve closed access request"))
-
-        # make sure user is still allowed to handle secret, privileges might
-        # have been revoked since the access request was made
-        self.secret.check_access(reviewer)
-
-        log(
-            _("{reviewer} has approved access request #{access_request} for {requester}, "
-              "allowing access to '{secret}'").format(
-                access_request=self.id,
-                requester=self.requester,
-                reviewer=reviewer,
-                secret=self.secret.name,
-            ),
-            actor=reviewer,
-            secret=self.secret,
-            user=self.requester,
-        )
-
-        self.closed = now()
-        self.closed_by = reviewer
-        self.status = self.STATUS_APPROVED
-        self.save()
-
-        self.secret.allowed_users.add(self.requester)
-
-        other_reviewers = list(self.reviewers.all())
-        try:
-            other_reviewers.remove(reviewer)
-        except ValueError:
-            # review by other superuser
-            pass
-
-        send_mail(
-            other_reviewers + [self.requester],
-            _("[TeamVault] Access request for '{}' approved").format(self.secret.name),
-            "secrets/mail_access_request_approved",
-            context={
-                'approved_by': reviewer.username,
-                'base_url': settings.BASE_URL,
-                'secret_name': self.secret.name,
-                'secret_url': self.secret.get_absolute_url(),
-                'username': self.requester.username,
-            },
-            user_from=reviewer,
-        )
-
-    def assign_reviewers(self):
-        candidates = list(self.secret.notify_on_access_request.filter(is_active=True))
-        if len(candidates) < 3:
-            candidates += list(
-                self.secret.allowed_users.order_by('-last_login').filter(is_active=True)[:10]
-            )
-            for group in self.secret.allowed_groups.all():
-                candidates += list(group.user_set.order_by('-last_login').filter(is_active=True)[:3])
-        if len(candidates) < 3:
-            candidates += list(User.objects.filter(
-                is_active=True,
-                is_superuser=True,
-            ).order_by('-last_login')[:3])
-        candidates = set(candidates)
-        selected = sample(candidates, min(3, len(candidates)))
-        if not selected:
-            raise RuntimeError(_("unable to find reviewers for {}").format(self))
-        self.reviewers.set(selected)
-
-        send_mail(
-            self.reviewers.all(),
-            _("[TeamVault] Review access request for '{}'").format(self.secret.name),
-            "secrets/mail_access_request_review",
-            context={
-                'access_request_url': reverse(
-                    'secrets.access_request-detail',
-                    kwargs={'hashid': self.hashid},
-                ),
-                'base_url': settings.BASE_URL,
-                'secret_name': self.secret.name,
-                'secret_url': self.secret.get_absolute_url(),
-                'username': self.requester.username,
-            },
-            user_from=self.requester,
-        )
-
-    def reject(self, reviewer, reason=None):
-        if self.status != self.STATUS_PENDING:
-            raise PermissionDenied(_("Can't reject closed access request"))
-
-        # make sure user is still allowed to handle secret, privileges might
-        # have been revoked since the access request was made
-        self.secret.check_access(reviewer)
-
-        log(
-            _("{reviewer} has rejected access request #{access_request} for {requester}, "
-              "NOT allowing access to '{secret}'").format(
-                access_request=self.id,
-                requester=self.requester,
-                reviewer=reviewer,
-                secret=self.secret.name,
-            ),
-            actor=reviewer,
-            secret=self.secret,
-            user=self.requester,
-        )
-
-        self.closed = now()
-        self.closed_by = reviewer
-        self.reason_rejected = reason
-        self.status = self.STATUS_REJECTED
-        self.save()
-
-        other_reviewers = list(self.reviewers.all())
-        try:
-            other_reviewers.remove(reviewer)
-        except ValueError:
-            # review by other superuser
-            pass
-
-        send_mail(
-            other_reviewers + [self.requester],
-            _("[TeamVault] Access request for '{}' denied").format(self.secret.name),
-            "secrets/mail_access_request_denied",
-            context={
-                'base_url': settings.BASE_URL,
-                'denied_by': reviewer.username,
-                'reason': reason,
-                'secret_name': self.secret.name,
-                'secret_url': self.secret.get_absolute_url(),
-                'username': self.requester.username,
-            },
-            user_from=reviewer,
-        )
-
-    @property
-    def full_url(self):
-        return settings.BASE_URL.rstrip("/") + self.get_absolute_url()
-
-    def get_absolute_url(self):
-        return reverse('secrets.access_request-detail', args=[str(self.hashid)])
-
-    def is_readable_by_user(self, user):
-        return (
-            user == self.requester or
-            user in self.reviewers.all() or
-            user.is_superuser
-        )
-
-
 class Secret(HashIDModel):
     HASHID_NAMESPACE = "Secret"
 
-    ACCESS_POLICY_REQUEST = 1
+    ACCESS_POLICY_DISCOVERABLE = 1
     ACCESS_POLICY_ANY = 2
     ACCESS_POLICY_HIDDEN = 3
     ACCESS_POLICY_CHOICES = (
-        (ACCESS_POLICY_REQUEST, _("request")),
+        (ACCESS_POLICY_DISCOVERABLE, _("discoverable")),
         (ACCESS_POLICY_ANY, _("everyone")),
         (ACCESS_POLICY_HIDDEN, _("hidden")),
     )
@@ -312,17 +93,7 @@ class Secret(HashIDModel):
 
     access_policy = models.PositiveSmallIntegerField(
         choices=ACCESS_POLICY_CHOICES,
-        default=ACCESS_POLICY_REQUEST,
-    )
-    allowed_groups = models.ManyToManyField(
-        Group,
-        blank=True,
-        related_name='allowed_passwords',
-    )
-    allowed_users = models.ManyToManyField(
-        settings.AUTH_USER_MODEL,
-        blank=True,
-        related_name='allowed_passwords',
+        default=ACCESS_POLICY_DISCOVERABLE,
     )
     content_type = models.PositiveSmallIntegerField(
         choices=CONTENT_CHOICES,
@@ -344,6 +115,7 @@ class Secret(HashIDModel):
     description = models.TextField(
         blank=True,
         null=True,
+        help_text=_('Further information on the secret.'),
     )
     filename = models.CharField(
         blank=True,
@@ -356,14 +128,21 @@ class Secret(HashIDModel):
     last_read = models.DateTimeField(
         default=now,
     )
-    name = models.CharField(max_length=92)
+    name = models.CharField(max_length=92, help_text=_('Enter a unique name for the secret'))
     needs_changing_on_leave = models.BooleanField(
         default=True,
     )
-    notify_on_access_request = models.ManyToManyField(
+    shared_groups = models.ManyToManyField(
+        Group,
+        blank=True,
+        through='SharedSecretData',
+        through_fields=('secret', 'group'),
+    )
+    shared_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
-        related_name='notify_on_access_requests_for',
+        through='SharedSecretData',
+        through_fields=('secret', 'user'),
     )
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
@@ -395,11 +174,23 @@ class Secret(HashIDModel):
     def __repr__(self):
         return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
 
-    def check_access(self, user):
+    def check_read_access(self, user):
         if not self.is_visible_to_user(user):
             raise Http404
-        elif not self.is_readable_by_user(user):
+
+        readable = self.is_readable_by_user(user)
+        if not readable:
             raise PermissionDenied()
+        return readable
+
+    def check_share_access(self, user):
+        if not self.is_visible_to_user(user):
+            raise Http404
+
+        shareable = self.is_shareable_by_user(user)
+        if not shareable:
+            raise PermissionDenied()
+        return shareable
 
     @property
     def full_url(self):
@@ -411,15 +202,14 @@ class Secret(HashIDModel):
     def get_data(self, user):
         if not self.current_revision:
             raise Http404
-        if not self.is_readable_by_user(user):
-            log(_(
-                    "{user} tried to access '{name}' without permission"
-                ).format(
-                    name=self.name,
-                    user=user.username,
-                ),
+
+        read_allowed = self.is_readable_by_user(user)
+        if not read_allowed:
+            log(
+                _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
                 actor=user,
-                level='warn',
+                category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
+                level='warning',
                 secret=self,
             )
             raise PermissionError(_(
@@ -429,14 +219,21 @@ class Secret(HashIDModel):
                 name=self.name,
                 user=user.username,
             ))
-        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        log(_(
-                "{user} read '{name}'"
-            ).format(
+
+        if read_allowed == AccessPermissionTypes.SUPERUSER_ALLOWED:
+            category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
+            log_message = _("{user} used superuser privileges to read '{name}'")
+        else:
+            category = AuditLogCategoryChoices.SECRET_READ
+            log_message = _("{user} read '{name}'")
+
+        log(
+            log_message.format(
                 name=self.name,
                 user=user.username,
             ),
             actor=user,
+            category=category,
             level='info',
             secret=self,
             secret_revision=self.current_revision,
@@ -446,6 +243,7 @@ class Secret(HashIDModel):
         self.last_read = now()
         self.save()
 
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         plaintext_data = f.decrypt(self.current_revision.encrypted_data.tobytes())
         if self.content_type != Secret.CONTENT_FILE:
             plaintext_data = plaintext_data.decode('utf-8')
@@ -453,24 +251,29 @@ class Secret(HashIDModel):
 
     @classmethod
     def get_all_readable_by_user(cls, user):
-        if user.is_superuser:
+        if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
             return cls.objects.all()
-        return (
-            cls.objects.filter(access_policy=cls.ACCESS_POLICY_ANY) |
-            cls.objects.filter(allowed_users=user) |
-            cls.objects.filter(allowed_groups__in=user.groups.all())
+
+        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
+            Q(user=user) | Q(group__user=user)
+        ).exclude(is_expired=True).values('secret__pk')
+        return cls.objects.filter(
+            Q(access_policy=cls.ACCESS_POLICY_ANY) | Q(pk__in=allowed_shares)
         ).exclude(status=cls.STATUS_DELETED).distinct()
 
     @classmethod
     def get_all_visible_to_user(cls, user, queryset=None):
         if queryset is None:
             queryset = cls.objects.all()
+
         if user.is_superuser:
             return queryset
-        return (
-            queryset.filter(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_REQUEST)) |
-            queryset.filter(allowed_users=user) |
-            queryset.filter(allowed_groups__in=user.groups.all())
+
+        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
+            Q(user=user) | Q(group__user=user)
+        ).exclude(is_expired=True).values('secret__pk')
+        return queryset.filter(
+            Q(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_DISCOVERABLE)) | Q(pk__in=allowed_shares)
         ).exclude(status=cls.STATUS_DELETED).distinct()
 
     @classmethod
@@ -507,18 +310,22 @@ class Secret(HashIDModel):
         return secrets
 
     @classmethod
-    def get_search_results(cls, user, term, limit=None):
+    def get_search_results(cls, user, term, limit=None, substr_search=True):
         base_queryset = cls.get_all_visible_to_user(user)
         name_hits = base_queryset.filter(name__icontains=term)
         fulltext_hits = cls.get_all_visible_to_user(
             user,
             queryset=cls.objects.filter(search_index=term),
         )
-        substr_hits = base_queryset.filter(
-            models.Q(filename__icontains=term) |
-            models.Q(url__icontains=term) |
-            models.Q(username__icontains=term)
-        )
+
+        substr_hits = Secret.objects.none()
+        if substr_search:
+            substr_hits = base_queryset.filter(
+                models.Q(filename__icontains=term) |
+                models.Q(url__icontains=term) |
+                models.Q(username__icontains=term) |
+                models.Q(hashid__exact=term)
+            )
         if limit:
             name_hits = name_hits[:limit]
             fulltext_hits = fulltext_hits[:limit]
@@ -531,25 +338,42 @@ class Secret(HashIDModel):
             return result
 
     def is_readable_by_user(self, user):
-        return (
-            user.is_superuser or (
-                (
-                    self.access_policy == self.ACCESS_POLICY_ANY or
-                    user in self.allowed_users.all() or
-                    set(self.allowed_groups.all()).intersection(set(user.groups.all()))
-                ) and self.status != self.STATUS_DELETED
-            )
-        )
+        if self.status != self.STATUS_DELETED:
+            shares = self.share_data.with_expiry_state().filter(
+                Q(user=user) | Q(group__user=user)
+            ).exclude(is_expired=True)
+
+            if self.access_policy == self.ACCESS_POLICY_ANY or shares.filter(granted_until__isnull=True).exists():
+                return AccessPermissionTypes.ALLOWED
+
+            if shares.exists():
+                return AccessPermissionTypes.TEMPORARILY_ALLOWED
+
+        if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+
+        return AccessPermissionTypes.NOT_ALLOWED
+
+    def is_shareable_by_user(self, user):
+        read_permission = self.is_readable_by_user(user)
+        if read_permission == AccessPermissionTypes.ALLOWED:
+            return AccessPermissionTypes.ALLOWED
+
+        if user.is_superuser:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+        return AccessPermissionTypes.NOT_ALLOWED
 
     def is_visible_to_user(self, user):
-        return (
-            user.is_superuser or (
-                (
-                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_REQUEST) or
-                    self.is_readable_by_user(user)
-                ) and self.status != self.STATUS_DELETED
-            )
-       )
+        if self.status != self.STATUS_DELETED:
+            if (
+                self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
+                self.is_readable_by_user(user)
+            ):
+                return AccessPermissionTypes.ALLOWED
+
+        if user.is_superuser:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+        return AccessPermissionTypes.NOT_ALLOWED
 
     def set_data(self, user, plaintext_data, skip_access_check=False):
         # skip_access_check is used when initially creating a secret
@@ -609,10 +433,14 @@ class Secret(HashIDModel):
                 user=user.username,
             ),
             actor=user,
+            category=AuditLogCategoryChoices.SECRET_CHANGED,
             level='info',
             secret=self,
             secret_revision=self.current_revision,
         )
+
+    def needs_changing(self):
+        return self.status == self.STATUS_NEEDS_CHANGING
 
 
 class SecretRevision(HashIDModel):
@@ -659,6 +487,119 @@ class SecretRevision(HashIDModel):
     @property
     def is_current_revision(self):
         return self.secret.current_revision == self
+
+
+class SecretShareQuerySet(models.QuerySet):
+    # TODO: Rename to group_shares, user_shares
+    def groups(self):
+        return self.with_expiry_state().filter(group__isnull=False).order_by('group__name')
+
+    def users(self):
+        return self.with_expiry_state().filter(user__isnull=False).order_by('user__username')
+
+    def with_expiry_state(self):
+        return self.annotate(
+            is_expired=Case(
+                When(
+                    granted_until__lte=now(),
+                    then=Value(True)
+                ),
+                default=Value(False),
+                output_field=BooleanField()
+            )
+        )
+
+
+class SharedSecretData(models.Model):
+    objects = SecretShareQuerySet.as_manager()
+
+    group = models.ForeignKey(
+        Group,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='secret_share_data',
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        null=True,
+        related_name='secret_share_data',
+    )
+
+    secret = models.ForeignKey(
+        'Secret',
+        on_delete=models.CASCADE,
+        related_name='share_data',
+    )
+
+    grant_description = models.TextField(
+        null=True
+    )
+
+    granted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        null=True,
+        related_name='+',
+    )
+
+    granted_on = models.DateTimeField(
+        auto_now_add=True,
+        null=True,
+    )
+
+    # Secrets are considered permanently shared if granted_until is not set
+    granted_until = models.DateTimeField(
+        blank=True,
+        null=True,
+    )
+
+    @property
+    def shared_entity(self):
+        return self.group if self.group else self.user
+
+    @property
+    def shared_entity_name(self):
+        return self.group.name if self.group else self.user.username
+
+    @property
+    def shared_entity_type(self):
+        return 'group' if self.group else 'user'
+
+    @property
+    def about_to_expire(self):
+        if not self.granted_until:
+            return False
+
+        if now() + timedelta(hours=8) >= self.granted_until:
+            return True
+
+    @property
+    def expiry_icon(self):
+        if not self.granted_until:
+            return 'success'
+
+        if self.about_to_expire:
+            time_left = self.granted_until - now()
+            if time_left <= timedelta(hours=8):
+                return 'danger'
+        return 'warning'
+
+    def __str__(self):
+        return f'SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})'
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (Q(group__isnull=False) & Q(user__isnull=True)) |
+                    (Q(group__isnull=True) & Q(user__isnull=False))
+                ),
+                name='only_one_set'
+            ),
+        ]
+        unique_together = [('group', 'secret'), ('user', 'secret')]
 
 
 @receiver(post_save, sender=Secret)

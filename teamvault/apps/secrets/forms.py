@@ -1,56 +1,59 @@
 from datetime import date
-from json import dumps
 
 from django import forms
 from django.contrib.auth.models import Group, User
-from django.forms.widgets import SelectMultiple
-from django.utils.safestring import mark_safe
-from django.utils.translation import ugettext_lazy as _
+from django.core.exceptions import ValidationError
+from django.forms.widgets import RadioSelect
+from django.utils.translation import gettext_lazy as _
 
-from .models import Secret
-
+from .models import Secret, SharedSecretData
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
-    'description',
     'access_policy',
+    'description',
+    'grant_description',
     'needs_changing_on_leave',
-    'notify_on_access_request',
-    'allowed_groups',
-    'allowed_users',
+    'shared_groups_on_create',
 ]
 
 
-class Select2DataWidget(SelectMultiple):
-    """
-    Used to render form values as a select2-compatible data structure.
-    """
-    def render(self, name, value, attrs=None, choices=(), renderer=None):
-        if value is None:
-            return "[]"
-        output = []
-        value_ints = [int(v) for v in value]
-        for option_id, option_label in self.choices:
-            if option_id in value_ints:
-                output.append({'id': str(option_id), 'text': option_label})
-        return mark_safe(dumps(output))
-
-
 class SecretForm(forms.ModelForm):
-    allowed_groups = forms.ModelMultipleChoiceField(
-        queryset=Group.objects.all(),
-        required=False,
-        widget=Select2DataWidget,
+    access_policy = forms.ChoiceField(
+        choices=Secret.ACCESS_POLICY_CHOICES,
+        initial=Secret.ACCESS_POLICY_DISCOVERABLE,
+        widget=RadioSelect(),
     )
-    allowed_users = forms.ModelMultipleChoiceField(
-        queryset=User.objects.filter(is_active=True),
+    description = forms.CharField(
         required=False,
-        widget=Select2DataWidget,
+        widget=forms.Textarea(attrs={'cols': '15', 'rows': '4'})
     )
-    notify_on_access_request = forms.BooleanField(
+    needs_changing_on_leave = forms.BooleanField(
+        help_text=_("This secret will be marked as 'needs changing' when a user who accessed it is deactivated."),
         initial=True,
+        label=_('Needs changing'),
+        required=False,
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+    )
+    shared_groups_on_create = forms.ModelMultipleChoiceField(
+        help_text=_('Default groups you configured in your settings will be selected automatically.'),
+        label=_('Share with groups'),
+        queryset=Group.objects.all().order_by('name'),
         required=False,
     )
+    grant_description = forms.CharField(
+        label=_('Reason'),
+        required=False,  # see clean() below
+        widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'}),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if cleaned_data['shared_groups_on_create'] and not cleaned_data['grant_description']:
+            self.add_error(
+                'grant_description',
+                _('Please provide a valid reason to share this secret with the groups selected above.')
+            )
 
 
 class CCForm(SecretForm):
@@ -62,13 +65,16 @@ class CCForm(SecretForm):
         min_value=date.today().year,
         max_value=date.today().year + 50,
     )
-    holder = forms.CharField()
+    holder = forms.CharField(
+        label=_('Name on card'),
+    )
     number = forms.CharField()
     password = forms.CharField(
         required=False,
         widget=forms.PasswordInput,
     )
     security_code = forms.CharField(
+        label=_('Card CVV'),
         required=False,
         widget=forms.NumberInput,
     )
@@ -91,6 +97,8 @@ class CCForm(SecretForm):
 
 class FileForm(SecretForm):
     file = forms.FileField(
+        # Note: There's also custom handling for files with a file size above the FILE_UPLOAD_MAX_MEMORY_SIZE limit
+        #  in the corresponding view
         allow_empty_file=False,
         required=False,
     )
@@ -111,6 +119,7 @@ class PasswordForm(SecretForm):
     url = forms.CharField(
         max_length=255,
         required=False,
+        label='URL',
     )
     username = forms.CharField(
         max_length=255,
@@ -130,3 +139,35 @@ class PasswordForm(SecretForm):
             ['password', 'username', 'url'] +
             GENERIC_FIELDS_FOOTER
         )
+
+
+class SecretShareForm(forms.ModelForm):
+    group = forms.ModelChoiceField(
+        required=False,
+        queryset=Group.objects.none(),  # will be set in view
+    )
+
+    user = forms.ModelChoiceField(
+        required=False,
+        queryset=User.objects.none(),  # will be set in view
+    )
+
+    grant_description = forms.CharField(
+        label=_('Reason'),
+        required=True,
+        widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'})
+    )
+
+    granted_until = forms.DateTimeField(
+        required=False,
+        widget=forms.DateTimeInput(),
+    )
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if (cleaned_data['group'] and cleaned_data['user']) or (not cleaned_data['group'] and not cleaned_data['user']):
+            raise ValidationError('Choose exactly one group *or* one user to share the secret with.')
+
+    class Meta:
+        fields = ['group', 'user', 'granted_until', 'grant_description']
+        model = SharedSecretData

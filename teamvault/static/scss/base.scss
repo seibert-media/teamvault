@@ -1,0 +1,101 @@
+@import "@fontsource/poppins/100.css";
+@import "@fontsource/poppins/200.css";
+@import "@fontsource/poppins/300.css";
+@import "@fontsource/poppins/400.css";
+@import "@fontsource/poppins/500.css";
+@import "@fontsource/poppins/600.css";
+@import "@fontsource/poppins/700.css";
+@import "@fontsource/poppins/800.css";
+@import "@fontsource/poppins/900.css";
+
+@import "./theme";
+@import "./avatars";
+@import "./scrollbar";
+@import "./search";
+@import "./secrets";
+
+@import "./fontawesome";
+@import "./select2";
+
+body {
+  font-family: 'Poppins', serif;
+}
+
+a {
+  text-decoration: none;
+  color: #377fae;
+}
+
+.background {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background-position: 50% 50%;
+  background: var(--bs-body-bg);
+  z-index: -999;
+}
+
+.dropdown-menu i {
+  color: #92A6B2;
+}
+
+h1 {
+  color: #505050;
+
+  > .badge {
+    vertical-align: top;
+  }
+}
+
+.card {
+  table {
+    margin-bottom: 0;
+  }
+
+  &.shadow {
+    box-shadow: 0 0.5rem 0.5rem rgba(0, 0, 0, 0.05);
+  }
+}
+
+.card .card-body .table tr:last-child {
+  border-bottom-style: hidden;
+}
+
+kbd {
+  font-family: monospace;
+  text-align: center;
+  border-color: #303030;
+  font-size: inherit;
+
+  &:not(kbd:first-of-type) {
+    margin-left: 0.1rem;
+  }
+}
+
+.list-group-hover .list-group-item {
+  &:hover {
+    background-color: var(--bs-list-group-action-active-bg);
+  }
+}
+
+@include media-breakpoint-down(lg) {
+  .modal-lg {
+    --bs-modal-width: 88%
+  }
+}
+
+@include media-breakpoint-down(xl) {
+  .modal-xl {
+    --bs-modal-width: 88%
+  }
+}
+
+form {
+  input, textarea {
+    &:placeholder-shown {
+      background-color: var(--bs-gray-100);
+    }
+  }
+}

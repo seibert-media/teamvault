@@ -1,0 +1,44 @@
+.avatar {
+  --tv-avatar-border-radius: 100%;
+  --tv-avatar-opacity: 100%;
+  --tv-avatar-size-default: 2rem;
+  --tv-avatar-size-sm: 1.25rem;
+  --tv-avatar-size-lg: 2.5rem;
+  --tv-avatar-size: var(--tv-avatar-size-default);
+
+  border-color: var(--bs-border-color-translucent);
+  border-radius: var(--tv-avatar-border-radius);
+  opacity: var(--tv-avatar-opacity);
+  height: var(--tv-avatar-size);
+  width: var(--tv-avatar-size);
+
+  &.avatar-sm {
+    --tv-avatar-size: var(--tv-avatar-size-sm);
+  }
+
+  &.avatar-lg {
+    --tv-avatar-size: var(--tv-avatar-size-lg);
+  }
+}
+
+svg.avatar {
+  background-color: var(--bs-gray-500);
+  font-size: calc(var(--tv-avatar-size) * 0.4);
+}
+
+a {
+  &:hover, &:focus {
+    > .avatar {
+      border-style: solid;
+      border-width: 1px;
+    }
+  }
+
+  &:hover > .avatar {
+    --tv-avatar-opacity: 80% !important;
+  }
+
+  &:focus > .avatar {
+    --tv-avatar-opacity: 90%;
+  }
+}
