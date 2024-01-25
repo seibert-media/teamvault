@@ -95,7 +95,7 @@ def configure_google_auth(config, settings):
         'social_core.backends.google.GoogleOAuth2',
     )
 
-    settings.SOCIAL_AUTH_PIPELINE = (
+    settings.SOCIAL_AUTH_PIPELINE = [
         # Get the information we can about the user and return it in a simple
         # format to create the user instance later. In some cases the details are
         # already part of the auth response from the provider, but sometimes this
@@ -119,6 +119,7 @@ def configure_google_auth(config, settings):
         'social_core.pipeline.social_auth.associate_by_email',
 
         # Create a user account if we haven't found one yet.
+        # Also see comment below for LDAP compatibility
         'social_core.pipeline.user.create_user',
 
         # Create the record that associates the social account with the user.
@@ -130,10 +131,7 @@ def configure_google_auth(config, settings):
 
         # Update the user record with any changed info from the auth service.
         'social_core.pipeline.user.user_details',
-
-        # Get groups from LDAP
-        'teamvault.apps.accounts.auth.populate_from_ldap',
-    )
+    ]
 
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = [
         domain.strip() for domain in
@@ -142,12 +140,27 @@ def configure_google_auth(config, settings):
 
     settings.GOOGLE_AUTH_AVATARS = get_from_config(config, "auth_google", "use_avatars", True)
     if settings.GOOGLE_AUTH_AVATARS:
-        settings.SOCIAL_AUTH_PIPELINE += ('teamvault.apps.accounts.utils.save_google_avatar',)
+        settings.SOCIAL_AUTH_PIPELINE.append('teamvault.apps.accounts.utils.save_google_avatar')
     else:
-        settings.SOCIAL_AUTH_PIPELINE += ('teamvault.apps.accounts.utils.save_gravatar',)
+        settings.SOCIAL_AUTH_PIPELINE.append('teamvault.apps.accounts.utils.save_gravatar')
 
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config.get("auth_google", "oauth2_key")
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config.get("auth_google", "oauth2_secret")
+
+    # LDAP compatibility settings
+    if config.has_section("auth_ldap"):
+        settings.SOCIAL_AUTH_PIPELINE.append('teamvault.apps.accounts.auth.populate_from_ldap')
+
+        if get_from_config(config, "auth_google", "use_ldap_usernames", False):
+            # Social Auth tries to create users with usernames by stripping the domain part of their email address.
+            # This behaviour clashes when these usernames differ from the ones in a configured LDAP directory.
+            # We cannot use "SOCIAL_AUTH_CLEAN_USERNAME_FUNCTION" here, because Social Auth only provides the username
+            # of our chosen storage provider and not the full email address.
+            settings.SOCIAL_AUTH_PIPELINE.insert(
+                # Username fix has to happen before "social_core.pipeline.user.create_user".
+                settings.SOCIAL_AUTH_PIPELINE.index('social_core.pipeline.user.create_user'),
+                'teamvault.apps.accounts.auth.find_ldap_username_for_social_auth'
+            )
 
 
 def configure_ldap_auth(config, settings):
