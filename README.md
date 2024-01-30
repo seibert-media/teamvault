@@ -47,6 +47,12 @@ Now create a virtual environment to install and configure TeamVault in:
 
 Now open http://localhost:8000
 
+## Scheduled background jobs
+
+We use [huey](https://huey.readthedocs.io/en/latest/) to run background jobs. This requires you to run a second process, in parallel to TeamVault itself. You can launch it via `manage.py`:
+
+    teamvault/manage.py run_huey
+
 ## Release process
 1. Install the "build" and "twine" packages via pip
 2. Bump the version in ```teamvault/__version__.py```
