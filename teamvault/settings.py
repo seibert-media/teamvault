@@ -1,5 +1,7 @@
 from os.path import dirname, join, realpath
 
+from huey import SqliteHuey
+
 from .apps.settings.config import (
     configure_database,
     configure_django_secret_key,
@@ -41,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django_bootstrap5',
+    'huey.contrib.djhuey',
     'rest_framework',
     'social_django',
     'teamvault.apps.accounts.AccountsConfig',
@@ -147,3 +150,5 @@ BOOTSTRAP5 = {
     'success_css_class': 'is-valid',
     'error_css_class': 'is-invalid',
 }
+
+HUEY = SqliteHuey('teamvault')
