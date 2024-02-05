@@ -49,6 +49,10 @@ def build_parser():
     parser_run.add_argument('--bind', nargs='?', help='define bind, default is 127.0.0.1:8000')
     parser_run.set_defaults(func=run)
 
+    # teamvault run_huey
+    parser_run = subparsers.add_parser("run_huey")
+    parser_run.set_defaults(func=run_huey)
+
     # teamvault setup
     parser_setup = subparsers.add_parser("setup")
     parser_setup.set_defaults(func=setup)
@@ -91,6 +95,10 @@ def run(pargs):
         shell=True,
     )
     gunicorn.communicate()
+
+
+def run_huey(pargs):
+    execute_from_command_line(["", "run_huey"])
 
 
 def setup(pargs):
