@@ -15,7 +15,7 @@ def find_ldap_username_for_social_auth(details, *_args, **_kwargs):
     )
     results = search.execute(connection)
     if results is not None and len(results) > 0:
-        uid = results[0][1]['uid']
+        uid = results[0][1]['uid'][0]
         return {'username': uid}
     return {}
 
