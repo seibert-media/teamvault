@@ -71,7 +71,7 @@ def revoke_unused_shares():
                     share_type=_("user") if share.user else _("group"),
                     who=share.user or share.group,
                 ),
-                category=AuditLogCategoryChoices.MISCELLANEOUS,
+                category=AuditLogCategoryChoices.SHARE_AUTOMATICALLY_REVOKED,
                 level='info',
                 secret=share.secret,
             )
