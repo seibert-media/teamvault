@@ -17,7 +17,7 @@ from huey.contrib.djhuey import periodic_task
 huey_log = logging.getLogger('huey')
 
 
-@periodic_task(crontab(**settings.HUEY_TASK_FREQUENCY))
+@periodic_task(crontab(**settings.HUEY_TASKS['scheduler_frequency']))
 def prune_expired_shares():
     for share in SharedSecretData.objects.with_expiry_state().filter(is_expired=True):
         huey_log.info(
@@ -32,12 +32,12 @@ def prune_expired_shares():
         share.delete()
 
 
-@periodic_task(crontab(**settings.HUEY_TASK_FREQUENCY))
+@periodic_task(crontab(**settings.HUEY_TASKS['scheduler_frequency']))
 def revoke_unused_shares():
-    if not hasattr(settings, 'REVOKE_UNUSED_SHARES_AFTER_DAYS'):
+    if settings.HUEY_TASKS['revoke_unused_shares_after_days'] is None:
         return
 
-    grace_period = now() - timedelta(days=settings.REVOKE_UNUSED_SHARES_AFTER_DAYS)
+    grace_period = now() - timedelta(days=settings.HUEY_TASKS['revoke_unused_shares_after_days'])
 
     for share in SharedSecretData.objects.filter(
         granted_on__lt=grace_period,
