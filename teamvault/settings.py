@@ -153,4 +153,6 @@ BOOTSTRAP5 = {
 
 HUEY = SqliteHuey('teamvault')
 HUEY_TASK_FREQUENCY = {'day': '*/1', 'hour': '0', 'minute': '0'}
+
+# Run via huey. Comment this setting to disable the task.
 REVOKE_UNUSED_SHARES_AFTER_DAYS = 365
