@@ -17,7 +17,7 @@ from huey.contrib.djhuey import periodic_task
 huey_log = logging.getLogger('huey')
 
 
-@periodic_task(crontab(minute='*/1'))
+@periodic_task(crontab(**settings.HUEY_TASK_FREQUENCY))
 def prune_expired_shares():
     for share in SharedSecretData.objects.with_expiry_state().filter(is_expired=True):
         huey_log.info(
