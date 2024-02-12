@@ -6,6 +6,7 @@ from .apps.settings.config import (
     configure_database,
     configure_django_secret_key,
     configure_hashid,
+    configure_huey,
     configure_logging,
     configure_password_generator,
     configure_session,
@@ -152,7 +153,4 @@ BOOTSTRAP5 = {
 }
 
 HUEY = SqliteHuey('teamvault')
-HUEY_TASK_FREQUENCY = {'day': '*/1', 'hour': '0', 'minute': '0'}
-
-# Run via huey. Comment this setting to disable the task.
-REVOKE_UNUSED_SHARES_AFTER_DAYS = 365
+HUEY_TASKS = configure_huey(CONFIG)
