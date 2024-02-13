@@ -33,11 +33,16 @@
                                     <tr>
                                         <td>{{ entry.time|date:"Y-m-d H:i:s e" }}</td>
                                         <td>{% if entry.actor %}{{ entry.actor.username }}{% endif %}</td>
-                                        <td>{{ entry.user }}</td>
+                                        <td>{{ entry.user|default_if_none:'' }}</td>
                                         <td>{% if entry.secret %}
                                             <a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}
                                         </td>
-                                        <td>{{ entry.message }}</td>
+                                        <td>
+                                            {{ entry.message }}
+                                            {% if entry.reason %}
+                                                <br>{% translate "Reason" %}: {{ entry.reason }}
+                                            {% endif %}
+                                        </td>
                                         <td>{{ entry.category }}</td>
                                     </tr>
                                 {% endfor %}
