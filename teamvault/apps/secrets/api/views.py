@@ -13,7 +13,7 @@ from rest_framework.response import Response
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from .serializers import SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
-from ..models import Secret, SecretRevision, SharedSecretData
+from ..models import Secret, SecretRevision, SharedSecretData, AccessPermissionTypes
 from ..utils import generate_password
 
 
@@ -89,7 +89,8 @@ class SecretShare(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         secret = self.get_object()
-        if not secret.is_shareable_by_user(self.request.user):
+        permission = secret.is_shareable_by_user(self.request.user)
+        if not permission:
             raise PermissionDenied
 
         obj = serializer.save(granted_by=self.request.user, secret=secret)
@@ -101,7 +102,11 @@ class SecretShare(generics.ListCreateAPIView):
                 time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
             ),
             actor=self.request.user,
-            category=AuditLogCategoryChoices.SECRET_SHARED,
+            category=(
+                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
+                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+                else AuditLogCategoryChoices.SECRET_SHARED
+            ),
             level='warning',
             secret=secret,
         )
@@ -116,7 +121,8 @@ class SecretShareDetail(generics.RetrieveDestroyAPIView):
         return obj
 
     def perform_destroy(self, instance):
-        if not instance.secret.is_shareable_by_user(self.request.user):
+        permission = instance.secret.is_shareable_by_user(self.request.user)
+        if not permission:
             raise PermissionDenied()
 
         secret = instance.secret
@@ -131,7 +137,11 @@ class SecretShareDetail(generics.RetrieveDestroyAPIView):
                 user=self.request.user.username,
             ),
             actor=self.request.user,
-            category=AuditLogCategoryChoices.SECRET_SHARED,
+            category=(
+                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARE_REMOVED
+                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+                else AuditLogCategoryChoices.SECRET_SHARE_REMOVED
+            ),
             level='warning',
             secret=secret,
         )

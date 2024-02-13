@@ -23,7 +23,6 @@ from .models import AccessPermissionTypes, Secret, SharedSecretData
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from django.conf import settings
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
@@ -433,7 +432,8 @@ class SecretShareList(CreateView):
 
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
-        if not secret.is_shareable_by_user(self.request.user):
+        permission = secret.is_shareable_by_user(self.request.user)
+        if not permission:
             raise PermissionDenied()
 
         obj = form.save(commit=False)
@@ -449,7 +449,11 @@ class SecretShareList(CreateView):
                 time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
             ),
             actor=self.request.user,
-            category=AuditLogCategoryChoices.SECRET_SHARED,
+            category=(
+                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
+                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+                else AuditLogCategoryChoices.SECRET_SHARED
+            ),
             level='warning',
             secret=secret,
         )
@@ -492,7 +496,8 @@ secret_share_list = login_required(SecretShareList.as_view())
 @require_http_methods(['DELETE'])
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
-    if not share_data.secret.is_shareable_by_user(request.user):
+    permission = share_data.secret.is_shareable_by_user(request.user)
+    if not permission:
         raise PermissionDenied()
 
     secret = share_data.secret
@@ -513,7 +518,11 @@ def secret_share_delete(request, hashid, share_id):
             user=request.user.username,
         ),
         actor=request.user,
-        category=AuditLogCategoryChoices.SECRET_SHARED,
+        category=(
+            AuditLogCategoryChoices.SECRET_SUPERUSER_SHARE_REMOVED
+            if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+            else AuditLogCategoryChoices.SECRET_SHARE_REMOVED
+        ),
         level='warning',
         secret=secret,
     )

@@ -12,6 +12,8 @@ class AuditLogCategoryChoices(TextChoices):
     SECRET_NEEDS_CHANGING_REMINDER = 'secret_needs_changing_reminder', _('secret_needs_changing_reminder')
     SECRET_SHARED = 'secret_shared', _('secret_shared')
     SECRET_SUPERUSER_SHARED = 'secret_superuser_shared', _('secret_superuser_shared')
+    SECRET_SHARE_REMOVED = 'secret_share_removed', _('secret_share_removed')
+    SECRET_SUPERUSER_SHARE_REMOVED = 'secret_superuser_share_removed', _('secret_superuser_share_removed')
     SECRET_ACCESS_REQUEST = 'secret_legacy_access_requests', _('secret_legacy_access_requests')
 
     USER_ACTIVATED = 'user_activated', _('user_activated')

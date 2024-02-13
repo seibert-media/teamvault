@@ -424,9 +424,8 @@ class Secret(HashIDModel):
         if self.status == self.STATUS_NEEDS_CHANGING:
             self.status = self.STATUS_OK
         self.save()
-        log(_(
-                "{user} set a new secret for '{name}' ({oldrev}->{newrev})"
-            ).format(
+        log(
+            _("{user} set a new secret for '{name}' ({oldrev}->{newrev})").format(
                 name=self.name,
                 newrev=self.current_revision.id,
                 oldrev=previous_revision_id,
