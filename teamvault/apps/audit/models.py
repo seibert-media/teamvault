@@ -44,6 +44,10 @@ class LogEntry(models.Model):
         related_name='logged_actions',
     )
     message = models.TextField()
+    reason = models.TextField(
+        blank=True,
+        null=True,
+    )
     secret = models.ForeignKey(
         'secrets.Secret',
         models.PROTECT,

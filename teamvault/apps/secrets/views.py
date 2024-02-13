@@ -455,6 +455,7 @@ class SecretShareList(CreateView):
                 else AuditLogCategoryChoices.SECRET_SHARED
             ),
             level='warning',
+            reason=obj.grant_description,
             secret=secret,
         )
 
