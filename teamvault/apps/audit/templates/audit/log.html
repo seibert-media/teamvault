@@ -20,12 +20,12 @@
                             <table class="table table-hover">
                                 <thead class="fs-5">
                                 <tr>
-                                    <td>Time</td>
-                                    <td>Actor</td>
-                                    <td>User</td>
-                                    <td>Secret</td>
-                                    <td>Message</td>
-                                    <td>Category</td>
+                                    <td>{% translate "Time" %}</td>
+                                    <td>{% translate "Actor" %}</td>
+                                    <td>{% translate "User" %}</td>
+                                    <td>{% translate "Secret" %}</td>
+                                    <td>{% translate "Message" %}</td>
+                                    <td>{% translate "Category" %}</td>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -38,7 +38,7 @@
                                             <a href="{{ entry.secret.get_absolute_url }}">{{ entry.secret.name }}</a>{% endif %}
                                         </td>
                                         <td>{{ entry.message }}</td>
-                                    <td>{{ entry.category }}</td>
+                                        <td>{{ entry.category }}</td>
                                     </tr>
                                 {% endfor %}
                                 </tbody>
