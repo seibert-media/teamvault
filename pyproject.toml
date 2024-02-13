@@ -7,7 +7,7 @@ name = "teamvault"
 description = "Keep your passwords behind the firewall"
 readme = "README.md"
 license = { file = "LICENSE" }
-authors = [{ name = "//SEIBERT/MEDIA GmbH" }]
+authors = [{ name = "Seibert Group" }]
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 3 - Alpha",
