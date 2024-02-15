@@ -1,0 +1,40 @@
+version: '2.0'
+services:
+  psql:
+    container_name: psql
+    environment:
+      - POSTGRES_USER=teamvault
+      - POSTGRES_PASSWORD=teamvault
+    image: postgres:latest
+    networks:
+      - teamvault-net
+
+  teamvault:
+    container_name: teamvault
+    image: teamvault-dev
+    networks:
+      - teamvault-net
+    ports:
+      - 8000:8000
+    # For dev: Bind-mount the source directory to allow for code changes
+    # without rebuilding the image.
+    volumes:
+      - type: bind
+        source: .
+        target: /teamvault
+    working_dir: /teamvault
+
+  webpack:
+    container_name: webpack
+    image: node:latest
+    command: ['sh', '-c', 'yarn add webpack webpack-dev-server --dev && yarn run serve']
+    ports:
+      - 3000:3000
+    volumes:
+      - type: bind
+        source: .
+        target: /teamvault
+    working_dir: /teamvault
+
+networks:
+  teamvault-net:

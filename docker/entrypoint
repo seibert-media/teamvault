@@ -1,0 +1,64 @@
+#!/bin/sh
+
+set -xe
+
+. /teamvault/docker/profile.d.sh
+
+# Wait until PSQL ready.
+(
+    export PGPASSWORD=teamvault
+
+    for i in $(seq 60)
+    do
+        if psql -h psql -U teamvault -c 'select 1;'
+        then
+            exit 0
+        fi
+        sleep 1
+    done
+
+    echo Database won\'t boot. Giving up. >&2
+    exit 1
+) || exit 1
+
+
+# Set up if not done yet.
+if ! test -e "$TEAMVAULT_CONFIG_FILE"
+then
+    teamvault setup
+    sed -i 's/^base_url = .*/base_url = http:\/\/localhost:8000/' \
+        "$TEAMVAULT_CONFIG_FILE"
+    sed -i 's/^host = .*/host = psql/' \
+        "$TEAMVAULT_CONFIG_FILE"
+
+    # XXX This isn't great, hard to customize.
+    cat >>"$TEAMVAULT_CONFIG_FILE" <<EOF
+
+[tasks]
+scheduler_frequency = minutely
+revoke_unused_shares_after_days = 0
+EOF
+fi
+
+# Running upgrades is always fine.
+teamvault upgrade
+
+# Create superuser if not done yet.
+if ! test -e /tv-superuser-created
+then
+    teamvault plumbing shell <<EOF
+from django.contrib.auth.models import User
+user = User.objects.create_user('tv', 'admin@localhost.localdomain', 'tv')
+user.is_staff = True
+user.is_superuser = True
+user.save()
+EOF
+    touch /tv-superuser-created
+fi
+
+# Fork off huey.
+# XXX It would be more elegant if this was an additional container,
+# but huey and main teamvault share a lot of things ...
+( teamvault run_huey & ) &
+
+exec teamvault run --bind 0.0.0.0:8000
