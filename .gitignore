@@ -1,6 +1,7 @@
 *.egg-info/
 build/
 dist/
+huey.db
 teamvault.cfg
 teamvault/static/bundled/
 teamvault/static_collected/
