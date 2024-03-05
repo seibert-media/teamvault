@@ -163,6 +163,55 @@ def configure_google_auth(config, settings):
             )
 
 
+def configure_huey(config):
+    # For now, all tasks use the same crontab value. They're all
+    # background maintenance task at the moment.
+    freq = get_from_config(config, "tasks", "scheduler_frequency", "daily")
+    if freq == "daily":
+        scheduler_frequency = {
+            'day': '*/1',
+            'hour': '0',
+            'minute': '0',
+        }
+    elif freq == "hourly":
+        scheduler_frequency = {
+            'hour': '*/1',
+            'minute': '0',
+        }
+    elif freq == "minutely":
+        scheduler_frequency = {
+            'minute': '*/1',
+        }
+    else:
+        raise RuntimeError(_(
+            "Unknown value {freq} for task.scheduler_frequency in {path}"
+        ).format(
+            freq=freq,
+            path=environ['TEAMVAULT_CONFIG_FILE'],
+        ))
+
+    revoke = get_from_config(
+        config,
+        "tasks",
+        "revoke_unused_shares_after_days",
+        None,
+    )
+    if not revoke is None:
+        try:
+            revoke = int(revoke)
+        except ValueError:
+            raise RuntimeError(_(
+                "task.revoke_unused_shares_after_days must be an integer in {path}"
+            ).format(
+                path=environ['TEAMVAULT_CONFIG_FILE'],
+            ))
+
+    return {
+        'revoke_unused_shares_after_days': revoke,
+        'scheduler_frequency': scheduler_frequency,
+    }
+
+
 def configure_ldap_auth(config, settings):
     if not config.has_section("auth_ldap"):
         settings.LDAP_AUTH_ENABLED = False
@@ -421,6 +470,10 @@ salt = {hashid_salt}
 #oauth2_key = 123456789.apps.googleusercontent.com
 #oauth2_secret = ******************
 #use_avatars = True
+
+#[tasks]
+#scheduler_frequency = daily  # or hourly, minutely
+#revoke_unused_shares_after_days = 365  # task disabled if unset
     """.format(
         django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
         hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),

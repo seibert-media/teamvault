@@ -20,6 +20,8 @@ class AuditLogCategoryChoices(TextChoices):
     USER_DEACTIVATED = 'user_deactivated', _('user_deactivated')
     USER_SETTINGS_CHANGED = 'user_settings_changed', _('user_settings_changed')
 
+    SHARE_AUTOMATICALLY_REVOKED = 'share_automatically_revoked', _('share_automatically_revoked')
+
     MISCELLANEOUS = 'miscellaneous', _('miscellaneous')
 
 

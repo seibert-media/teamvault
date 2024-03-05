@@ -6,6 +6,7 @@ from .apps.settings.config import (
     configure_database,
     configure_django_secret_key,
     configure_hashid,
+    configure_huey,
     configure_logging,
     configure_password_generator,
     configure_session,
@@ -152,3 +153,4 @@ BOOTSTRAP5 = {
 }
 
 HUEY = SqliteHuey('teamvault')
+HUEY_TASKS = configure_huey(CONFIG)
