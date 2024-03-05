@@ -1,4 +1,5 @@
-from django.core.management.base import BaseCommand, CommandError
+from django.contrib.postgres.search import SearchVector
+from django.core.management.base import BaseCommand
 
 from ...models import Secret
 
@@ -8,16 +9,14 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         secrets_total = Secret.objects.count()
-        secrets_processed = 0
-        last_progress = 0
-        for secret in Secret.objects.all():
-            secret.save()
-            secrets_processed += 1
-            progress = int((secrets_processed / secrets_total) * 100)
-            if progress > last_progress:
-                self.stdout.write("{}%".format(progress))
-                last_progress = progress
-
+        Secret.objects.all().update(
+            search_index=(
+                SearchVector('name', weight='A') +
+                SearchVector('description', weight='B') +
+                SearchVector('username', weight='C') +
+                SearchVector('filename', weight='D')
+            )
+        )
         self.stdout.write(self.style.SUCCESS(
             "Finished updating search index for {} objects.".format(secrets_total)
         ))
