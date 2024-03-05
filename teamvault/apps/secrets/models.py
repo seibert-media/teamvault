@@ -441,6 +441,44 @@ class Secret(HashIDModel):
     def needs_changing(self):
         return self.status == self.STATUS_NEEDS_CHANGING
 
+    def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
+        if (user and group) or (not user and not group):
+            raise ValueError('Specify either a user or a group!')
+
+        if not isinstance(granted_by, User):
+            raise ValueError('granted_by has to be a User object!')
+
+        permission = self.is_shareable_by_user(granted_by)
+        if not permission:
+            raise PermissionDenied()
+
+        share_obj = self.share_data.create(
+            grant_description=grant_description,
+            granted_by=granted_by,
+            granted_until=granted_until,
+            group=group,
+            user=user,
+        )
+        log(
+            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
+                shared_entity_type=share_obj.shared_entity_type,
+                name=share_obj.shared_entity_name,
+                user=granted_by.username,
+                time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
+            ),
+            actor=granted_by,
+            category=(
+                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
+                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+                else AuditLogCategoryChoices.SECRET_SHARED
+            ),
+            level='warning',
+            reason=grant_description,
+            secret=self,
+        )
+
+        return share_obj
+
 
 class SecretRevision(HashIDModel):
     HASHID_NAMESPACE = "SecretRevision"

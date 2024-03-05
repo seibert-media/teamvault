@@ -436,27 +436,13 @@ class SecretShareList(CreateView):
         if not permission:
             raise PermissionDenied()
 
-        obj = form.save(commit=False)
-        obj.granted_by = self.request.user
-        obj.secret = secret
-        obj.save()
-
-        log(
-            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
-                shared_entity_type=obj.shared_entity_type,
-                name=obj.shared_entity_name,
-                user=self.request.user.username,
-                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
-            ),
-            actor=self.request.user,
-            category=(
-                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
-                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
-                else AuditLogCategoryChoices.SECRET_SHARED
-            ),
-            level='warning',
-            reason=obj.grant_description,
-            secret=secret,
+        form_obj = form.save(commit=False)
+        obj = secret.share(
+            grant_description=form_obj.grant_description,
+            granted_by=self.request.user,
+            granted_until=form_obj.granted_until,
+            group=form_obj.group,
+            user=form_obj.user,
         )
 
         messages.success(self.request, _('Shared secret with {}'.format(obj.shared_entity_name)))
