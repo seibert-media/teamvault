@@ -399,7 +399,7 @@ def configure_whitenoise(settings):
     if not settings.DEBUG:
         settings.STORAGES = {
             'staticfiles': {
-                'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+                'BACKEND': 'whitenoise.storage.StaticFilesStorage'
             }
         }
 
