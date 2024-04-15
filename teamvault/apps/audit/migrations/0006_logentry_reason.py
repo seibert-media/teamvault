@@ -26,6 +26,7 @@ def add_current_share_reasons_to_audit_log(apps, schema_editor):
 class Migration(migrations.Migration):
     dependencies = [
         ("audit", "0005_alter_logentry_category"),
+        ("secrets", "0032_alter_sharedsecretdata_granted_by")
     ]
 
     operations = [
