@@ -8,7 +8,7 @@ from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import BooleanField, Case, Q, Value, When
+from django.db.models import BooleanField, Case, Max, Q, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
@@ -19,7 +19,7 @@ from hashids import Hashids
 
 from .exceptions import PermissionError
 from ..audit.auditlog import log
-from ..audit.models import LogEntry, AuditLogCategoryChoices
+from ..audit.models import AuditLogCategoryChoices, LogEntry
 
 
 class AccessPermissionTypes(models.IntegerChoices):
@@ -295,19 +295,21 @@ class Secret(HashIDModel):
 
     @classmethod
     def get_most_recently_used_for_user(cls, user, limit=5):
-        secrets = []
         log_entries = LogEntry.objects.filter(
-            actor=user,
-            secret__isnull=False,
-        )
-        number_of_log_entries = log_entries.count()
-        offset = limit
-        while len(secrets) < limit and (offset < number_of_log_entries or offset == limit):
-            for log_entry in log_entries[:offset].select_related('secret'):
-                if log_entry.secret not in secrets and len(secrets) < limit:
-                    secrets.append(log_entry.secret)
-            offset += limit
-        return secrets
+            actor=user
+        ).values(
+            'secret'
+        ).annotate(
+            latest_time=Max('time')
+        ).order_by(
+            '-latest_time'
+        )[:limit]
+
+        ordered_secret_ids = [access['secret'] for access in log_entries]
+        unordered_secrets = Secret.objects.filter(id__in=ordered_secret_ids)
+        secret_map = {secret.id: secret for secret in unordered_secrets}
+        ordered_secrets = [secret_map[secret_id] for secret_id in ordered_secret_ids if secret_id in secret_map]
+        return ordered_secrets
 
     @classmethod
     def get_search_results(cls, user, term, limit=None, substr_search=True):
@@ -366,8 +368,8 @@ class Secret(HashIDModel):
     def is_visible_to_user(self, user):
         if self.status != self.STATUS_DELETED:
             if (
-                self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
-                self.is_readable_by_user(user)
+                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
+                    self.is_readable_by_user(user)
             ):
                 return AccessPermissionTypes.ALLOWED
 
@@ -630,8 +632,8 @@ class SharedSecretData(models.Model):
         constraints = [
             models.CheckConstraint(
                 check=(
-                    (Q(group__isnull=False) & Q(user__isnull=True)) |
-                    (Q(group__isnull=True) & Q(user__isnull=False))
+                        (Q(group__isnull=False) & Q(user__isnull=True)) |
+                        (Q(group__isnull=True) & Q(user__isnull=False))
                 ),
                 name='only_one_set'
             ),
@@ -643,9 +645,9 @@ class SharedSecretData(models.Model):
 def update_search_index(sender, **kwargs):
     Secret.objects.filter(id=kwargs['instance'].id).update(
         search_index=(
-            SearchVector('name', weight='A') +
-            SearchVector('description', weight='B') +
-            SearchVector('username', weight='C') +
-            SearchVector('filename', weight='D')
+                SearchVector('name', weight='A') +
+                SearchVector('description', weight='B') +
+                SearchVector('username', weight='C') +
+                SearchVector('filename', weight='D')
         ),
     )
