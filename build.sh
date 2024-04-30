@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-if $(command -v bun); then
+if command -v bun &> /dev/null; then
     BUILDER="bun" 
-elif $(command -v yarn); then
+elif command -v yarn &> /dev/null; then
     BUILDER="yarn"
 else
     BUILDER="npm"
