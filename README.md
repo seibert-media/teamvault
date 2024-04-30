@@ -26,9 +26,9 @@ Install Postgres and create a database and superuser for TeamVault to use, for e
 	docker run --rm --detach --publish=5432:5432 --name teamvault-postgres -e POSTGRES_USER=teamvault -e POSTGRES_PASSWORD=teamvault postgres:latest
 
 
-To compile all JS & SCSS files, you'll need to install all required packages via yarn v2 with node >= v18.
+To compile all JS & SCSS files, you'll need to install all required packages via bun (or yarn/npm) with node >= v18.
 
-Use ```yarn run serve``` to start a dev server.
+Use ```bun/yarn/npm run serve``` to start a dev server.
 
 
 Now create a virtual environment to install and configure TeamVault in:
