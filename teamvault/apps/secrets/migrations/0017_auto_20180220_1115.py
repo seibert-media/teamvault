@@ -26,6 +26,7 @@ def remove_duplicate_srevs(apps, schema_editor):
 class Migration(migrations.Migration):
 
     dependencies = [
+        ('audit', '0002_auto_20170313_1544'),
         ('secrets', '0016_auto_20180220_1053'),
     ]
 
