@@ -199,7 +199,7 @@ class Secret(HashIDModel):
     def get_absolute_url(self):
         return reverse('secrets.secret-detail', args=[str(self.hashid)])
 
-    def get_data(self, user):
+    def get_data(self, user, get_otp_key=False):
         if not self.current_revision:
             raise Http404
 
@@ -244,9 +244,12 @@ class Secret(HashIDModel):
         self.save()
 
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        plaintext_data = f.decrypt(self.current_revision.encrypted_data)
+        if get_otp_key and self.current_revision.encrypted_otp_key_data:
+            plaintext_data = f.decrypt(self.current_revision.encrypted_otp_key_data)
+        else:
+            plaintext_data = f.decrypt(self.current_revision.encrypted_data)
         if self.content_type != Secret.CONTENT_FILE:
-            plaintext_data = plaintext_data.decode('utf-8')
+            plaintext_data = plaintext_data
         return plaintext_data
 
     @classmethod
@@ -377,7 +380,8 @@ class Secret(HashIDModel):
             return AccessPermissionTypes.SUPERUSER_ALLOWED
         return AccessPermissionTypes.NOT_ALLOWED
 
-    def set_data(self, user, plaintext_data, skip_access_check=False):
+    def set_data(self, user, plaintext_data, plaintext_key_data="", set_password=True, skip_access_check=False,
+                 set_otp_key=False):
         # skip_access_check is used when initially creating a secret
         # and makes it possible to create secrets you don't have access
         # to
@@ -389,33 +393,45 @@ class Secret(HashIDModel):
                 name=self.name,
                 user=user.username,
             ))
-        # save the length before encoding so multi-byte characters don't
-        # mess up the result
+
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         plaintext_length = len(plaintext_data)
         if isinstance(plaintext_data, str):
             plaintext_data = plaintext_data.encode('utf-8')
         plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
-        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        encrypted_data = f.encrypt(plaintext_data)
         try:
             # see the comment on unique_together for SecretRevision
             p = SecretRevision.objects.get(
                 plaintext_data_sha256=plaintext_data_sha256,
                 secret=self,
-            )
+            ) if set_password else self.current_revision
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
-        p.encrypted_data = encrypted_data
-        p.length = plaintext_length
-        # the hash is needed for unique_together (see below)
-        # unique_together uses an index on its fields which is
-        # problematic with the largeish blobs we might store here (see
-        # issue #30)
-        p.plaintext_data_sha256 = plaintext_data_sha256
+            if set_password:
+                p.encrypted_otp_key_data = self.current_revision.encrypted_otp_key_data if self.current_revision else None
+
+        if set_password:
+            # save the length before encoding so multi-byte characters don't
+            # mess up the result
+            encrypted_data = f.encrypt(plaintext_data)
+            p.encrypted_data = encrypted_data
+            p.length = plaintext_length
+
+            # the hash is needed for unique_together (see below)
+            # unique_together uses an index on its fields which is
+            # problematic with the largeish blobs we might store here (see
+            # issue #30)
+            p.plaintext_data_sha256 = plaintext_data_sha256
+            p.set_by = user
+        if set_otp_key:
+            plaintext_key_data = plaintext_key_data.encode('utf-8')
+            encrypted_key_data = f.encrypt(plaintext_key_data)
+            p.encrypted_otp_key_data = encrypted_key_data
+
         p.secret = self
-        p.set_by = user
         p.save()
         p.accessed_by.add(user)
+
         if self.current_revision:
             previous_revision_id = self.current_revision.id
         else:
@@ -440,46 +456,48 @@ class Secret(HashIDModel):
             secret_revision=self.current_revision,
         )
 
-    def needs_changing(self):
-        return self.status == self.STATUS_NEEDS_CHANGING
 
-    def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
-        if (user and group) or (not user and not group):
-            raise ValueError('Specify either a user or a group!')
+def needs_changing(self):
+    return self.status == self.STATUS_NEEDS_CHANGING
 
-        if not isinstance(granted_by, User):
-            raise ValueError('granted_by has to be a User object!')
 
-        permission = self.is_shareable_by_user(granted_by)
-        if not permission:
-            raise PermissionDenied()
+def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
+    if (user and group) or (not user and not group):
+        raise ValueError('Specify either a user or a group!')
 
-        share_obj = self.share_data.create(
-            grant_description=grant_description,
-            granted_by=granted_by,
-            granted_until=granted_until,
-            group=group,
-            user=user,
-        )
-        log(
-            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
-                shared_entity_type=share_obj.shared_entity_type,
-                name=share_obj.shared_entity_name,
-                user=granted_by.username,
-                time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
-            ),
-            actor=granted_by,
-            category=(
-                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
-                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
-                else AuditLogCategoryChoices.SECRET_SHARED
-            ),
-            level='warning',
-            reason=grant_description,
-            secret=self,
-        )
+    if not isinstance(granted_by, User):
+        raise ValueError('granted_by has to be a User object!')
 
-        return share_obj
+    permission = self.is_shareable_by_user(granted_by)
+    if not permission:
+        raise PermissionDenied()
+
+    share_obj = self.share_data.create(
+        grant_description=grant_description,
+        granted_by=granted_by,
+        granted_until=granted_until,
+        group=group,
+        user=user,
+    )
+    log(
+        _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
+            shared_entity_type=share_obj.shared_entity_type,
+            name=share_obj.shared_entity_name,
+            user=granted_by.username,
+            time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
+        ),
+        actor=granted_by,
+        category=(
+            AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
+            if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+            else AuditLogCategoryChoices.SECRET_SHARED
+        ),
+        level='warning',
+        reason=grant_description,
+        secret=self,
+    )
+
+    return share_obj
 
 
 class SecretRevision(HashIDModel):
@@ -490,6 +508,7 @@ class SecretRevision(HashIDModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
+    encrypted_otp_key_data = models.BinaryField(blank=True, null=True)
     length = models.PositiveIntegerField(
         default=0,
     )

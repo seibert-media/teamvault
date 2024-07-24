@@ -6,7 +6,7 @@ urlpatterns = (
     path(
         '',
         views.dashboard,
-        name='dashboard',
+            name='dashboard',
     ),
     path(
         'opensearch.xml',

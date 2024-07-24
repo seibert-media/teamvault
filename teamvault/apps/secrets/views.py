@@ -79,6 +79,7 @@ class SecretAdd(CreateView):
         secret = Secret()
         secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
         secret.created_by = self.request.user
+        plaintext_key = None
 
         for attr in ('access_policy', 'description', 'name', 'needs_changing_on_leave', 'url', 'username'):
             if attr in form.cleaned_data:
@@ -87,6 +88,25 @@ class SecretAdd(CreateView):
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
             plaintext_data = form.cleaned_data['password']
+            if form.cleaned_data['otp_key_data']:
+                plaintext_key_data = form.cleaned_data['otp_key_data']
+                plaintext_key = plaintext_key_data[
+                                plaintext_key_data.index("secret") + 7:
+                                plaintext_key_data.index("&")
+                                ].encode('utf-8')
+                digits = 8 if "digits=8" in plaintext_key_data else 6
+                if "SHA256" in plaintext_key_data:
+                    algorithm = "SHA256"
+                elif "SHA512" in plaintext_key_data:
+                    algorithm = "SHA512"
+                else:
+                    algorithm = "SHA1"
+                plaintext_key_data = dumps({
+                    "plaintext_key": plaintext_key,
+                    "digits": digits,
+                    "algorithm": algorithm
+                })
+
         elif secret.content_type == Secret.CONTENT_FILE:
             plaintext_data = form.cleaned_data['file'].read()
             secret.filename = form.cleaned_data['file'].name
@@ -100,7 +120,10 @@ class SecretAdd(CreateView):
                 'security_code': str(form.cleaned_data['security_code']),
                 'password': form.cleaned_data['password'],
             })
-        secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
+        if plaintext_key:
+            secret.set_data(self.request.user, plaintext_data, plaintext_key_data, skip_access_check=True, set_otp_key=True)
+        else:
+            secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
 
         # Create share objects
         secret.share_data.create(user=self.request.user)
@@ -168,9 +191,31 @@ class SecretEdit(UpdateView):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
-            plaintext_data = form.cleaned_data['password']
+        plaintext_key = None
+        if secret.content_type == Secret.CONTENT_PASSWORD:
+            if form.cleaned_data['password']:
+                plaintext_data = form.cleaned_data['password']
+            else:
+                plaintext_data = None
+            if form.cleaned_data['otp_key_data']:
+                plaintext_key_data = form.cleaned_data['otp_key_data']
+                key_index = plaintext_key_data.index("secret") + 7
+                plaintext_key = plaintext_key_data[
+                                key_index:
+                                plaintext_key_data[key_index:].index("&") + key_index
+                                ]
+                digits = 8 if "digits=8" in plaintext_key_data else 6
+                if "SHA256" in plaintext_key_data:
+                    algorithm = "SHA256"
+                elif "SHA512" in plaintext_key_data:
+                    algorithm = "SHA512"
+                else:
+                    algorithm = "SHA1"
+                plaintext_key_data = dumps({
+                    "plaintext_key": plaintext_key,
+                    "digits": digits,
+                    "algorithm": algorithm
+                })
         elif secret.content_type == Secret.CONTENT_FILE and form.cleaned_data['file']:
             plaintext_data = form.cleaned_data['file'].read()
             secret.filename = form.cleaned_data['file'].name
@@ -189,7 +234,8 @@ class SecretEdit(UpdateView):
 
         if plaintext_data is not None:
             secret.set_data(self.request.user, plaintext_data)
-
+        if plaintext_key is not None:
+            secret.set_data(self.request.user, plaintext_data="", plaintext_key_data=plaintext_key_data, set_password=False, set_otp_key=True)
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):

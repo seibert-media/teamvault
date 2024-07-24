@@ -36,7 +36,7 @@ twine = "~=5.1"
 # django-webpack-loader:    https://github.com/django-webpack/django-webpack-loader/blob/master/CHANGELOG.md
 # djangorestframework:      https://www.django-rest-framework.org/community/release-notes/
 # gunicorn:                 https://docs.gunicorn.org/en/stable/news.html
-# hashids:                  currently no changelogs found, https://pypi.org/project/hashids/
+# hashids:                  https://pypi.org/project/hashids/ -> Migrate to https://github.com/sqids/sqids-python
 # psycopg:                  https://www.psycopg.org/psycopg3/docs/news.html
 # pytz:                     currently no changelogs found, https://github.com/stub42/pytz/tree/master
 # requests:                 https://github.com/psf/requests/releases
