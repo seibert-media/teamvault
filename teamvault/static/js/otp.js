@@ -7,7 +7,15 @@ export async function refreshOtpEvery30Sec(inputElement, secret_url) {
   digits = secretData["digits"];
   algortihm = secretData["algorithm"]; // TODO maybe write own version that consideres algortihm
   const otp = new jsotp.TOTP(secret, digits).now();
-  inputElement.value = otp.slice(0, 3) + "·" + otp.slice(3);
+  let textCont = inputElement.textContent
+  let newSpan = document.createElement('span');
+  newSpan.textContent = " ";
+  newSpan.setAttribute("class", "separator");
+  inputElement.textContent = "";
+  inputElement.appendChild(document.createTextNode(otp.slice(0, 3) + " "));
+  inputElement.appendChild(newSpan);
+  inputElement.appendChild(document.createTextNode(" " + otp.slice(3)));
+  //inputElement.textContent = otp.slice(0, 3) + "·" + otp.slice(3);
 }
 
 export function otpCountdown(countdownContainerEl, countdownNumberEl, inputField, secret_url) {

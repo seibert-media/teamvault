@@ -14,9 +14,9 @@ $max_progress: 30;
 
 #countdown-number {
   color: black;
+  font-family: monospace;
   display: inline-block;
   line-height: 40px;
-  margin-top: 1px;
   font-size: small;
   margin-left: -1px;
 }
@@ -44,3 +44,11 @@ svg circle {
   // animation: countdown calc(var(--initial-progress) * 1s) linear infinite forwards;
 }
 
+.separator {
+  height: 6px;
+  width: 6px;
+  margin-bottom: 4px;
+  background-color: #383838;
+  border-radius: 50%;
+  display: inline-block;
+}
