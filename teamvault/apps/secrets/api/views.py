@@ -152,8 +152,9 @@ def data_get(request, hashid):
     secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
     secret_revision.secret.check_read_access(request.user)
     data = secret_revision.secret.get_data(request.user)
+    key = loads(secret_revision.secret.get_data(request.user, get_otp_key=True))
     if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:
-        return Response({'password': data})
+        return Response({'password': data, 'otp-key-data': key})
     elif secret_revision.secret.content_type == Secret.CONTENT_FILE:
         return Response({'file': b64encode(data).decode('ascii')})
     elif secret_revision.secret.content_type == Secret.CONTENT_CC:

@@ -113,6 +113,12 @@ class FileForm(SecretForm):
 
 
 class PasswordForm(SecretForm):
+    otp_key = forms.CharField(
+        required=False
+    )
+    otp_key_data = forms.CharField(
+        required=False,
+    )
     password = forms.CharField(
         required=False,
     )

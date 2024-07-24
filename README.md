@@ -47,6 +47,8 @@ Now create a virtual environment to install and configure TeamVault in:
 
 Now open http://localhost:8000
 
+If you have problems with server terminating use NPM istead of Bun
+
 ## Scheduled background jobs
 
 We use [huey](https://huey.readthedocs.io/en/latest/) to run background jobs. This requires you to run a second process, in parallel to TeamVault itself. You can launch it via `manage.py`:
