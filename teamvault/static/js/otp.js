@@ -1,29 +1,27 @@
-export async function refreshOtpEvery30Sec(inputElement, secret_url) {
+export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement) {
   let secretData, secret, digits, algortihm;
   const response = await fetch(secret_url);
   const data = await response.json();
   secretData = data['otp-key-data']
   secret = secretData["plaintext_key"];
   digits = secretData["digits"];
-  algortihm = secretData["algorithm"]; // TODO maybe write own version that consideres algortihm
+  // algortihm = secretData["algorithm"]; // TODO maybe write own version that consideres algortihm
   const otp = new jsotp.TOTP(secret, digits).now();
-  let textCont = inputElement.textContent
-  let newSpan = document.createElement('span');
-  newSpan.textContent = " ";
-  newSpan.setAttribute("class", "separator");
-  inputElement.textContent = "";
-  inputElement.appendChild(document.createTextNode(otp.slice(0, 3) + " "));
-  inputElement.appendChild(newSpan);
-  inputElement.appendChild(document.createTextNode(" " + otp.slice(3)));
-  //inputElement.textContent = otp.slice(0, 3) + "·" + otp.slice(3);
+  const newFieldData = otp.slice(0, 3) + " <span class='separator'></span> " + otp.slice(3);
+  const newFieldDataBig = otp.slice(0, 3) + "<span class='separator'></span>" + otp.slice(3);
+  inputElement.innerHTML = newFieldData;
+  console.log(bigElement)
+  if ( !bigElement.classList.contains("invisible")) {
+    bigElement.children[0].innerHTML = newFieldDataBig;
+  }
 }
 
-export function otpCountdown(countdownContainerEl, countdownNumberEl, inputField, secret_url) {
+export function otpCountdown(countdownContainerEl, countdownNumberEl, inputField, secret_url, bigElement) {
   const unixDict = getUnixTime();
   countdownContainerEl.style.setProperty('--progress', unixDict['countdown']-1);
   countdownNumberEl.textContent = unixDict['countdown']-1;
   if (unixDict['countdown'] === 30) {
-    refreshOtpEvery30Sec(inputField, secret_url).then();
+    refreshOtpEvery30Sec(inputField, secret_url, bigElement).then();
   }
 }
 
