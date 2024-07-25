@@ -10,7 +10,6 @@ export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement)
   const newFieldData = otp.slice(0, 3) + " <span class='separator'></span> " + otp.slice(3);
   const newFieldDataBig = otp.slice(0, 3) + "<span class='separator'></span>" + otp.slice(3);
   inputElement.innerHTML = newFieldData;
-  console.log(bigElement)
   if ( !bigElement.classList.contains("invisible")) {
     bigElement.children[0].innerHTML = newFieldDataBig;
   }
