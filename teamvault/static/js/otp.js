@@ -16,12 +16,6 @@ export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement)
 }
 
 export function otpCountdown(countdownContainerEl, countdownNumberEl, inputField, secret_url, bigElement) {
-
-
-
-
-
-
   const unixDict = getUnixTime();
   calcCircleStuff(document.getElementById("progress-circle"), unixDict['countdown']-1)
   countdownContainerEl.style.setProperty('--progress', unixDict['countdown']-1);
@@ -34,6 +28,7 @@ export function otpCountdown(countdownContainerEl, countdownNumberEl, inputField
     bigCountdownCircleElement.setAttribute("r", 50)
     bigCountdownCircleElement.setAttribute("cx", 100)
     bigCountdownCircleElement.setAttribute("cy", 100)
+    calcCircleStuff(bigCountdownCircleElement, unixDict['countdown']-1)
   }
   if (unixDict['countdown'] === 30) {
     refreshOtpEvery30Sec(inputField, secret_url, bigElement).then();
@@ -49,7 +44,7 @@ function getUnixTime(interval = 30) {
 }
 
 
-function calcCircleStuff(circleElement, progress){
+ export function calcCircleStuff(circleElement, progress){
   const radius = circleElement.getAttribute("r");
   const circleSize = (2 * Math.PI) * radius;
   const progressOffset = circleSize - ((progress/30)*circleSize);
