@@ -20,7 +20,6 @@ import * as otp from './otp'
 window.otp = otp
 window.teamvault = teamvault
 
-
 // Bootstrap
 window.bootstrap = bootstrap
 
@@ -34,13 +33,7 @@ window.jQuery = $
 // jsOTP
 window.jsotp = require('jsotp');
 
-// qr scanner
-const QrScanner = require('qr-scanner');
-QrScanner.WORKER_PATH = 'node_modules/qr-scanner/qr-scanner-worker.min.js';
-window.QrScanner = QrScanner;
-
-//other qr scanner
-
+//js qr scanner
 window.qrScanner = require("jsqr")
 // Bigtext
 require('bigtext');
