@@ -249,7 +249,7 @@ class Secret(HashIDModel):
         else:
             plaintext_data = f.decrypt(self.current_revision.encrypted_data)
         if self.content_type != Secret.CONTENT_FILE:
-            plaintext_data = plaintext_data
+            plaintext_data = plaintext_data.decode('utf-8')
         return plaintext_data
 
     @classmethod
@@ -393,9 +393,10 @@ class Secret(HashIDModel):
                 name=self.name,
                 user=user.username,
             ))
-
-        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+        # save the length before encoding so multi-byte characters don't
+        # mess up the result
         plaintext_length = len(plaintext_data)
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if isinstance(plaintext_data, str):
             plaintext_data = plaintext_data.encode('utf-8')
         plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
@@ -408,11 +409,10 @@ class Secret(HashIDModel):
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
             if set_password:
+                # secret OTP key should remain the same if password is changed
                 p.encrypted_otp_key_data = self.current_revision.encrypted_otp_key_data if self.current_revision else None
 
         if set_password:
-            # save the length before encoding so multi-byte characters don't
-            # mess up the result
             encrypted_data = f.encrypt(plaintext_data)
             p.encrypted_data = encrypted_data
             p.length = plaintext_length
@@ -456,48 +456,46 @@ class Secret(HashIDModel):
             secret_revision=self.current_revision,
         )
 
+    def needs_changing(self):
+        return self.status == self.STATUS_NEEDS_CHANGING
 
-def needs_changing(self):
-    return self.status == self.STATUS_NEEDS_CHANGING
+    def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
+        if (user and group) or (not user and not group):
+            raise ValueError('Specify either a user or a group!')
 
+        if not isinstance(granted_by, User):
+            raise ValueError('granted_by has to be a User object!')
 
-def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
-    if (user and group) or (not user and not group):
-        raise ValueError('Specify either a user or a group!')
+        permission = self.is_shareable_by_user(granted_by)
+        if not permission:
+            raise PermissionDenied()
 
-    if not isinstance(granted_by, User):
-        raise ValueError('granted_by has to be a User object!')
+        share_obj = self.share_data.create(
+            grant_description=grant_description,
+            granted_by=granted_by,
+            granted_until=granted_until,
+            group=group,
+            user=user,
+        )
+        log(
+            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
+                shared_entity_type=share_obj.shared_entity_type,
+                name=share_obj.shared_entity_name,
+                user=granted_by.username,
+                time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
+            ),
+            actor=granted_by,
+            category=(
+                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
+                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+                else AuditLogCategoryChoices.SECRET_SHARED
+            ),
+            level='warning',
+            reason=grant_description,
+            secret=self,
+        )
 
-    permission = self.is_shareable_by_user(granted_by)
-    if not permission:
-        raise PermissionDenied()
-
-    share_obj = self.share_data.create(
-        grant_description=grant_description,
-        granted_by=granted_by,
-        granted_until=granted_until,
-        group=group,
-        user=user,
-    )
-    log(
-        _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
-            shared_entity_type=share_obj.shared_entity_type,
-            name=share_obj.shared_entity_name,
-            user=granted_by.username,
-            time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
-        ),
-        actor=granted_by,
-        category=(
-            AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
-            if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
-            else AuditLogCategoryChoices.SECRET_SHARED
-        ),
-        level='warning',
-        reason=grant_description,
-        secret=self,
-    )
-
-    return share_obj
+        return share_obj
 
 
 class SecretRevision(HashIDModel):
@@ -508,6 +506,7 @@ class SecretRevision(HashIDModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
+    # binary field or JSON  field?
     encrypted_otp_key_data = models.BinaryField(blank=True, null=True)
     length = models.PositiveIntegerField(
         default=0,

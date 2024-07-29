@@ -4,7 +4,6 @@ $max_progress: 30;
 
 
 #countdown {
-//  --initial-progress: $max_countdown;
   --progress: $max_progress;
   position: relative;
   height: 40px;
@@ -31,15 +30,12 @@ svg {
 }
 
 svg circle {
-   // stroke-dasharray: calc($circle_size * 1px);
-   // stroke-dashoffset: calc(($circle_size - ((var(--progress) / $max_progress) * $circle_size)) * 1px);
   stroke-linecap: round;
   stroke-width: 2px;
   stroke: rgb(min(255, 255 - ((var(--progress) * (10/3)) * 2.55)),
               max(0, ((var(--progress) * (10/3))*2.55)),
               0);
   fill: none;
-  // animation: countdown calc(var(--initial-progress) * 1s) linear infinite forwards;
 }
 
 .separator {
