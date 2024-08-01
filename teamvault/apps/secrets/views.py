@@ -10,6 +10,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.shortcuts import get_object_or_404, render, redirect
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
@@ -363,6 +364,8 @@ class SecretDetail(DetailView):
     slug_url_kwarg = 'hashid'
 
     def get_context_data(self, **kwargs):
+        self.request.session['session_start'] = timezone.now().isoformat()
+        self.request.session['sessions_tracked'] = 0
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
