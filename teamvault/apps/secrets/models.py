@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from hashlib import sha256
 from operator import itemgetter
 
@@ -199,7 +199,7 @@ class Secret(HashIDModel):
     def get_absolute_url(self):
         return reverse('secrets.secret-detail', args=[str(self.hashid)])
 
-    def get_data(self, user, get_otp_key=False):
+    def get_data(self, user, get_otp_key=False, request=None):
         if not self.current_revision:
             raise Http404
 
@@ -227,17 +227,37 @@ class Secret(HashIDModel):
             category = AuditLogCategoryChoices.SECRET_READ
             log_message = _("{user} read '{name}'")
 
-        log(
-            log_message.format(
-                name=self.name,
-                user=user.username,
-            ),
-            actor=user,
-            category=category,
-            level='info',
-            secret=self,
-            secret_revision=self.current_revision,
-        )
+        if request:
+            timediff = datetime.now() - datetime.fromisoformat(
+                request.session["session_start"]).replace(
+                tzinfo=None)
+            timediff = timediff.seconds
+            sessions_tracked = request.session["sessions_tracked"]
+            if sessions_tracked == 0 or timediff >= sessions_tracked * 1800 or not get_otp_key:
+                log(
+                    log_message.format(
+                        name=self.name,
+                        user=user.username,
+                    ),
+                    actor=user,
+                    category=category,
+                    level='info',
+                    secret=self,
+                    secret_revision=self.current_revision,
+                )
+                request.session["sessions_tracked"] += 1
+        else:
+            log(
+                log_message.format(
+                    name=self.name,
+                    user=user.username,
+                ),
+                actor=user,
+                category=category,
+                level='info',
+                secret=self,
+                secret_revision=self.current_revision,
+            )
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
         self.last_read = now()
