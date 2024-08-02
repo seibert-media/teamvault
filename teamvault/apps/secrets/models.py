@@ -265,9 +265,10 @@ class Secret(HashIDModel):
 
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if get_otp_key and self.current_revision.encrypted_otp_key_data:
-            plaintext_data = f.decrypt(self.current_revision.encrypted_otp_key_data)
+            plaintext_data = self.current_revision.encrypted_otp_key_data
         else:
-            plaintext_data = f.decrypt(self.current_revision.encrypted_data)
+            plaintext_data = self.current_revision.encrypted_data
+        plaintext_data = f.decrypt(plaintext_data)
         if self.content_type != Secret.CONTENT_FILE:
             plaintext_data = plaintext_data.decode('utf-8')
         return plaintext_data
@@ -526,7 +527,6 @@ class SecretRevision(HashIDModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
-    # binary field or JSON  field?
     encrypted_otp_key_data = models.BinaryField(blank=True, null=True)
     length = models.PositiveIntegerField(
         default=0,
