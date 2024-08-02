@@ -7,15 +7,15 @@ export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement)
   digits = secretData["digits"];
   algortihm = secretData["algorithm"]; // TODO maybe write own version that consideres algortihm
   const otp = new jsotp.TOTP(secret, digits).now();
-  const newFieldData = otp.slice(0, 3) + " <span class='separator'></span> " + otp.slice(3);
-  const newFieldDataBig = otp.slice(0, 3) + "<span class='separator'></span>" + otp.slice(3); // without spaces between separator and OTP
+  let newFieldData = otp.slice(0, 3) + "<span class='separator mx-1'></span>" + otp.slice(3);
   inputElement.innerHTML = newFieldData;
   if ( !bigElement.classList.contains("invisible")) {
-    bigElement.children[1].innerHTML = newFieldDataBig;
+    newFieldData = newFieldData.replace('mx-1', 'mx-3')
+    bigElement.children[1].innerHTML = newFieldData;
   }
 }
 
-export function otpCountdown(countdownContainerEl, countdownNumberEl, inputField, secret_url, bigElement) {
+export async function otpCountdown(countdownContainerEl, countdownNumberEl, inputField, secret_url, bigElement) {
   const countdowmTime = getCountdowmTime();
   setCircleParams(document.getElementById("progress-circle"), countdowmTime);
   countdownContainerEl.style.setProperty('--progress', countdowmTime);
@@ -32,7 +32,7 @@ export function otpCountdown(countdownContainerEl, countdownNumberEl, inputField
     setCircleParams(bigCountdownCircleElement, countdowmTime);
   }
   if (countdowmTime+1 === 30) {
-    refreshOtpEvery30Sec(inputField, secret_url, bigElement).then();
+    await refreshOtpEvery30Sec(inputField, secret_url, bigElement).then();
   }
 }
 
