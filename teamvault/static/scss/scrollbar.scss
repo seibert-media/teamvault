@@ -10,8 +10,9 @@ body, .modal-dialog-scrollable .modal-body {
   &::-webkit-scrollbar-thumb {
     background-color: var(--bs-secondary);
     border-radius: 20px;
-    border: 6px solid transparent;
+    border: 8px solid transparent;
     background-clip: content-box;
+    min-height: 50px;
   }
 
   &::-webkit-scrollbar-thumb:hover {
