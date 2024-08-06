@@ -88,43 +88,36 @@ class SecretAdd(CreateView):
         secret.save()
 
         if secret.content_type == Secret.CONTENT_PASSWORD:
-            plaintext_data = form.cleaned_data['password']
+            plaintext_data = dict(password=form.cleaned_data['password'], otp_key="", digits=6, algorithm="SHA1")
             if form.cleaned_data['otp_key_data']:
                 plaintext_key_data = form.cleaned_data['otp_key_data']
-                plaintext_key = plaintext_key_data[
-                                plaintext_key_data.index("secret") + 7:
-                                plaintext_key_data.index("&")
-                                ].encode('utf-8')
-                digits = 8 if "digits=8" in plaintext_key_data else 6
+                plaintext_data["otp_key"] = plaintext_key_data[
+                                            plaintext_key_data.index("secret") + 7:
+                                            plaintext_key_data.index("&")
+                                            ].encode('utf-8')
+                plaintext_data["digits"] = 8 if "digits=8" in plaintext_key_data else 6
                 if "SHA256" in plaintext_key_data:
                     algorithm = "SHA256"
                 elif "SHA512" in plaintext_key_data:
                     algorithm = "SHA512"
                 else:
                     algorithm = "SHA1"
-                plaintext_key_data = dumps({
-                    "plaintext_key": plaintext_key,
-                    "digits": digits,
-                    "algorithm": algorithm
-                })
+                plaintext_data["algorithm"] = algorithm
 
         elif secret.content_type == Secret.CONTENT_FILE:
-            plaintext_data = form.cleaned_data['file'].read()
+            plaintext_data = dict(file_content=form.cleaned_data['file'].read())
             secret.filename = form.cleaned_data['file'].name
             secret.save()
-        elif secret.content_type == Secret.CONTENT_CC:
-            plaintext_data = dumps({
+        else:
+            plaintext_data = {
                 'holder': form.cleaned_data['holder'],
                 'number': form.cleaned_data['number'],
                 'expiration_month': str(form.cleaned_data['expiration_month']),
                 'expiration_year': str(form.cleaned_data['expiration_year']),
                 'security_code': str(form.cleaned_data['security_code']),
                 'password': form.cleaned_data['password'],
-            })
-        if plaintext_key:
-            secret.set_data(self.request.user, plaintext_data, plaintext_key_data, skip_access_check=True, set_otp_key=True)
-        else:
-            secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
+            }
+        secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
 
         # Create share objects
         secret.share_data.create(user=self.request.user)
@@ -192,51 +185,43 @@ class SecretEdit(UpdateView):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-        plaintext_key = None
         if secret.content_type == Secret.CONTENT_PASSWORD:
+            plaintext_data = dict(password="", otp_key="", digits=6, algorithm="")
             if form.cleaned_data['password']:
-                plaintext_data = form.cleaned_data['password']
-            else:
-                plaintext_data = None
+                plaintext_data["password"] = form.cleaned_data['password']
             if form.cleaned_data['otp_key_data']:
                 plaintext_key_data = form.cleaned_data['otp_key_data']
                 key_index = plaintext_key_data.index("secret") + 7
-                plaintext_key = plaintext_key_data[
-                                key_index:
-                                plaintext_key_data[key_index:].index("&") + key_index
-                                ]
-                digits = 8 if "digits=8" in plaintext_key_data else 6
+                plaintext_data["otp_key"] = plaintext_key_data[
+                                            key_index:
+                                            plaintext_key_data[key_index:].index("&") + key_index
+                                            ]
+                plaintext_data["digits"] = 8 if "digits=8" in plaintext_key_data else 6
                 if "SHA256" in plaintext_key_data:
                     algorithm = "SHA256"
                 elif "SHA512" in plaintext_key_data:
                     algorithm = "SHA512"
                 else:
                     algorithm = "SHA1"
-                plaintext_key_data = dumps({
-                    "plaintext_key": plaintext_key,
-                    "digits": digits,
-                    "algorithm": algorithm
-                })
+                plaintext_data["algorithm"] = algorithm
         elif secret.content_type == Secret.CONTENT_FILE and form.cleaned_data['file']:
-            plaintext_data = form.cleaned_data['file'].read()
+            plaintext_data = dict(file_content=form.cleaned_data['file'].read())
             secret.filename = form.cleaned_data['file'].name
             secret.save()
         elif secret.content_type == Secret.CONTENT_CC:
-            plaintext_data = dumps({
+            plaintext_data = {
                 'holder': form.cleaned_data['holder'],
                 'number': form.cleaned_data['number'],
                 'expiration_month': form.cleaned_data['expiration_month'],
                 'expiration_year': form.cleaned_data['expiration_year'],
                 'security_code': form.cleaned_data['security_code'],
                 'password': form.cleaned_data['password'],
-            })
+            }
         else:
             plaintext_data = None
 
         if plaintext_data is not None:
             secret.set_data(self.request.user, plaintext_data)
-        if plaintext_key is not None:
-            secret.set_data(self.request.user, plaintext_data="", plaintext_key_data=plaintext_key_data, set_password=False, set_otp_key=True)
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
@@ -364,8 +349,7 @@ class SecretDetail(DetailView):
     slug_url_kwarg = 'hashid'
 
     def get_context_data(self, **kwargs):
-        self.request.session['session_start'] = timezone.now().isoformat()
-        self.request.session['sessions_tracked'] = 0
+        self.request.session["otp_key"] = None
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]

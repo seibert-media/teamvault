@@ -1,13 +1,7 @@
 export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement) {
-  let secretData, secret, digits, algortihm;
-  const response = await fetch(secret_url);
-  const data = await response.json();
-  secretData = data['otp-key-data'];
-  secret = secretData["plaintext_key"];
-  digits = secretData["digits"];
-  algortihm = secretData["algorithm"]; // TODO maybe write own version that consideres algortihm
-  const otp = new jsotp.TOTP(secret, digits).now();
-  let newFieldData = otp.slice(0, 3) + "<span class='separator mx-1'></span>" + otp.slice(3);
+  const otp_response = await fetch(secret_url+"/otp")
+  const otp_data = await otp_response.json()
+  let newFieldData = otp_data.slice(0, 3) + "<span class='separator mx-1'></span>" + otp_data.slice(3);
   inputElement.innerHTML = newFieldData;
   if ( !bigElement.classList.contains("invisible")) {
     newFieldData = newFieldData.replace('mx-1', 'mx-3')
