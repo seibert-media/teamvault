@@ -15,7 +15,9 @@ import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
 import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
 
 import * as teamvault from './utils'
+import * as otp from './otp'
 
+window.otp = otp
 window.teamvault = teamvault
 
 // Bootstrap
@@ -28,6 +30,8 @@ window.htmx = require('htmx.org')
 window.$ = $
 window.jQuery = $
 
+//js qr scanner
+window.qrScanner = require("jsqr")
 // Bigtext
 require('bigtext');
 

@@ -14,13 +14,12 @@ django-webpack-loader = "*"
 djangorestframework = "*"
 gunicorn = "*"
 hashids = "*"
-psycopg2 = "*"
 pytz = "*"
 requests = "*"
 social-auth-app-django = "*"
 whitenoise = {extras = ["brotli"], version = "*"}
-
 # Required for building and publishing
 build = "*"
 twine = "*"
 huey = "*"
+psycopg = "*"

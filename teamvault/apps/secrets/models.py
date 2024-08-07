@@ -1,6 +1,8 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 from hashlib import sha256
+from json import dumps, loads
 from operator import itemgetter
+from pyotp import TOTP
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -244,10 +246,60 @@ class Secret(HashIDModel):
         self.save()
 
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        plaintext_data = f.decrypt(self.current_revision.encrypted_data.tobytes())
-        if self.content_type != Secret.CONTENT_FILE:
-            plaintext_data = plaintext_data.decode('utf-8')
+        if self.current_revision.encrypted_json_data:
+            # new version with json fields
+            plaintext_data = self.current_revision.encrypted_json_data
+            if self.content_type == Secret.CONTENT_PASSWORD:
+                plaintext_data["password"] = f.decrypt(plaintext_data["password"].encode("utf-8")).decode("utf-8")
+                if plaintext_data["otp_key"]:
+                    plaintext_data["otp_key"] = f.decrypt(plaintext_data["otp_key"].encode("utf-8")).decode("utf-8")
+            elif self.content_type == Secret.CONTENT_CC:
+                for key in plaintext_data.keys():
+                    plaintext_data[key] = f.decrypt(plaintext_data[key].encode("utf-8")).decode("utf-8")
+            else:
+                plaintext_data = f.decrypt(plaintext_data["file_content"].encode("utf-8")).decode(
+                    "utf-8")
+        else:
+            # old version with binary fields
+            if self.content_type == Secret.CONTENT_PASSWORD:
+                plaintext_data = dict(password="", otp_key="", digits=6, algorithm="")
+                if self.current_revision.encrypted_otp_key_data:
+                    plaintext_key_data = self.current_revision.encrypted_otp_key_data
+                    plaintext_data["otp_key"] = f.decrypt(plaintext_key_data["plaintext_key"].tobytes()).decode("utf-8")
+                    plaintext_data["digits"] = plaintext_key_data["digits"]
+                    plaintext_data["algorithm"] = plaintext_key_data["algorithm"]
+                plaintext_data["password"] = f.decrypt(self.current_revision.encrypted_data.tobytes())
+            elif self.content_type == Secret.CONTENT_CC:
+                plaintext_data = loads(f.decrypt(self.current_revision.encrypted_data.tobytes()).decode("utf-8"))
+            else:
+                plaintext_data = f.decrypt(self.current_revision.encrypted_data.tobytes()).decode("utf-8")
         return plaintext_data
+
+    def get_old_data(self, f: Fernet):
+        if self.current_revision.encrypted_json_data:
+            # new version where data is stored as JSON field
+            old_data = self.current_revision.encrypted_json_data
+        else:
+            # old version where data is stored as binary field
+            old_data = dict(password="", otp_key="", digits=6, algorithm="")
+            if self.current_revision:
+                old_data["password"] = f.decrypt(self.current_revision.encrypted_data.tobytes()).decode('utf-8')
+                if self.current_revision.encrypted_otp_key_data:
+                    old_otp_key_data = loads(
+                        f.decrypt(self.current_revision.encrypted_otp_key_data.tobytes()).decode('utf-8'))
+                    old_data["algorithm"] = old_otp_key_data["algorithm"]
+                    old_data["digits"] = old_otp_key_data["digits"]
+                    old_data["otp_key"] = old_otp_key_data["plaintext_key"]
+        return old_data
+
+    def get_otp(self, request):
+        if not request.session["otp_key"]:
+            otp_key = self.get_data(request.user)["otp_key"]
+            request.session["otp_key"] = otp_key
+        else:
+            otp_key = request.session["otp_key"]
+        totp = TOTP(otp_key)
+        return totp.now()
 
     @classmethod
     def get_all_readable_by_user(cls, user):
@@ -389,33 +441,67 @@ class Secret(HashIDModel):
                 name=self.name,
                 user=user.username,
             ))
-        # save the length before encoding so multi-byte characters don't
-        # mess up the result
-        plaintext_length = len(plaintext_data)
-        if isinstance(plaintext_data, str):
-            plaintext_data = plaintext_data.encode('utf-8')
-        plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        encrypted_data = f.encrypt(plaintext_data)
+        length = len(dumps(plaintext_data))
+        if self.content_type == Secret.CONTENT_PASSWORD:
+            encrypted_data = self.get_old_data(f) if self.current_revision else dict(password="", otp_key="", digits=6,
+                                                                                     algorithm="")
+            plain_data = encrypted_data.copy()
+            if plaintext_data["otp_key"]:
+                otp_key = plaintext_data["otp_key"]
+                plain_data["otp_key"] = otp_key
+            else:
+                otp_key = encrypted_data["otp_key"]
+            if plaintext_data["password"]:
+                password = plaintext_data["password"]
+                length = len(password)
+                plain_data["password"] = password
+            else:
+                password = encrypted_data["password"]
+            if encrypted_data["otp_key"]:
+                encrypted_data["otp_key"] = f.encrypt(otp_key.encode("utf-8")).decode("utf-8")
+            encrypted_data["password"] = f.encrypt(password.encode("utf-8")).decode("utf-8")
+            plaintext_data_sha256_old = sha256(password.encode("utf-8")).hexdigest()
+            plaintext_data_sha256_new = sha256(dumps(plain_data).encode("utf-8")).hexdigest()
+        else:
+            encrypted_data = {}
+            plaintext_data_sha256_new = sha256(dumps(plaintext_data).encode("utf-8")).hexdigest()
+            if self.content_type == Secret.CONTENT_CC:
+                plaintext_data_sha256_old = plaintext_data_sha256_new
+                for key in plaintext_data.keys():
+                    encrypted_data[key] = f.encrypt(plaintext_data[key].encode("utf-8")).decode("utf-8")
+            else:
+                plaintext_data_sha256_old = sha256(plaintext_data["file_content"]).hexdigest()
+                encrypted_data["file_content"] = f.encrypt(plaintext_data["file_content"].encode("utf-8")).decode(
+                    "utf-8")
+
         try:
             # see the comment on unique_together for SecretRevision
             p = SecretRevision.objects.get(
-                plaintext_data_sha256=plaintext_data_sha256,
+                plaintext_data_sha256=plaintext_data_sha256_old,
                 secret=self,
             )
         except SecretRevision.DoesNotExist:
-            p = SecretRevision()
-        p.encrypted_data = encrypted_data
-        p.length = plaintext_length
-        # the hash is needed for unique_together (see below)
-        # unique_together uses an index on its fields which is
-        # problematic with the largeish blobs we might store here (see
-        # issue #30)
-        p.plaintext_data_sha256 = plaintext_data_sha256
+            try:
+                # if old revision was not found with old sha, try new one
+                p = SecretRevision.objects.get(
+                    plaintext_data_sha256=plaintext_data_sha256_new,
+                    secret=self,
+                )
+            except SecretRevision.DoesNotExist:
+                p = SecretRevision()
+        if self.content_type == Secret.CONTENT_PASSWORD and plaintext_data["otp_key"]:
+            p.otp_key_set = True
+        p.encrypted_data = b""
+        p.encrypted_json_data = encrypted_data
+        p.encrypted_otp_key_data = None
+        p.length = length
+        p.plaintext_data_sha256 = plaintext_data_sha256_new
         p.secret = self
         p.set_by = user
         p.save()
         p.accessed_by.add(user)
+
         if self.current_revision:
             previous_revision_id = self.current_revision.id
         else:
@@ -490,9 +576,12 @@ class SecretRevision(HashIDModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
+    encrypted_json_data = models.JSONField(blank=True, null=True)
+    encrypted_otp_key_data = models.BinaryField(blank=True, null=True)
     length = models.PositiveIntegerField(
         default=0,
     )
+    otp_key_set = models.BooleanField(default=False)
     plaintext_data_sha256 = models.CharField(
         max_length=64,
     )
