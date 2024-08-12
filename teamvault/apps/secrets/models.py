@@ -1,5 +1,6 @@
 from datetime import timedelta, datetime
 from hashlib import sha256
+from json import dumps, loads
 from operator import itemgetter
 
 from cryptography.fernet import Fernet
@@ -401,8 +402,7 @@ class Secret(HashIDModel):
             return AccessPermissionTypes.SUPERUSER_ALLOWED
         return AccessPermissionTypes.NOT_ALLOWED
 
-    def set_data(self, user, plaintext_data, plaintext_key_data="", set_password=True, skip_access_check=False,
-                 set_otp_key=False):
+    def set_data(self, user, plaintext_data, skip_access_check=False):
         # skip_access_check is used when initially creating a secret
         # and makes it possible to create secrets you don't have access
         # to
@@ -416,39 +416,44 @@ class Secret(HashIDModel):
             ))
         # save the length before encoding so multi-byte characters don't
         # mess up the result
+        set_password = "password" in plaintext_data.keys()
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        if isinstance(plaintext_data, str):
-            plaintext_data = plaintext_data.encode('utf-8')
+        if set_password:
+            plaintext_length = len(plaintext_data["password"])
+        if self.current_revision:
+            old_data = f.decrypt(self.current_revision.encrypted_data.tobytes()).decode('utf-8')
+            try:
+                old_data = loads(old_data)
+                is_json = True
+            except ValueError:
+                is_json = False
+            if not is_json and not set_password:
+                plaintext_data["password"] = old_data
+            elif is_json:
+                if not set_password:
+                    plaintext_data["password"] = old_data.get("password")
+                if not plaintext_data["otp_key"] and "otp_key" in old_data.keys:
+                    for key in ["otp_key", "digits", "algorithm"]:
+                        plaintext_data[key] = old_data.get(key)
+        password = plaintext_data["password"]
+        plaintext_data = dumps(plaintext_data).encode('utf-8')
         plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
+        if set_password:
+            plaintext_data_sha256 = sha256(password.encode('utf-8')).hexdigest()
         try:
             # see the comment on unique_together for SecretRevision
             p = SecretRevision.objects.get(
                 plaintext_data_sha256=plaintext_data_sha256,
                 secret=self,
-            ) if set_password else self.current_revision
+            )
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
-            if set_password:
-                # secret OTP key should remain the same if password is changed
-                p.encrypted_otp_key_data = self.current_revision.encrypted_otp_key_data if self.current_revision else None
 
-        if set_password:
-            encrypted_data = f.encrypt(plaintext_data)
-            p.encrypted_data = encrypted_data
-            p.length = plaintext_length
-
-            # the hash is needed for unique_together (see below)
-            # unique_together uses an index on its fields which is
-            # problematic with the largeish blobs we might store here (see
-            # issue #30)
-            p.plaintext_data_sha256 = plaintext_data_sha256
-            p.set_by = user
-        if set_otp_key:
-            plaintext_key_data = plaintext_key_data.encode('utf-8')
-            encrypted_key_data = f.encrypt(plaintext_key_data)
-            p.encrypted_otp_key_data = encrypted_key_data
-
+        p.encrypted_data = f.encrypt(plaintext_data)
+        p.length = plaintext_length
+        p.plaintext_data_sha256 = plaintext_data_sha256
+        p.set_by = user
         p.secret = self
         p.save()
         p.accessed_by.add(user)
@@ -527,7 +532,7 @@ class SecretRevision(HashIDModel):
     )
     created = models.DateTimeField(auto_now_add=True)
     encrypted_data = models.BinaryField()
-    encrypted_otp_key_data = models.BinaryField(blank=True, null=True)
+    otp_key_set = models.BooleanField(default=False)
     length = models.PositiveIntegerField(
         default=0,
     )
