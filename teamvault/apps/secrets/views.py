@@ -1,4 +1,3 @@
-from json import loads
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
