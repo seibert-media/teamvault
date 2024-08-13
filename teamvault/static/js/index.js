@@ -30,9 +30,6 @@ window.htmx = require('htmx.org')
 window.$ = $
 window.jQuery = $
 
-// jsOTP
-window.jsotp = require('jsotp');
-
 //js qr scanner
 window.qrScanner = require("jsqr")
 // Bigtext

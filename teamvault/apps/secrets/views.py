@@ -161,6 +161,7 @@ class SecretEdit(UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super(SecretEdit, self).get_context_data(**kwargs)
+        context['current_revision'] = self.get_object().current_revision
         context['pretty_content_type'] = self.object.get_content_type_display()
         return context
 
@@ -182,7 +183,7 @@ class SecretEdit(UpdateView):
 
     def get_initial(self):
         if self.object.content_type == Secret.CONTENT_CC:
-            data = loads(self.object.get_data(self.request.user))
+            data = self.object.get_data(self.request.user)
             return {
                 'holder': data['holder'],
                 'number': data['number'],
@@ -284,11 +285,11 @@ class SecretDetail(DetailView):
     slug_url_kwarg = 'hashid'
 
     def get_context_data(self, **kwargs):
-        self.request.session['session_start'] = timezone.now().isoformat()
-        self.request.session['sessions_tracked'] = 0
+        self.request.session['otp_key'] = None
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
+        context['current_revision'] = secret.current_revision
         context['readable'] = secret.is_readable_by_user(self.request.user)
         context['shareable'] = secret.is_shareable_by_user(self.request.user)
         context['secret_deleted'] = True if secret.status == Secret.STATUS_DELETED else False

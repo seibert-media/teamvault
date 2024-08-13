@@ -14,10 +14,10 @@ def serialize_add_edit_data(cleaned_data, secret):
             plaintext_data['password'] = cleaned_data['password']
         if cleaned_data['otp_key_data']:
             plaintext_key_data = cleaned_data['otp_key_data']
-            plaintext_data["opt_key"] = plaintext_key_data[
+            plaintext_data["otp_key"] = plaintext_key_data[
                                         plaintext_key_data.index("secret") + 7:
                                         plaintext_key_data.index("&")
-                                        ].encode('utf-8')
+                                        ]
             plaintext_data["digits"] = 8 if "digits=8" in plaintext_key_data else 6
             if "SHA256" in plaintext_key_data:
                 algorithm = "SHA256"
@@ -27,7 +27,7 @@ def serialize_add_edit_data(cleaned_data, secret):
                 algorithm = "SHA1"
             plaintext_data["algorithm"] = algorithm
     elif secret.content_type == Secret.CONTENT_FILE:
-        plaintext_data["file_content"] = cleaned_data['file'].read()
+        plaintext_data["file_content"] = cleaned_data['file'].read().decode("utf-8")
         secret.filename = cleaned_data['file'].name
         secret.save()
     elif secret.content_type == Secret.CONTENT_CC:

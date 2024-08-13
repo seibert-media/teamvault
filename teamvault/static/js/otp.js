@@ -1,12 +1,6 @@
 export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement) {
-  let secretData, secret, digits, algortihm;
-  const response = await fetch(secret_url);
-  const data = await response.json();
-  secretData = data['otp-key-data'];
-  secret = secretData["plaintext_key"];
-  digits = secretData["digits"];
-  algortihm = secretData["algorithm"]; // TODO maybe write own version that consideres algortihm
-  const otp = new jsotp.TOTP(secret, digits).now();
+  const response = await fetch(secret_url+"/otp");
+  const otp = await response.json();
   let newFieldData = otp.slice(0, 3) + "<span class='separator mx-1'></span>" + otp.slice(3);
   inputElement.innerHTML = newFieldData;
   if ( !bigElement.classList.contains("invisible")) {
@@ -43,7 +37,7 @@ function getCountdowmTime(interval = 30) {
 }
 
 
- export function setCircleParams(circleElement, progress){
+function setCircleParams(circleElement, progress){
   const radius = circleElement.getAttribute("r");
   const circleSize = (2 * Math.PI) * radius;
   const progressOffset = circleSize - ((progress/30)*circleSize);

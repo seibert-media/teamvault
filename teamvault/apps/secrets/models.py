@@ -17,6 +17,7 @@ from django.urls import reverse
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from hashids import Hashids
+from pyotp import TOTP
 
 from .exceptions import PermissionError
 from ..audit.auditlog import log
@@ -200,7 +201,7 @@ class Secret(HashIDModel):
     def get_absolute_url(self):
         return reverse('secrets.secret-detail', args=[str(self.hashid)])
 
-    def get_data(self, user, get_otp_key=False, request=None):
+    def get_data(self, user, ):
         if not self.current_revision:
             raise Http404
 
@@ -220,59 +221,48 @@ class Secret(HashIDModel):
                 name=self.name,
                 user=user.username,
             ))
-
         if read_allowed == AccessPermissionTypes.SUPERUSER_ALLOWED:
             category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
             log_message = _("{user} used superuser privileges to read '{name}'")
         else:
             category = AuditLogCategoryChoices.SECRET_READ
             log_message = _("{user} read '{name}'")
-
-        if request:
-            timediff = datetime.now() - datetime.fromisoformat(
-                request.session["session_start"]).replace(
-                tzinfo=None)
-            timediff = timediff.seconds
-            sessions_tracked = request.session["sessions_tracked"]
-            if sessions_tracked == 0 or timediff >= sessions_tracked * 1800 or not get_otp_key:
-                log(
-                    log_message.format(
-                        name=self.name,
-                        user=user.username,
-                    ),
-                    actor=user,
-                    category=category,
-                    level='info',
-                    secret=self,
-                    secret_revision=self.current_revision,
-                )
-                request.session["sessions_tracked"] += 1
-        else:
-            log(
-                log_message.format(
-                    name=self.name,
-                    user=user.username,
-                ),
-                actor=user,
-                category=category,
-                level='info',
-                secret=self,
-                secret_revision=self.current_revision,
-            )
+        log(
+            log_message.format(
+                name=self.name,
+                user=user.username,
+            ),
+            actor=user,
+            category=category,
+            level='info',
+            secret=self,
+            secret_revision=self.current_revision,
+        )
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
         self.last_read = now()
         self.save()
-
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        if get_otp_key and self.current_revision.encrypted_otp_key_data:
-            plaintext_data = self.current_revision.encrypted_otp_key_data
-        else:
-            plaintext_data = self.current_revision.encrypted_data
-        plaintext_data = f.decrypt(plaintext_data)
-        if self.content_type != Secret.CONTENT_FILE:
-            plaintext_data = plaintext_data.decode('utf-8')
+        plaintext_data = self.current_revision.encrypted_data
+        plaintext_data = f.decrypt(plaintext_data).decode('utf-8')
+        try:
+            plaintext_data = loads(plaintext_data)
+            if self.content_type == Secret.CONTENT_FILE:
+                plaintext_data = plaintext_data["file_content"]
+        except ValueError:
+            if self.content_type == self.CONTENT_PASSWORD:
+                plaintext_data = dict(password=plaintext_data)
+
         return plaintext_data
+
+    def get_otp(self, request):
+        if not request.session["otp_key"]:
+            otp_key = self.get_data(request.user)["otp_key"]
+            request.session["otp_key"] = otp_key
+        else:
+            otp_key = request.session["otp_key"]
+        totp = TOTP(otp_key)
+        return totp.now()
 
     @classmethod
     def get_all_readable_by_user(cls, user):
@@ -416,31 +406,13 @@ class Secret(HashIDModel):
             ))
         # save the length before encoding so multi-byte characters don't
         # mess up the result
-        set_password = "password" in plaintext_data.keys()
+        set_password = "password" in plaintext_data.keys() and self.content_type == Secret.CONTENT_PASSWORD
+        set_otp = "otp_key" in plaintext_data.keys()
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+        plaintext_data_sha256 = sha256(dumps(plaintext_data).encode('utf-8')).hexdigest()
         if set_password:
-            plaintext_length = len(plaintext_data["password"])
-        if self.current_revision:
-            old_data = f.decrypt(self.current_revision.encrypted_data.tobytes()).decode('utf-8')
-            try:
-                old_data = loads(old_data)
-                is_json = True
-            except ValueError:
-                is_json = False
-            if not is_json and not set_password:
-                plaintext_data["password"] = old_data
-            elif is_json:
-                if not set_password:
-                    plaintext_data["password"] = old_data.get("password")
-                if not plaintext_data["otp_key"] and "otp_key" in old_data.keys:
-                    for key in ["otp_key", "digits", "algorithm"]:
-                        plaintext_data[key] = old_data.get(key)
-        password = plaintext_data["password"]
-        plaintext_data = dumps(plaintext_data).encode('utf-8')
-        plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
-        if set_password:
-            plaintext_data_sha256 = sha256(password.encode('utf-8')).hexdigest()
+            plaintext_data_sha256 = sha256(plaintext_data["password"].encode('utf-8')).hexdigest()
         try:
             # see the comment on unique_together for SecretRevision
             p = SecretRevision.objects.get(
@@ -449,7 +421,22 @@ class Secret(HashIDModel):
             )
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
-
+        if self.current_revision and self.content_type == Secret.CONTENT_PASSWORD:
+            old_data = f.decrypt(self.current_revision.encrypted_data.tobytes()).decode('utf-8')
+            try:
+                old_data = loads(old_data)
+            except ValueError:
+                old_data = dict(password=old_data)
+            if not set_password:
+                plaintext_data["password"] = old_data["password"]
+            if not set_otp:
+                for key in ["otp_key", "digits", "algorithm"]:
+                    plaintext_data[key] = old_data.get(key)
+        if self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data.keys():
+            plaintext_length = len(plaintext_data["password"])
+        if set_otp or "otp_key" in plaintext_data.keys():
+            p.otp_key_set = True
+        plaintext_data = dumps(plaintext_data).encode('utf-8')
         p.encrypted_data = f.encrypt(plaintext_data)
         p.length = plaintext_length
         p.plaintext_data_sha256 = plaintext_data_sha256
