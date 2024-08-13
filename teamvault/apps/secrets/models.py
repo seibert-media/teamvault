@@ -201,7 +201,7 @@ class Secret(HashIDModel):
     def get_absolute_url(self):
         return reverse('secrets.secret-detail', args=[str(self.hashid)])
 
-    def get_data(self, user, ):
+    def get_data(self, user):
         if not self.current_revision:
             raise Http404
 
@@ -434,7 +434,7 @@ class Secret(HashIDModel):
                     plaintext_data[key] = old_data.get(key)
         if self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data.keys():
             plaintext_length = len(plaintext_data["password"])
-        if set_otp or "otp_key" in plaintext_data.keys():
+        if set_otp:
             p.otp_key_set = True
         plaintext_data = dumps(plaintext_data).encode('utf-8')
         p.encrypted_data = f.encrypt(plaintext_data)
