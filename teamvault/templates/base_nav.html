@@ -83,6 +83,17 @@
                     </div>
                 </div>
             {% endif %}
+
+            <!-- Theme toggle -->
+            <div class="col-12 col-lg-auto my-2 me-lg-4 mb-3 mb-lg-2 d-flex justify-content-center align-items-center">
+                <button class="btn btn-outline-primary bg-transparent btn-sm border-0"
+                    role="button"
+                    onclick="toggleTheme()"
+                    aria-expanded="false">
+                    <i class="fa {% if request.COOKIES.theme == 'dark' %} fa-moon {% else %} fa-sun {% endif %} fa-fw text-white fs-5 lh-1" id="theme-icon"></i>
+                </button> 
+            </div>
+
             <!-- User actions -->
             <div class="col-12 col-lg-auto my-2 mb-3 mb-lg-2 d-flex justify-content-center justify-content-lg-end align-items-center">
                 <div class="dropdown-center">
@@ -112,5 +123,26 @@
         </div>
     </div>
 </header>
+
+<script>
+    let theme = {% if request.COOKIES.theme == 'dark' %} "dark" {% else %} "light" {% endif %}; // directly using`request.COOKIES.theme` could lead to a code injection
+
+    function toggleTheme() {
+        // toggle theme
+        theme = theme === "light" ? "dark" : "light";
+        document.body.setAttribute("data-bs-theme", theme)
+
+        // change icon
+        const toggleButton = document.getElementById("theme-icon");
+        toggleButton.classList.remove("fa-sun", "fa-moon")
+        toggleButton.classList.add(theme === "dark" ? "fa-moon" : "fa-sun")
+
+        // update cookie
+        const d = new Date();
+        d.setTime(d.getTime() + 25_920_000_000);
+        let expires = "expires="+ d.toUTCString();
+        document.cookie = `theme=${theme}; expires=${expires}; path=/`;
+    }
+</script>
 
 {% include 'secrets/secret_search.html' %}
