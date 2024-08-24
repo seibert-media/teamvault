@@ -435,6 +435,7 @@ class Secret(HashIDModel):
             if not set_otp and "otp_key" in old_data:
                 for key in ["otp_key", "digits", "algorithm"]:
                     plaintext_data[key] = old_data[key]
+                    set_otp = True
         if self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data.keys():
             plaintext_length = len(plaintext_data["password"])
         if set_otp:
