@@ -1,6 +1,6 @@
 from datetime import timedelta
 from hashlib import sha256
-from json import dumps, loads
+from json import JSONDecodeError, dumps, loads
 from operator import itemgetter
 
 from cryptography.fernet import Fernet
@@ -249,14 +249,14 @@ class Secret(HashIDModel):
             plaintext_data = loads(plaintext_data)
             if self.content_type == Secret.CONTENT_FILE:
                 plaintext_data = plaintext_data["file_content"]
-        except ValueError:
+        except JSONDecodeError:
             if self.content_type == self.CONTENT_PASSWORD:
                 plaintext_data = dict(password=plaintext_data)
 
         return plaintext_data
 
     def get_otp(self, request):
-        if not request.session["otp_key"]:
+        if not request.session.get("otp_key"):
             otp_key = self.get_data(request.user)["otp_key"]
             request.session["otp_key"] = otp_key
         else:
@@ -406,13 +406,14 @@ class Secret(HashIDModel):
             ))
         # save the length before encoding so multi-byte characters don't
         # mess up the result
-        set_password = "password" in plaintext_data.keys() and self.content_type == Secret.CONTENT_PASSWORD
-        set_otp = "otp_key" in plaintext_data.keys()
+        set_password = "password" in plaintext_data and self.content_type == Secret.CONTENT_PASSWORD
+        set_otp = "otp_key" in plaintext_data
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        plaintext_data_sha256 = sha256(dumps(plaintext_data).encode('utf-8')).hexdigest()
         if set_password:
             plaintext_data_sha256 = sha256(plaintext_data["password"].encode('utf-8')).hexdigest()
+        else:
+            plaintext_data_sha256 = sha256(dumps(plaintext_data).encode('utf-8')).hexdigest()
         try:
             # see the comment on unique_together for SecretRevision
             p = SecretRevision.objects.get(
@@ -423,15 +424,17 @@ class Secret(HashIDModel):
             p = SecretRevision()
         if self.current_revision and self.content_type == Secret.CONTENT_PASSWORD:
             old_data = f.decrypt(self.current_revision.encrypted_data.tobytes()).decode('utf-8')
+            # If not already dict convert to dict since password and otp key are now stored together in dict format.
+            # To keep everything uniform CC and file secrets stored as a dict as well
             try:
                 old_data = loads(old_data)
-            except ValueError:
+            except JSONDecodeError:
                 old_data = dict(password=old_data)
             if not set_password:
                 plaintext_data["password"] = old_data["password"]
-            if not set_otp:
+            if not set_otp and "otp_key" in old_data:
                 for key in ["otp_key", "digits", "algorithm"]:
-                    plaintext_data[key] = old_data.get(key)
+                    plaintext_data[key] = old_data[key]
         if self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data.keys():
             plaintext_length = len(plaintext_data["password"])
         if set_otp:

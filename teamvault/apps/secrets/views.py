@@ -155,12 +155,13 @@ class SecretEdit(UpdateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
         plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
-        secret.set_data(self.request.user, plaintext_data)
+        if plaintext_data is not None:
+            secret.set_data(self.request.user, plaintext_data)
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
         context = super(SecretEdit, self).get_context_data(**kwargs)
-        context['current_revision'] = self.get_object().current_revision
+        context['current_revision'] = self.object.current_revision
         context['pretty_content_type'] = self.object.get_content_type_display()
         return context
 
@@ -284,11 +285,10 @@ class SecretDetail(DetailView):
     slug_url_kwarg = 'hashid'
 
     def get_context_data(self, **kwargs):
-        self.request.session['otp_key'] = None
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
-        context['current_revision'] = secret.current_revision
+        context['secret_revision'] = secret.current_revision
         context['readable'] = secret.is_readable_by_user(self.request.user)
         context['shareable'] = secret.is_shareable_by_user(self.request.user)
         context['secret_deleted'] = True if secret.status == Secret.STATUS_DELETED else False

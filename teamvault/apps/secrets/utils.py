@@ -1,5 +1,6 @@
 import secrets
 import string
+from urllib.parse import urlparse, parse_qs
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 
@@ -9,22 +10,13 @@ from .models import Secret
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
     if secret.content_type == Secret.CONTENT_PASSWORD:
-        if cleaned_data['password']:
+        cleaned_data_as_url = urlparse(cleaned_data["otp_key_data"])
+        data_params = parse_qs(cleaned_data_as_url.query)
+        if cleaned_data.get("password"):
             plaintext_data['password'] = cleaned_data['password']
-        if cleaned_data['otp_key_data']:
-            plaintext_key_data = cleaned_data['otp_key_data']
-            plaintext_data["otp_key"] = plaintext_key_data[
-                                        plaintext_key_data.index("secret") + 7:
-                                        plaintext_key_data.index("&")
-                                        ]
-            plaintext_data["digits"] = 8 if "digits=8" in plaintext_key_data else 6
-            if "SHA256" in plaintext_key_data:
-                algorithm = "SHA256"
-            elif "SHA512" in plaintext_key_data:
-                algorithm = "SHA512"
-            else:
-                algorithm = "SHA1"
-            plaintext_data["algorithm"] = algorithm
+        for key in ["secret", "digits", "algorithm"]:
+            if data_params.get(key):
+                plaintext_data[key] = data_params[key][0]
     elif secret.content_type == Secret.CONTENT_FILE:
         plaintext_data["file_content"] = cleaned_data['file'].read().decode("utf-8")
         secret.filename = cleaned_data['file'].name

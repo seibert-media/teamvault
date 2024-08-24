@@ -32,6 +32,7 @@ window.jQuery = $
 
 //js qr scanner
 window.qrScanner = require("jsqr")
+
 // Bigtext
 require('bigtext');
 

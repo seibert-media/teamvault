@@ -130,3 +130,12 @@ form {
     background-color: #37383b!important;
   }
 }
+
+.separator {
+  height: 0.3em;
+  width: 0.3em;
+  margin-bottom: 0.2em;
+  background-color: #383838;
+  border-radius: 50%;
+  display: inline-block;
+}
