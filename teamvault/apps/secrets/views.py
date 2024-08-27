@@ -49,9 +49,9 @@ class Dashboard(TemplateView):
     def get_context_data(self, **kwargs):
         context = super(Dashboard, self).get_context_data(**kwargs)
         context['search_term'] = ""
-        context['most_used_secrets'] = Secret.get_most_used_for_user(self.request.user)
+        context['most_used_secrets'] = Secret.get_most_used_for_user(self.request.user, 15)
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
-        context['recently_used_secrets'] = Secret.get_most_recently_used_for_user(self.request.user)
+        context['recently_used_secrets'] = Secret.get_most_recently_used_for_user(self.request.user, 15)
         return context
 
 

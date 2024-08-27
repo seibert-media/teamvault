@@ -80,6 +80,10 @@ kbd {
   }
 }
 
+.list-group-item {
+  --bs-list-group-item-padding-y: 0.75rem;
+}
+
 @include media-breakpoint-down(lg) {
   .modal-lg {
     --bs-modal-width: 88%
