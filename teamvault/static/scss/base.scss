@@ -13,6 +13,7 @@
 @import "./scrollbar";
 @import "./search";
 @import "./secrets";
+@import "./card.scss";
 
 @import "./fontawesome";
 @import "./select2";
@@ -23,7 +24,7 @@ body {
 
 a {
   text-decoration: none;
-  color: #377fae;
+  color: var(--bs-info);
 }
 
 .background {
@@ -42,7 +43,7 @@ a {
 }
 
 h1 {
-  color: #505050;
+  color: var(--text-body);
 
   > .badge {
     vertical-align: top;
@@ -96,10 +97,27 @@ kbd {
   }
 }
 
-form {
-  input, textarea {
-    &:placeholder-shown {
-      background-color: var(--bs-gray-100);
+[data-bs-theme="dark"] {
+  .btn-light {
+    color: var(--bs-light);
+    background-color: var(--bs-secondary-bg);
+    border-color: var(--bs-secondary-bg);
+    border-width: 1px;
+    transition: filter .15s ease-in-out;
+
+    &:hover {
+      filter: brightness(1.2);
     }
+    &:active {
+      filter: brightness(1.4);
+      background-color: var(--bs-secondary-bg);
+      border-color: var(--bs-secondary-bg);
+      color: var(--bs-light);
+    }
+  }
+  
+  // bg-color for filter chips
+  .bg-secondary-subtle {
+    background-color: #37383b!important;
   }
 }

@@ -1,0 +1,4 @@
+// custom dark credit card background
+[data-bs-theme="dark"] .jp-card-front {
+  background-color: $secondary !important;
+}
