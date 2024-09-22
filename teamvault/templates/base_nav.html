@@ -115,10 +115,12 @@
                         </li>
                         <li class="dropdown-divider"></li>
                         <li>
-                            <a class="dropdown-item align-items-center d-inline-flex gap-2"
-                               href="{% url 'accounts.logout' %}">
-                                <i class="fa fa-arrow-right-from-bracket fa-fw"></i> {% trans "Sign out" %}
-                            </a>
+                            <form method="post" action="{% url 'accounts.logout' %}">
+                                {% csrf_token %}
+                                <button class="dropdown-item align-items-center d-inline-flex gap-2" type="submit">
+                                    <i class="fa fa-arrow-right-from-bracket fa-fw"></i> {% trans "Sign out" %}
+                                </button>
+                            </form>
                         </li>
                     </ul>
                 </div>
