@@ -47,7 +47,9 @@
                         data-bs-target="#search-modal">
                     <span><i class="fa fa-search fa-fw"></i> {% translate "Search" %}</span>
                     <span>
-                        <kbd class="bg-transparent border border-secondary">{% translate "CTRL" %}<span class="mx-1">/</span>⌘</kbd>
+                        <kbd class="bg-transparent border border-secondary">
+                            {% translate "CTRL" %}<span class="mx-1">/</span>⌘
+                        </kbd>
                         <kbd class="bg-transparent border border-secondary">K</kbd>
                     </span>
                 </button>
@@ -85,17 +87,18 @@
             {% endif %}
 
             <!-- Theme toggle -->
-            <div class="col-12 col-lg-auto my-2 me-lg-4 mb-3 mb-lg-2 d-flex justify-content-center align-items-center">
-                <button class="btn btn-outline-primary bg-transparent btn-sm border-0"
-                    role="button"
-                    onclick="toggleTheme()"
-                    aria-expanded="false">
-                    <i class="fa {% if request.COOKIES.theme == 'dark' %} fa-moon {% else %} fa-sun {% endif %} fa-fw text-white fs-5 lh-1" id="theme-icon"></i>
-                </button> 
+            <div class="col-12 col-lg-auto my-2 me-lg-4 mb-lg-2 d-flex justify-content-center align-items-center">
+                <button class="btn btn-outline-primary bg-transparent btn-sm border-0 d-flex"
+                        role="button"
+                        onclick="toggleTheme()"
+                        aria-expanded="false">
+                    <i class="fa {% if request.COOKIES.theme == 'dark' %}fa-moon{% else %}fa-sun{% endif %} fa-fw fa-xl text-white lh-1"
+                       id="theme-icon"></i>
+                </button>
             </div>
 
             <!-- User actions -->
-            <div class="col-12 col-lg-auto my-2 mb-3 mb-lg-2 d-flex justify-content-center justify-content-lg-end align-items-center">
+            <div class="col-12 col-lg-auto my-2 mb-lg-2 d-flex justify-content-center justify-content-lg-end align-items-center">
                 <div class="dropdown-center">
                     <a href="#" class="d-flex text-decoration-none"
                        data-bs-toggle="dropdown"
@@ -125,7 +128,7 @@
 </header>
 
 <script>
-    let theme = {% if request.COOKIES.theme == 'dark' %} "dark" {% else %} "light" {% endif %}; // directly using`request.COOKIES.theme` could lead to a code injection
+    let theme = "{% if request.COOKIES.theme == 'dark' %}dark{% else %}light{% endif %}";  // directly using`request.COOKIES.theme` could lead to a code injection
 
     function toggleTheme() {
         // toggle theme
@@ -140,7 +143,7 @@
         // update cookie
         const d = new Date();
         d.setTime(d.getTime() + 25_920_000_000);
-        let expires = "expires="+ d.toUTCString();
+        let expires = "expires=" + d.toUTCString();
         document.cookie = `theme=${theme}; expires=${expires}; path=/`;
     }
 </script>

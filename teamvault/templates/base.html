@@ -18,7 +18,7 @@
     {% block head %}{% endblock %}
 </head>
 
-<body data-bs-no-jquery {% if request.COOKIES.theme == 'dark' %}data-bs-theme="dark"{% else %}data-bs-theme="light"{% endif %}>
+<body data-bs-no-jquery data-bs-theme="{% if request.COOKIES.theme == 'dark' %}dark{% else %}light{% endif %}">
 <script>
     const tooltipOptions = {container: 'body', html: true, trigger: 'hover'}
 

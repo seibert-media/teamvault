@@ -1,5 +1,8 @@
 @import "select2/src/scss/core.scss";
-@import "select2-bootstrap-5-theme/dist/select2-bootstrap-5-theme.css";
+
+/* See https://github.com/apalfrey/select2-bootstrap-5-theme/issues/75 */
+$s2bs5-border-color: $border-color;
+@import "select2-bootstrap-5-theme/src/include-all";
 
 /* Hide selected options in choices */
 .select2-results__option[aria-selected="true"] {
@@ -8,16 +11,6 @@
 
 .select2-container--bootstrap-5 {
   .select2-selection {
-    background-color: var(--bs-body-bg);
-
-    .select2-selection__rendered {
-      color: var(--bs-body-color);
-    }
-
-    .select2-selection__clear {
-      color: var(--bs-body-color);
-    }
-
     // Fix misaligned clear button
     &--single .select2-selection__clear {
       position: absolute;
@@ -38,25 +31,8 @@
   &.select2-container--open .select2-selection {
     box-shadow: none;
   }
-  .select2-dropdown {
-    background-color: var(--bs-body-bg);
-    color: var(--bs-body-color);
-    .select2-search {
-      .select2-search__field {
-        color: var(--bs-body-color);
-        background-color: initial;
-      }
-    }
-    .select2-results {
-      ul.select2-results__options {
-        li.select2-results__option {
-          &.select2-results__option--highlighted {
-            color: var(--bs-body-color);
-            background: var(--bs-body-bg);
-            filter: brightness(0.8);
-          }
-        }
-      }
-    }
+
+  .select2-results__option--highlighted {
+    filter: brightness(0.8);
   }
 }
