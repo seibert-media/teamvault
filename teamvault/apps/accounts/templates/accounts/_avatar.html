@@ -1,5 +1,5 @@
 {% if user.profile.avatar %}
-    <img src="data: image/jpeg; base64,{{ user.profile.avatar.tobytes.decode }}" alt="{{ user.username }} avatar"
+    <img src="data: image/jpeg; base64,{{ user.profile.avatar.decode }}" alt="{{ user.username }} avatar"
          class="avatar {{ classes }}"
             {% if tooltip_title %}
          data-bs-toggle="tooltip"

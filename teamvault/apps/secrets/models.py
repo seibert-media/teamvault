@@ -244,7 +244,7 @@ class Secret(HashIDModel):
         self.save()
 
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        plaintext_data = f.decrypt(self.current_revision.encrypted_data.tobytes())
+        plaintext_data = f.decrypt(self.current_revision.encrypted_data)
         if self.content_type != Secret.CONTENT_FILE:
             plaintext_data = plaintext_data.decode('utf-8')
         return plaintext_data

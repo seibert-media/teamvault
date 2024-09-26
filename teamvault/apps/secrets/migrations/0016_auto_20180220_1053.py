@@ -10,7 +10,10 @@ def backfill_plaintext_hashes(apps, schema_editor):
     SecretRevision = apps.get_model('secrets', 'SecretRevision')
     f = Fernet(settings.TEAMVAULT_SECRET_KEY)
     for srev in SecretRevision.objects.all():
-        plaintext_data = f.decrypt(srev.encrypted_data.tobytes())
+        encrypted_data = srev.encrypted_data
+        if isinstance(encrypted_data, memoryview):  # backwards compatibility with psycopg2
+            encrypted_data = encrypted_data.tobytes()
+        plaintext_data = f.decrypt(encrypted_data)
         srev.plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
         srev.save()
 
