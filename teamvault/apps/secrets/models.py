@@ -194,6 +194,9 @@ class Secret(HashIDModel):
             raise PermissionDenied()
         return shareable
 
+    def check_delete_access(self, user):
+        return self.check_read_access(user)
+
     @property
     def full_url(self):
         return settings.BASE_URL.rstrip("/") + self.get_absolute_url()
