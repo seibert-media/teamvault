@@ -423,7 +423,7 @@ class Secret(HashIDModel):
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
         if self.current_revision and self.content_type == Secret.CONTENT_PASSWORD:
-            old_data = f.decrypt(self.current_revision.encrypted_data.tobytes()).decode('utf-8')
+            old_data = f.decrypt(self.current_revision.encrypted_data).decode('utf-8')
             # If not already dict convert to dict since password and otp key are now stored together in dict format.
             # To keep everything uniform CC and file secrets stored as a dict as well
             try:
