@@ -1,7 +1,39 @@
 import secrets
 import string
+from urllib.parse import urlparse, parse_qs
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
+
+from .models import Secret
+
+
+def serialize_add_edit_data(cleaned_data, secret):
+    plaintext_data = {}
+    if secret.content_type == Secret.CONTENT_PASSWORD:
+        cleaned_data_as_url = urlparse(cleaned_data["otp_key_data"])
+        data_params = parse_qs(cleaned_data_as_url.query)
+        if cleaned_data.get("password"):
+            plaintext_data['password'] = cleaned_data['password']
+        if data_params.get("secret"):
+            plaintext_data["otp_key"] = data_params["secret"][0]
+        if data_params.get("digits"):
+            plaintext_data["digits"] = data_params["digits"][0]
+        if data_params.get("algorithm"):
+            plaintext_data["algorithm"] = data_params["algorithm"][0]
+    elif secret.content_type == Secret.CONTENT_FILE:
+        plaintext_data["file_content"] = cleaned_data['file'].read().decode("utf-8")
+        secret.filename = cleaned_data['file'].name
+        secret.save()
+    elif secret.content_type == Secret.CONTENT_CC:
+        plaintext_data = {
+            'holder': cleaned_data['holder'],
+            'number': cleaned_data['number'],
+            'expiration_month': str(cleaned_data['expiration_month']),
+            'expiration_year': str(cleaned_data['expiration_year']),
+            'security_code': str(cleaned_data['security_code']),
+            'password': cleaned_data['password'],
+        }
+    return plaintext_data
 
 
 def generate_password(length, digits, upper, lower, special):

@@ -31,7 +31,7 @@ def configure_database(config):
     """
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql_psycopg2',
+            'ENGINE': 'django.db.backends.postgresql',
             'HOST': get_from_config(config, "database", "host", "localhost"),
             'NAME': get_from_config(config, "database", "name", "teamvault"),
             'PASSWORD': get_from_config(config, "database", "password", ""),

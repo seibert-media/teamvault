@@ -1,0 +1,38 @@
+$circle_size: 88;
+$max_progress: 30;
+
+
+
+#countdown {
+  --progress: $max_progress;
+  position: relative;
+  height: 40px;
+  width: 40px;
+  text-align: center;
+}
+
+#countdown-number {
+  font-family: monospace;
+  line-height: 40px;
+  display: inline-block;
+  font-size: small;
+  margin-left: -1px;
+}
+
+svg {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 40px;
+  height: 40px;
+  transform: rotateY(-180deg) rotateZ(-90deg);
+}
+
+svg circle {
+  stroke-linecap: round;
+  stroke-width: 2px;
+  stroke: rgb(min(255, 255 - ((var(--progress) * (10/3)) * 2.55)),
+              max(0, ((var(--progress) * (10/3))*2.55)),
+              0);
+  fill: none;
+}

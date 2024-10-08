@@ -1,4 +1,3 @@
-from json import dumps, loads
 from urllib.parse import quote, urlencode
 
 from django.conf import settings
@@ -10,6 +9,7 @@ from django.http import HttpResponse, HttpResponseRedirect, Http404, JsonRespons
 from django.shortcuts import get_object_or_404, render, redirect
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
@@ -20,6 +20,7 @@ from django_htmx.http import trigger_client_event
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
 from .models import AccessPermissionTypes, Secret, SharedSecretData
+from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
@@ -84,22 +85,7 @@ class SecretAdd(CreateView):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        if secret.content_type == Secret.CONTENT_PASSWORD:
-            plaintext_data = form.cleaned_data['password']
-        elif secret.content_type == Secret.CONTENT_FILE:
-            plaintext_data = form.cleaned_data['file'].read()
-            secret.filename = form.cleaned_data['file'].name
-            secret.save()
-        elif secret.content_type == Secret.CONTENT_CC:
-            plaintext_data = dumps({
-                'holder': form.cleaned_data['holder'],
-                'number': form.cleaned_data['number'],
-                'expiration_month': str(form.cleaned_data['expiration_month']),
-                'expiration_year': str(form.cleaned_data['expiration_year']),
-                'security_code': str(form.cleaned_data['security_code']),
-                'password': form.cleaned_data['password'],
-            })
+        plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
         secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
 
         # Create share objects
@@ -168,32 +154,14 @@ class SecretEdit(UpdateView):
             if attr in form.cleaned_data:
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
-
-        if secret.content_type == Secret.CONTENT_PASSWORD and form.cleaned_data['password']:
-            plaintext_data = form.cleaned_data['password']
-        elif secret.content_type == Secret.CONTENT_FILE and form.cleaned_data['file']:
-            plaintext_data = form.cleaned_data['file'].read()
-            secret.filename = form.cleaned_data['file'].name
-            secret.save()
-        elif secret.content_type == Secret.CONTENT_CC:
-            plaintext_data = dumps({
-                'holder': form.cleaned_data['holder'],
-                'number': form.cleaned_data['number'],
-                'expiration_month': form.cleaned_data['expiration_month'],
-                'expiration_year': form.cleaned_data['expiration_year'],
-                'security_code': form.cleaned_data['security_code'],
-                'password': form.cleaned_data['password'],
-            })
-        else:
-            plaintext_data = None
-
+        plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
         if plaintext_data is not None:
             secret.set_data(self.request.user, plaintext_data)
-
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
         context = super(SecretEdit, self).get_context_data(**kwargs)
+        context['current_revision'] = self.object.current_revision
         context['pretty_content_type'] = self.object.get_content_type_display()
         return context
 
@@ -215,7 +183,7 @@ class SecretEdit(UpdateView):
 
     def get_initial(self):
         if self.object.content_type == Secret.CONTENT_CC:
-            data = loads(self.object.get_data(self.request.user))
+            data = self.object.get_data(self.request.user)
             return {
                 'holder': data['holder'],
                 'number': data['number'],
@@ -320,6 +288,7 @@ class SecretDetail(DetailView):
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
+        context['secret_revision'] = secret.current_revision
         context['readable'] = secret.is_readable_by_user(self.request.user)
         context['shareable'] = secret.is_shareable_by_user(self.request.user)
         context['secret_deleted'] = True if secret.status == Secret.STATUS_DELETED else False

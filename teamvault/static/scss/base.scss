@@ -14,6 +14,7 @@
 @import "./search";
 @import "./secrets";
 @import "./card.scss";
+@import "./circularProgressbar";
 
 @import "./fontawesome";
 @import "./select2";
@@ -97,6 +98,20 @@ kbd {
   }
 }
 
+form {
+  input, textarea {
+    &:placeholder-shown {
+      background-color: var(--bs-tertiary-bg);
+    }
+  }
+}
+
+[data-bs-theme="light"] {
+  .lt-otp {
+    color: white;
+  }
+}
+
 [data-bs-theme="dark"] {
   .btn-light {
     color: var(--bs-light);
@@ -115,9 +130,22 @@ kbd {
       color: var(--bs-light);
     }
   }
-  
+
   // bg-color for filter chips
   .bg-secondary-subtle {
     background-color: #37383b!important;
   }
+}
+
+.separator {
+  height: 0.3em;
+  width: 0.3em;
+  margin-bottom: 0.2em;
+  background-color: var(--bs-secondary);
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.bg-otp {
+  background-color: var(--bs-tertiary-bg);
 }
