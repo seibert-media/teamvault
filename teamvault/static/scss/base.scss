@@ -101,8 +101,14 @@ kbd {
 form {
   input, textarea {
     &:placeholder-shown {
-      background-color: var(--bs-gray-100);
+      background-color: var(--bs-tertiary-bg);
     }
+  }
+}
+
+[data-bs-theme="light"] {
+  .lt-otp {
+    color: white;
   }
 }
 
@@ -135,7 +141,11 @@ form {
   height: 0.3em;
   width: 0.3em;
   margin-bottom: 0.2em;
-  background-color: #383838;
+  background-color: var(--bs-secondary);
   border-radius: 50%;
   display: inline-block;
+}
+
+.bg-otp {
+  background-color: var(--bs-tertiary-bg);
 }
