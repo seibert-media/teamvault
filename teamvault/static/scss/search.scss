@@ -42,6 +42,7 @@
     box-shadow: none;
 
     &:focus {
+      background-color: var(--bs-body-bg);
       border: 0;
       box-shadow: none;
     }
