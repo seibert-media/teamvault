@@ -153,11 +153,11 @@ def data_get(request, hashid):
     secret_revision.secret.check_read_access(request.user)
     data = secret_revision.secret.get_data(request.user)
     if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:
-        return Response({'password': data})
+        return Response({'password': data["password"]})
     elif secret_revision.secret.content_type == Secret.CONTENT_FILE:
         return Response({'file': b64encode(data).decode('ascii')})
     elif secret_revision.secret.content_type == Secret.CONTENT_CC:
-        return Response(loads(data))
+        return Response(data)
 
 
 @api_view(['GET'])
@@ -169,3 +169,12 @@ def generate_password_view(*_args, **_kwargs):
         settings.PASSWORD_LOWER,
         settings.PASSWORD_SPECIAL
     ))
+
+
+@api_view(['GET'])
+def otp_get(request, hashid):
+    secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
+    secret = secret_revision.secret
+    secret.check_read_access(request.user)
+    otp = secret.get_otp(request)
+    return Response(otp)

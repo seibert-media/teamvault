@@ -14,6 +14,7 @@ django-webpack-loader = "~=3.1"
 djangorestframework = "~=3.15"
 gunicorn = "~=23.0"
 hashids = "~=1.3"
+pyotp= "~=2.9"
 huey = "~=2.5"
 psycopg = "~=3.2"
 pytz = "2023.3.post1"
@@ -36,7 +37,8 @@ twine = "~=5.1"
 # django-webpack-loader:    https://github.com/django-webpack/django-webpack-loader/blob/master/CHANGELOG.md
 # djangorestframework:      https://www.django-rest-framework.org/community/release-notes/
 # gunicorn:                 https://docs.gunicorn.org/en/stable/news.html
-# hashids:                  currently no changelogs found, https://pypi.org/project/hashids/
+# hashids:                  https://pypi.org/project/hashids/ -> Migrate to https://github.com/sqids/sqids-python
+# pyotp:                    https://github.com/pyauth/pyotp/blob/develop/Changes.rst
 # psycopg:                  https://www.psycopg.org/psycopg3/docs/news.html
 # pytz:                     currently no changelogs found, https://github.com/stub42/pytz/tree/master
 # requests:                 https://github.com/psf/requests/releases
