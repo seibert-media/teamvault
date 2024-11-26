@@ -1,4 +1,5 @@
 from datetime import date
+import re
 
 from django import forms
 from django.contrib.auth.models import Group, User
@@ -7,6 +8,7 @@ from django.forms.widgets import RadioSelect
 from django.utils.translation import gettext_lazy as _
 
 from .models import Secret, SharedSecretData
+from .utils import extract_url_and_params
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
@@ -137,6 +139,18 @@ class PasswordForm(SecretForm):
             # password is only required when adding a new secret
             raise forms.ValidationError(_("Please enter a password."))
         return self.cleaned_data['password']
+
+    def clean_otp_key_data(self):
+        as_url, data_params = extract_url_and_params(self.cleaned_data['otp_key_data'])
+        secret = data_params['secret'][0]
+
+        base32_pattern = r'^[A-Z2-7]+=*$'
+        is_base_32 = bool(re.match(base32_pattern, secret))
+
+        if not is_base_32:
+            raise forms.ValidationError(_("OTP key has wrong format. Please enter a valid OTP key."))
+
+        return self.cleaned_data['otp_key_data']
 
     class Meta:
         model = Secret

@@ -7,11 +7,16 @@ from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 from .models import Secret
 
 
+def extract_url_and_params(data):
+    data_as_url = urlparse(data)
+    data_params = parse_qs(data_as_url.query)
+    return data_as_url, data_params
+
+
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
     if secret.content_type == Secret.CONTENT_PASSWORD:
-        cleaned_data_as_url = urlparse(cleaned_data["otp_key_data"])
-        data_params = parse_qs(cleaned_data_as_url.query)
+        cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data["otp_key_data"])
         if cleaned_data.get("password"):
             plaintext_data['password'] = cleaned_data['password']
         if data_params.get("secret"):

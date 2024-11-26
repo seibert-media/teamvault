@@ -256,12 +256,14 @@ class Secret(HashIDModel):
         return plaintext_data
 
     def get_otp(self, request):
-        if not request.session.get("otp_key"):
-            otp_key = self.get_data(request.user)["otp_key"]
-            request.session["otp_key"] = otp_key
+        if request.session.get("otp_key_data"):
+            data = request.session["otp_key_data"]
         else:
-            otp_key = request.session["otp_key"]
-        totp = TOTP(otp_key)
+            data = self.get_data(request.user)
+        otp_key = data['otp_key']
+        digits = int(data['digits'])
+        request.session["otp_key_data"] = {'otp_key': otp_key, 'digits': digits}
+        totp = TOTP(otp_key, digits=digits)
         return totp.now()
 
     @classmethod
