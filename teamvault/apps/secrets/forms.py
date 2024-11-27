@@ -141,14 +141,17 @@ class PasswordForm(SecretForm):
         return self.cleaned_data['password']
 
     def clean_otp_key_data(self):
-        as_url, data_params = extract_url_and_params(self.cleaned_data['otp_key_data'])
+        try:
+            as_url, data_params = extract_url_and_params(self.cleaned_data['otp_key_data'])
+        except Exception:
+            raise forms.ValidationError(_('OTP key should have format like this: ___?secret=___&digits=___ ...'))
         secret = data_params['secret'][0]
 
         base32_pattern = r'^[A-Z2-7]+=*$'
         is_base_32 = bool(re.match(base32_pattern, secret))
 
         if not is_base_32:
-            raise forms.ValidationError(_("OTP key has wrong format. Please enter a valid OTP key."))
+            raise forms.ValidationError(_('OTP key has wrong format. Please enter a valid OTP key.'))
 
         return self.cleaned_data['otp_key_data']
 
