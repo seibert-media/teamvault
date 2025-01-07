@@ -148,7 +148,7 @@ class PasswordForm(SecretForm):
         try:
             as_url, data_params = extract_url_and_params(cleaned_otp_key_data)
         except Exception:
-            raise forms.ValidationError(_('OTP key should have format like this: ___?secret=___&digits=___ ...'))
+            raise forms.ValidationError(_('OTP key should have a format like this: ___?secret=___&digits=___ ...'))
         secret = data_params['secret'][0] if 'secret' in data_params else ''
 
         is_valid_b32_string(secret)
