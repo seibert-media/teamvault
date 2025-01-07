@@ -1,5 +1,4 @@
 from datetime import date
-import re
 
 from django import forms
 from django.contrib.auth.models import Group, User
@@ -9,6 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from .models import Secret, SharedSecretData
 from .utils import extract_url_and_params
+from .validators import is_valid_b32_string
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
@@ -141,19 +141,18 @@ class PasswordForm(SecretForm):
         return self.cleaned_data['password']
 
     def clean_otp_key_data(self):
+        cleaned_otp_key_data = self.cleaned_data['otp_key_data']
+        if self.instance.pk is not None and not cleaned_otp_key_data:
+            return cleaned_otp_key_data
+
         try:
-            as_url, data_params = extract_url_and_params(self.cleaned_data['otp_key_data'])
+            as_url, data_params = extract_url_and_params(cleaned_otp_key_data)
         except Exception:
             raise forms.ValidationError(_('OTP key should have format like this: ___?secret=___&digits=___ ...'))
-        secret = data_params['secret'][0]
+        secret = data_params['secret'][0] if 'secret' in data_params else ''
 
-        base32_pattern = r'^[A-Z2-7]+=*$'
-        is_base_32 = bool(re.match(base32_pattern, secret))
-
-        if not is_base_32:
-            raise forms.ValidationError(_('OTP key has wrong format. Please enter a valid OTP key.'))
-
-        return self.cleaned_data['otp_key_data']
+        is_valid_b32_string(secret)
+        return cleaned_otp_key_data
 
     class Meta:
         model = Secret
