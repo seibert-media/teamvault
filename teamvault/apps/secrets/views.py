@@ -5,6 +5,7 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.db.models import Q
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
@@ -23,6 +24,7 @@ from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
+from ...views import FilterMixin
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
@@ -336,15 +338,16 @@ def secret_metadata(request, hashid):
     return render(request, context=context, template_name='secrets/detail_content/meta.html')
 
 
-class SecretList(ListView):
-    context_object_name = 'secrets'
+class SecretList(ListView, FilterMixin):
     filter = None
+    filter_class = SecretFilter
+    context_object_name = 'secrets'
     paginate_by = 25
     template_name = "secrets/secret_list.html"
 
     def get_context_data(self, **kwargs):
-        context = super(SecretList, self).get_context_data(**kwargs)
-        context['filter'] = self.filter
+        context = super().get_context_data(**kwargs)
+        context['filter'] = self._bound_filter
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
         return context
 
@@ -360,8 +363,7 @@ class SecretList(ListView):
         except ObjectDoesNotExist:
             pass
 
-        self.filter = SecretFilter(self.request.GET, queryset)
-        return self.filter.qs
+        return self.get_filtered_queryset(queryset)
 
 
 secret_list = login_required(SecretList.as_view())
