@@ -1,20 +1,19 @@
 {% load django_bootstrap5 %}
 {% load i18n %}
 
-<div class="row mb-3 justify-content-between">
-    <div class="col-12 col-md-8">
-        <button type="button" class="btn btn-outline-accent btn-sm rounded mb-3" data-bs-toggle="modal"
+<div class="row">
+    <div>
+        <button type="button" class="col-auto btn btn-outline-accent btn-sm rounded" data-bs-toggle="modal"
                 data-bs-target="#filter-modal">
             <i class="fa fa-sliders fa-fw"></i> {% translate "Filters" %}
         </button>
-        <div class="d-flex column-gap-4 row-gap-4 align-items-center flex-row flex-wrap">
-            {% for field, field_data in active_filters.items %}
-                {% include 'helpers/filter_row.html' with filter_name=field filter_items=field_data %}
-            {% endfor %}
-        </div>
+    </div>
+    <div class="col-auto d-flex mr-2 column-gap-4 row-gap-4 align-items-center flex-row flex-wrap">
+        {% for field, field_data in active_filters.items %}
+            {% include 'helpers/filter_row.html' with filter_name=field filter_items=field_data %}
+        {% endfor %}
     </div>
 </div>
-
 <div class="modal fade" id="filter-modal" tabindex="-1" aria-labelledby="filter-modal-label" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg modal-fullscreen-md-down">
         <div class="modal-content">
