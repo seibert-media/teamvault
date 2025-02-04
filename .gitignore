@@ -7,3 +7,4 @@ teamvault/static/bundled/
 teamvault/static_collected/
 teamvault/webpack-stats.json
 uv.lock
+package-lock.json
