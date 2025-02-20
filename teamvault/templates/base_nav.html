@@ -113,6 +113,12 @@
                                 <i class="fa fa-sliders fa-fw"></i> {% trans "Settings" %}
                             </a>
                         </li>
+                        <li>
+                            <a class="dropdown-item align-items-center d-inline-flex gap-2"
+                               href="{% url 'secrets.secret-list' %}?created_by={{ request.user.pk }}">
+                                <i class="fa-solid fa-key"></i> {% trans "My Secrets" %}
+                            </a>
+                        </li>
                         <li class="dropdown-divider"></li>
                         <li>
                             <form method="post" action="{% url 'accounts.logout' %}">
