@@ -98,14 +98,6 @@ kbd {
   }
 }
 
-form {
-  input, textarea {
-    &:placeholder-shown {
-      background-color: var(--bs-tertiary-bg);
-    }
-  }
-}
-
 [data-bs-theme="light"] {
   .lt-otp {
     color: white;

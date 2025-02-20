@@ -1,6 +1,7 @@
 from os.path import dirname, join, realpath
 
 from huey import SqliteHuey
+
 from teamvault.apps.settings.config import (
     configure_database,
     configure_django_secret_key,
