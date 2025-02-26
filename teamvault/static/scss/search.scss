@@ -40,9 +40,9 @@
   input {
     border: 0;
     box-shadow: none;
+    background-color: var(--bs-body-bg);
 
     &:focus {
-      background-color: var(--bs-body-bg);
       border: 0;
       box-shadow: none;
     }
