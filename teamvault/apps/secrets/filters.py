@@ -3,7 +3,7 @@ import enum
 import django_filters
 from django.contrib.auth import get_user_model
 from django import forms
-from django.db.models import IntegerChoices, TextChoices
+from django.db.models import IntegerChoices
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
@@ -49,10 +49,7 @@ class StatusChoices(IntegerChoices):
     #  Preferably migrate occurances of Secret.STATUS_CHOICES to this class
     OK = Secret.STATUS_OK, mark_safe(Icons.KEY.html + _('Regular'))
     NEEDS_CHANGING = Secret.STATUS_NEEDS_CHANGING, mark_safe(Icons.REFRESH_DANGER.html + _('Needs Changing'))
-    DELETED = Secret.STATUS_DELETED, mark_safe(Icons.DELETED_DANGER.html) + f'{add_tooltip( 
-        _('Deleted'),
-        _('Hide deleted secrets per default by changing your settings.')
-    )}'
+    DELETED = Secret.STATUS_DELETED, mark_safe(Icons.DELETED_DANGER.html) + f"{add_tooltip( _('Deleted'),_('Hide deleted secrets per default by changing your settings.'))}"
 
 
 class SecretFilter(django_filters.FilterSet):
