@@ -58,9 +58,6 @@ def _extract_data(validated_data, content_type: Secret.CONTENT_CHOICES):
             data['filename'] = secret_data['filename']
         if 'file' in secret_data:
             data['file'] = b64decode(secret_data.pop('file').encode('ascii'))
-        for attr in ['file', 'filename']:
-            if attr in secret_data:
-                data[attr] = secret_data[attr]
     return data
 
 
