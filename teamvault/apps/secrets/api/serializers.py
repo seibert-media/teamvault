@@ -43,17 +43,17 @@ REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number',
 def _extract_data(validated_data, content_type: Secret.CONTENT_CHOICES):
     data = {}
     secret_data = validated_data.get('secret_data')
-    if content_type == 'password':
+    if content_type == Secret.CONTENT_PASSWORD:
         for attr in ['password', 'otp_key_data']:
             if attr in secret_data:
                 data[attr] = secret_data[attr]
-    elif content_type == 'cc':
+    elif content_type == Secret.CONTENT_CC:
         for attr in ['holder', 'expiration_month', 'expiration_year', 'number', 'security_code', 'password']:
             try:
                 data[attr] = secret_data[attr]
             except KeyError:
                 raise serializers.ValidationError(_(f'Missing required credit card field {attr}'))
-    elif content_type == 'file':
+    elif content_type == Secret.CONTENT_FILE:
         if 'filename' in secret_data:
             data['filename'] = secret_data['filename']
         if 'file' in secret_data:
