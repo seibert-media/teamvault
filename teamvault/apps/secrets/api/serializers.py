@@ -1,5 +1,4 @@
 from base64 import b64decode
-from json import dumps
 
 from django.contrib.auth.models import Group, User
 from django.db import models
@@ -139,7 +138,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         try:
             content_type = validated_data.pop('content_type')
         except KeyError:
-            raise serializers.ValidationError(_(f'Missing required field content type'))
+            raise serializers.ValidationError(_('Missing required field content type'))
         data = _extract_data(validated_data, content_type)
         if not data:
             raise serializers.ValidationError("missing secret field (e.g. 'password')")
@@ -205,11 +204,11 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'last_read',
             'name',
             'needs_changing_on_leave',
+            'secret_data',
             'status',
             'url',
             'username',
             'web_url',
-            'secret_data',
         )
         read_only_fields = (
             'content_type',
