@@ -11,7 +11,7 @@ from rest_framework.reverse import reverse
 from ..models import Secret, SecretRevision, SharedSecretData
 
 
-class ConentType(models.TextChoices):
+class ContentType(models.TextChoices):
     PASSWORD = 'password', _('Password')
     CC = 'cc', _('Credit Card')
     FILE = 'file', _('File')
