@@ -40,24 +40,42 @@ SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number', 'security_code'}
 
 
+def serialize_password(secret_data):
+    return {
+        'password': secret_data['password'],
+        'otp_key_data': secret_data['otp_key_data'],
+    }
+
+
+def serialize_cc(secret_data):
+    try:
+        return {
+            'holder': secret_data['holder'],
+            'expiration_month': secret_data['expiration_month'],
+            'expiration_year': secret_data['expiration_year'],
+            'number': secret_data['number'],
+            'security_code': secret_data['security_code'],
+            'password': secret_data['password']
+        }
+    except KeyError as e:
+        raise serializers.ValidationError(_(f'Missing required credit card field {e}'))
+
+
+def serialize_file(secret_data):
+    return {
+        'filname': secret_data['filename'],
+        'file': b64decode(secret_data['file'].encode('ascii'))
+    }
+
+
 def _extract_data(validated_data, content_type: Secret.CONTENT_CHOICES):
-    data = {}
     secret_data = validated_data.get('secret_data')
     if content_type == Secret.CONTENT_PASSWORD:
-        for attr in ['password', 'otp_key_data']:
-            if attr in secret_data:
-                data[attr] = secret_data[attr]
+        data = serialize_password(secret_data)
     elif content_type == Secret.CONTENT_CC:
-        for attr in ['holder', 'expiration_month', 'expiration_year', 'number', 'security_code', 'password']:
-            try:
-                data[attr] = secret_data[attr]
-            except KeyError:
-                raise serializers.ValidationError(_(f'Missing required credit card field {attr}'))
+        data = serialize_cc(secret_data)
     elif content_type == Secret.CONTENT_FILE:
-        if 'filename' in secret_data:
-            data['filename'] = secret_data['filename']
-        if 'file' in secret_data:
-            data['file'] = b64decode(secret_data.pop('file').encode('ascii'))
+        data = serialize_file(secret_data)
     return data
 
 
