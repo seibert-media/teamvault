@@ -36,7 +36,7 @@ class Icons(enum.Enum):
         return f'<i class="fa fa-fw {self.value}"></i> '
 
 
-class ContenTypeChoices(IntegerChoices):
+class ContentTypeChoice(IntegerChoices):
     # TODO: Merge CONTENT_* vars with these ones.
     #  Preferably migrate occurances of Secret.CONTENT_CHOICES to this class
     PASSWORD = Secret.CONTENT_PASSWORD, mark_safe(Icons.KEY.html + _('Password'))
@@ -54,14 +54,14 @@ class StatusChoices(IntegerChoices):
 
 class SecretFilter(django_filters.FilterSet):
     content_type = django_filters.MultipleChoiceFilter(
-        choices=ContenTypeChoices,
+        choices=ContentTypeChoice,
         widget=forms.CheckboxSelectMultiple,
-        label='Type'
+        label=_('Type')
     )
     status = django_filters.MultipleChoiceFilter(
-        choices=StatusChoices.choices,
+        choices=StatusChoices,
         widget=forms.CheckboxSelectMultiple,
-        label='Status'
+        label=_('Status')
     )
     created_by = django_filters.ModelChoiceFilter(
         queryset=User.objects.all().order_by('username'),

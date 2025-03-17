@@ -33,7 +33,7 @@ dependencies = [
     "django-filter==23.5",
     "django-htmx~=1.17",
     "django-webpack-loader~=3.0",
-    "django~=4.2",
+    "django~=5.0",
     "djangorestframework~=3.14",
     "gunicorn~=21.2",
     "hashids~=1.3",

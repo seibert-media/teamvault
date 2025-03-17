@@ -2,13 +2,13 @@
 {% load i18n %}
 
 <div class="row">
-    <div class="d-flex justify-content-end mb-2">
+    <div class="d-flex justify-content-end mb-4">
         <button type="button" class="col-auto btn btn-outline-accent btn-sm rounded" data-bs-toggle="modal"
                 data-bs-target="#filter-modal">
             <i class="fa fa-sliders fa-fw"></i> {% translate "Filters" %}
         </button>
     </div>
-    <div class="col-auto d-flex mr-2 column-gap-4 row-gap-4 align-items-center flex-row flex-wrap">
+    <div class="d-flex mr-2 column-gap-4 row-gap-4 align-items-center justify-content-end flex-row flex-wrap">
         {% for field, field_data in active_filters.items %}
             {% include 'helpers/filter_row.html' with filter_name=field filter_items=field_data %}
         {% endfor %}
