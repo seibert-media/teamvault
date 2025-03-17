@@ -1,13 +1,13 @@
 [build-system]
-requires = ["setuptools >= 68"]
-build-backend = "setuptools.build_meta"
+requires = ["uv_build>=0.6,<0.7"]
+build-backend = "uv_build"
 
 [project]
 name = "teamvault"
 description = "Keep your passwords behind the firewall"
 readme = "README.md"
-license = { file = "LICENSE" }
-authors = [{ name = "Seibert Group" }]
+license-files = ["LICENSE"]
+authors = [{ name = "Seibert Group GmbH" }]
 requires-python = ">=3.8"
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -25,7 +25,6 @@ classifiers = [
     "Topic :: Office/Business",
     "Topic :: Security",
 ]
-dynamic = ["version"]
 keywords = ["password", "safe", "manager", "sharing"]
 dependencies = [
     "cryptography~=42.0",
@@ -47,6 +46,9 @@ dependencies = [
     "whitenoise[brotli]~=6.6",
 ]
 
+# dynamic = ["version"] - Currently unsupported by uv_build
+version = '1.0.0rc6'  # Also change in teamvault/__version__.py
+
 [dependency-groups]
 dev = [
     "django-stubs>=5.1.3",
@@ -58,21 +60,15 @@ teamvault = "teamvault.cli:main"
 [project.urls]
 Source = "https://github.com/seibert-media/teamvault"
 
-[tool.setuptools.dynamic]
-version = { attr = "teamvault.__version__" }
+[tool.uv]
+package = true
 
-[tool.setuptools.packages.find]
-where = ["."]
-exclude = ["node_modules"]
-
-[tool.black]
-line-length = 119
-target-versions = ["py37", "py38", "py39", "py310", "py311"]
-
-[tool.isort]
-profile = "black"
-line_length = 119
-skip = "migrations"
+[tool.uv.build-backend]
+module-root = ""
+source-include = [
+    "CHANGELOG.md",
+    "MANIFEST.in",
+]
 
 [tool.uv.sources]
 teamvault = { workspace = true }

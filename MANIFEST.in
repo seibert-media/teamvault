@@ -1,4 +1,7 @@
-include LICENSE CHANGELOG.md MANIFEST.in README.md
+include CHANGELOG.md
+include LICENSE
+include MANIFEST.in
+include README.md
 include pyproject.toml
 
 recursive-include teamvault *.html

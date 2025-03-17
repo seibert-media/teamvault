@@ -21,5 +21,5 @@ $BUILDER run build
 [ $? -eq 0 ] && printf "\n>> Bundle created.\n"
 
 printf ">> Generating python package...\n\n"
-python3 -m build
+uv build --no-sources
 [ $? -eq 0 ] && printf "\n>> Generated python package in dist/."
