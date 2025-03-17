@@ -122,7 +122,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         view_name='api.secret_detail',
     )
     content_type = serializers.ChoiceField(
-        choices=ConentType.choices,
+        choices=ContentType.choices,
         required=True
     )
     created_by = serializers.SlugRelatedField(
