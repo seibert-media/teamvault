@@ -5,7 +5,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.db.models import Q
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
@@ -339,9 +338,9 @@ def secret_metadata(request, hashid):
 
 
 class SecretList(ListView, FilterMixin):
+    context_object_name = 'secrets'
     filter = None
     filter_class = SecretFilter
-    context_object_name = 'secrets'
     paginate_by = 25
     template_name = "secrets/secret_list.html"
 

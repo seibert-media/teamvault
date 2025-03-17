@@ -6,5 +6,6 @@ teamvault.cfg
 teamvault/static/bundled/
 teamvault/static_collected/
 teamvault/webpack-stats.json
+# In the future, uv should be explicitly supported, and this exclusion should be reconsidered.
 uv.lock
 package-lock.json
