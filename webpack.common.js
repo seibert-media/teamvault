@@ -1,5 +1,6 @@
 const path = require('path');
 const BundleTracker = require('webpack-bundle-tracker');
+const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
 module.exports = {
   context: __dirname,
@@ -34,7 +35,13 @@ module.exports = {
           {
             loader: "sass-loader",
             options: {
-              sassOptions: {quietDeps: true},
+              sassOptions: {
+                api: "modern-compiler",  // Future default - only use with sass-embedded
+                quietDeps: true,
+                silenceDeprecations: [
+                  "import",
+                ],
+              },
             },
           },
         ],
