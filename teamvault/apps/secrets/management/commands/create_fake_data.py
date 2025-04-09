@@ -1,19 +1,23 @@
+import json
 import random
 from datetime import timedelta
+from hashlib import sha256
+
+from cryptography.fernet import Fernet
+from django.conf import settings
+from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
-from django.contrib.auth.models import User, Group
+
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
-from faker import Faker
-from django.conf import settings
-from cryptography.fernet import Fernet
-import json
-from hashlib import sha256
+
 
 class Command(BaseCommand):
     help = 'Create fake users and secrets'
 
     def handle(self, *args, **kwargs):
+        from faker import Faker
+
         fake = Faker()
         if not hasattr(settings, 'TEAMVAULT_SECRET_KEY'):
             self.stderr.write(self.style.ERROR('TEAMVAULT_SECRET_KEY is not set in settings.'))
