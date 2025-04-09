@@ -44,11 +44,21 @@ class FilterMixin(ContextMixin):
             if field_data:
                 field_label = new_filter_form.fields[field].label
                 initial[field] = field_data
-                if isinstance(field_data, (tuple, list)):
-                    active_filters[field_label] = field_data
+
+                values = field_data if isinstance(field_data, (list, tuple)) else [field_data]
+
+                if hasattr(new_filter_form.fields[field], 'choices'):
+                    mapping = dict(new_filter_form.fields[field].choices)
+                    converted_values = []
+                    for val in values:
+                        try:
+                            key = int(val)
+                        except (ValueError, TypeError):
+                            key = val
+                        converted_values.append(mapping.get(key, val))
+                    active_filters[field_label] = converted_values
                 else:
-                    # filter_items needs to be a list for us to iterate over
-                    active_filters[field_label] = [field_data]
+                    active_filters[field_label] = values
 
         new_filter_form.initial = initial
         new_filter_form = self.manipulate_filter_form(bound_filter_data, new_filter_form)
