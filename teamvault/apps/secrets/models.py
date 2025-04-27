@@ -260,9 +260,9 @@ class Secret(HashIDModel):
             data = request.session["otp_key_data"]
         else:
             data = self.get_data(request.user)
-        otp_key = data['otp_key']
+        otp_key = data['secret']
         digits = int(data['digits'])
-        request.session["otp_key_data"] = {'otp_key': otp_key, 'digits': digits}
+        request.session["otp_key_data"] = {'secret': otp_key, 'digits': digits}
         totp = TOTP(otp_key, digits=digits)
         return totp.now()
 
@@ -409,7 +409,7 @@ class Secret(HashIDModel):
         # save the length before encoding so multi-byte characters don't
         # mess up the result
         set_password = "password" in plaintext_data and self.content_type == Secret.CONTENT_PASSWORD
-        set_otp = "otp_key" in plaintext_data
+        set_otp = "secret" in plaintext_data
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if set_password:
