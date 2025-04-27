@@ -5,10 +5,10 @@ from hashlib import sha256
 
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
+from django.contrib.auth.models import User, Group
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 
