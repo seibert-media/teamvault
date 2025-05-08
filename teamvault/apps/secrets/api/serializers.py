@@ -38,6 +38,7 @@ SECRET_STATUS_REPR = {
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
 REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number', 'security_code'}
+STANDARD_FIELDS = {'name', 'description', 'username', 'url'}
 
 
 def serialize_password(secret_data):
@@ -209,6 +210,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         data = _extract_data(validated_data, content_type)
         if data:
             instance._data = data
+
+        standard_data = {k: v for k, v in validated_data.items() if k in STANDARD_FIELDS}
+        instance.update(**standard_data)
+
         return instance
 
     def validate(self, data):
