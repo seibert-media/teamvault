@@ -1,5 +1,4 @@
 from base64 import b64encode
-from json import loads
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -12,14 +11,14 @@ from rest_framework.response import Response
 
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
-from .serializers import SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
-from ..models import Secret, SecretRevision, SharedSecretData, AccessPermissionTypes
+from .serializers import SecretDetailSerializer, SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
+from ..models import AccessPermissionTypes, Secret, SecretRevision, SharedSecretData
 from ..utils import generate_password
 
 
 class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
     model = Secret
-    serializer_class = SecretSerializer
+    serializer_class = SecretDetailSerializer
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()

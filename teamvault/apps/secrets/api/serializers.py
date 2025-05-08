@@ -38,6 +38,7 @@ SECRET_STATUS_REPR = {
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
 REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number', 'security_code'}
+STANDARD_FIELDS = {'access_policy', 'name', 'description', 'username', 'url'}
 
 
 def serialize_password(secret_data):
@@ -68,12 +69,12 @@ def serialize_file(secret_data):
     }
 
 
-def _extract_data(secret_data, content_type: ContentType):
-    if content_type == ContentType.PASSWORD:
+def _extract_data(secret_data, content_type: ContentType | int):
+    if content_type in [ContentType.PASSWORD, Secret.CONTENT_PASSWORD]:
         data = serialize_password(secret_data)
-    elif content_type == ContentType.CC:
+    elif content_type in [ContentType.CC, Secret.CONTENT_CC]:
         data = serialize_cc(secret_data)
-    elif content_type == ContentType.FILE:
+    elif content_type in [ContentType.FILE, Secret.CONTENT_FILE]:
         data = serialize_file(secret_data)
     else:
         raise ValidationError(
@@ -149,7 +150,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         read_only=True,
     )
     secret_data = serializers.JSONField(
-        required=False,
+        required=False,  # validated below in .create()
         write_only=True,
     )
 
@@ -168,7 +169,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         if not data:
             raise serializers.ValidationError("missing secret field (e.g. 'password')")
 
-        instance = self.Meta.model.objects.create(**validated_data)
+        instance: Secret = self.Meta.model.objects.create(**validated_data)
 
         # transform string repr into integers
         instance.content_type = REPR_CONTENT_TYPE[content_type]
@@ -191,7 +192,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
         return super(SecretSerializer, self).to_internal_value(data)
 
-    def to_representation(self, instance):
+    def to_representation(self, instance: Secret):
         rep = super(SecretSerializer, self).to_representation(instance)
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
@@ -200,16 +201,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep['status'] = SECRET_STATUS_REPR[rep['status']]
         rep['web_url'] = instance.full_url
         return rep
-
-    def update(self, instance, validated_data):
-        try:
-            content_type = validated_data.pop('content_type')
-        except KeyError:
-            raise serializers.ValidationError(_('Missing required field content_type'))
-        data = _extract_data(validated_data, content_type)
-        if data:
-            instance._data = data
-        return instance
 
     def validate(self, data):
         if 'file' in data or 'filename' in data:
@@ -242,6 +233,30 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'created',
             'last_read',
         )
+
+
+class SecretDetailSerializer(SecretSerializer):
+    content_type = serializers.ChoiceField(
+        choices=ContentType.choices,
+        required=False,  # content_type is unchangeable after a secret has been created
+    )
+    name = serializers.CharField(
+        required=False,
+    )
+
+    def update(self, instance: Secret, validated_data):
+        secret_data = validated_data.get('secret_data')
+        if secret_data:
+            data = _extract_data(secret_data, instance.content_type)
+            if data:
+                instance._data = data
+
+        for k, v in validated_data.items():
+            if k in STANDARD_FIELDS:
+                setattr(instance, k, v)
+
+        instance.save()
+        return instance
 
 
 class SharedSecretDataSerializer(serializers.ModelSerializer):
