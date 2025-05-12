@@ -22,14 +22,9 @@ RUN python3 -m venv /tvenv
 
 # Activate the virtual environment and install Python dependencies
 RUN /tvenv/bin/pip install -U pip
-RUN /tvenv/bin/pip install psycopg2-binary -e /teamvault
-
-# Copy the entrypoint script
-COPY docker/entrypoint /usr/local/bin/entrypoint
-RUN chmod +x /usr/local/bin/entrypoint
-#COPY ./tv.cfg /etc/teamvault.conf
+RUN /tvenv/bin/pip install -e /teamvault
 
 # Expose the application port
 EXPOSE 8000
 # Set the entrypoint to start the application
-ENTRYPOINT ["/usr/local/bin/entrypoint"]
+ENTRYPOINT ["/teamvault/docker/entrypoint"]
