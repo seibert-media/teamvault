@@ -1,3 +1,4 @@
+# To build use: docker build -t teamvault-dev -f docker/Dockerfile .
 FROM ubuntu:latest
 
 # Install system-level dependencies

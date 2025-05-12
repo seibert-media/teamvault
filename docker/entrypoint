@@ -35,11 +35,28 @@ then
 fi
 
 echo "Running DB Migration"
-python3 manage.py migrate
+python3 /teamvault/teamvault/manage.py migrate
 # TeamVault Plumbing createsuperuser
 echo "Running teamvault plumbing createsuperuser"
-teamvault plumbing createsuperuser
+#teamvault plumbing createsuperuser
+echo "Checking if superuser exists..."
+if ! python /teamvault/teamvault/manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); exit(0) if User.objects.filter(username='admin').exists() else exit(1)"
+then
+    echo "Creating superuser..."
+    python /teamvault/teamvault/manage.py createsuperuser \
+        --no-input \
+        --username teamvault \
+        --email teamvault@example.com
 
+    echo "Setting password..."
+    python /teamvault/teamvault/manage.py shell -c "from django.contrib.auth import get_user_model; \
+User = get_user_model(); \
+u = User.objects.get(username='teamvault'); \
+u.set_password('teamvault'); \
+u.save()"
+else
+    echo "Superuser already exists."
+fi
 
 # Start TeamVault
 echo "Starting teamvault run"
