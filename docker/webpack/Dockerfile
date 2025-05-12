@@ -2,10 +2,10 @@
 FROM node:latest
 
 WORKDIR /teamvault
-COPY package.json yarn.lock* ./
-RUN yarn install
+#COPY package.json yarn.lock* ./
 
 COPY . .
+RUN yarn install
 RUN yarn add --dev @babel/plugin-syntax-dynamic-import
 RUN mkdir -p /teamvault/teamvault/
 
