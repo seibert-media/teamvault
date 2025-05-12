@@ -34,6 +34,8 @@ then
         "$TEAMVAULT_CONFIG_FILE"
 fi
 
+echo "Running DB Migration"
+python3 manage.py migrate
 # TeamVault Plumbing createsuperuser
 echo "Running teamvault plumbing createsuperuser"
 teamvault plumbing createsuperuser
