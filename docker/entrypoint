@@ -1,0 +1,44 @@
+#!/bin/bash
+set -xe
+
+. /tvenv/bin/activate
+# Optional: Umgebungsvariable für die Konfigurationsdatei setzen, falls nicht vorhanden
+export TEAMVAULT_CONFIG_FILE=/etc/teamvault.conf
+
+# Wait until PostgreSQL is ready.
+
+echo "Waiting for PostgreSQL to become available."
+(
+    export PGPASSWORD=teamvault
+
+    for i in $(seq 60)
+    do
+        if psql -h psql -U teamvault -c 'select 1;'
+        then
+            exit 0
+        fi
+        sleep 1
+    done
+
+    echo Database won\'t boot. Giving up. >&2
+    exit 1
+) || exit 1
+
+
+if ! test -e "$TEAMVAULT_CONFIG_FILE"
+then
+    teamvault setup
+    sed -i 's/^base_url = .*$/base_url = http:\/\/0.0.0.0:8000/' \
+        "$TEAMVAULT_CONFIG_FILE"
+    sed -i 's/^host = .*$/host = psql/' \
+        "$TEAMVAULT_CONFIG_FILE"
+fi
+
+# TeamVault Plumbing createsuperuser
+echo "Running teamvault plumbing createsuperuser"
+teamvault plumbing createsuperuser
+
+
+# Start TeamVault
+echo "Starting teamvault run"
+exec teamvault run --bind 0.0.0.0:8000
