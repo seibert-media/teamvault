@@ -1,0 +1,42 @@
+version: '2.0'
+services:
+  psql:
+    container_name: psql
+    environment:
+      - POSTGRES_USER=teamvault
+      - POSTGRES_PASSWORD=teamvault
+      - POSTGRES_DB=teamvault
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    networks:
+      - teamvault-net
+
+  teamvault:
+    container_name: teamvault
+    image: teamvault-dev
+    depends_on:
+      - psql
+    networks:
+      - teamvault-net
+    ports:
+      - 8000:8000
+    working_dir: /teamvault
+    volumes:
+      - webpack-stats:/teamvault/teamvault/  # Django liest `webpack-stats.json` von hier
+
+  webpack:
+    container_name: webpack
+    image: webpack-dev
+    networks:
+      - teamvault-net
+    ports:
+      - 3000:3000
+    volumes:
+      - webpack-stats:/teamvault/teamvault/  # Webpack schreibt `webpack-stats.json` hier rein
+
+networks:
+  teamvault-net:
+
+volumes:
+  webpack-stats:
