@@ -1,0 +1,11 @@
+.coveragerc
+.git
+.python-version
+pyproject.toml
+uv.lock
+.gitattributes
+build.sh
+.editorconfig
+.gitignore 
+docker-compose.yml
+webpack.dev.js
