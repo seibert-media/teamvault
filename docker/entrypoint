@@ -36,9 +36,7 @@ fi
 
 echo "Running DB Migration"
 python3 /teamvault/teamvault/manage.py migrate
-# TeamVault Plumbing createsuperuser
-echo "Running teamvault plumbing createsuperuser"
-#teamvault plumbing createsuperuser
+
 echo "Checking if superuser exists..."
 if ! python /teamvault/teamvault/manage.py shell -c "from django.contrib.auth import get_user_model; User = get_user_model(); exit(0) if User.objects.filter(username='admin').exists() else exit(1)"
 then
@@ -57,7 +55,10 @@ u.save()"
 else
     echo "Superuser already exists."
 fi
+#Copying static files
+echo "Copying static files"
 python /teamvault/teamvault/manage.py collectstatic --no-input
+
 # Start TeamVault
 echo "Starting teamvault run"
 exec teamvault run --bind 0.0.0.0:8000
