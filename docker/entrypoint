@@ -57,7 +57,7 @@ u.save()"
 else
     echo "Superuser already exists."
 fi
-
+python /teamvault/teamvault/manage.py collectstatic --no-input
 # Start TeamVault
 echo "Starting teamvault run"
 exec teamvault run --bind 0.0.0.0:8000
