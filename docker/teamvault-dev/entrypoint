@@ -2,7 +2,7 @@
 set -xe
 
 . /tvenv/bin/activate
-# Optional: Umgebungsvariable für die Konfigurationsdatei setzen, falls nicht vorhanden
+#Setting einvironment variable for the config file
 export TEAMVAULT_CONFIG_FILE=/etc/teamvault.conf
 
 # Wait until PostgreSQL is ready.

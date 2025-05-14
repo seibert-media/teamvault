@@ -1,8 +1,6 @@
-# To build use: docker build -t webpack-dev -f docker/webpack/Dockerfile .
 FROM node:latest
 
 WORKDIR /teamvault
-#COPY package.json yarn.lock* ./
 
 COPY . .
 RUN yarn install

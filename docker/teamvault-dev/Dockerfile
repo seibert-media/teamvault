@@ -1,4 +1,3 @@
-# To build use: docker build -t teamvault-dev -f docker/Dockerfile .
 FROM ubuntu:latest
 
 # Install system-level dependencies
@@ -27,4 +26,4 @@ RUN /tvenv/bin/pip install -e /teamvault
 # Expose the application port
 EXPOSE 8000
 # Set the entrypoint to start the application
-ENTRYPOINT ["/teamvault/docker/entrypoint"]
+ENTRYPOINT ["/teamvault/docker/teamvault-dev/entrypoint"]
