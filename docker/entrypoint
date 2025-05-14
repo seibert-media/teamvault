@@ -28,7 +28,7 @@ echo "Waiting for PostgreSQL to become available."
 if ! test -e "$TEAMVAULT_CONFIG_FILE"
 then
     teamvault setup
-    sed -i 's/^base_url = .*$/base_url = http:\/\/0.0.0.0:8000/' \
+    sed -i 's/^base_url = .*$/base_url = http:\/\/127.0.0.1:8000/' \
         "$TEAMVAULT_CONFIG_FILE"
     sed -i 's/^host = .*$/host = psql/' \
         "$TEAMVAULT_CONFIG_FILE"
