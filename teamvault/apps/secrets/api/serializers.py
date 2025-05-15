@@ -43,7 +43,7 @@ REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number',
 def serialize_password(secret_data):
     return {
         'password': secret_data['password'],
-        'otp_key_data': secret_data['otp_key_data'],
+        'otp_key_data': secret_data.get('otp_key_data', '')
     }
 
 
@@ -68,14 +68,18 @@ def serialize_file(secret_data):
     }
 
 
-def _extract_data(validated_data, content_type: Secret.CONTENT_CHOICES):
-    secret_data = validated_data.get('secret_data')
-    if content_type == Secret.CONTENT_PASSWORD:
+def _extract_data(secret_data, content_type: ContentType):
+    if content_type == ContentType.PASSWORD:
         data = serialize_password(secret_data)
-    elif content_type == Secret.CONTENT_CC:
+    elif content_type == ContentType.CC:
         data = serialize_cc(secret_data)
-    elif content_type == Secret.CONTENT_FILE:
+    elif content_type == ContentType.FILE:
         data = serialize_file(secret_data)
+    else:
+        raise ValidationError(
+            f'Selected content_type {content_type} is invalid. '
+            f'Choose one of {", ".join([str(ct) for ct in CONTENT_TYPE_REPR])}'
+        )
     return data
 
 
@@ -154,12 +158,20 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             content_type = validated_data.pop('content_type')
         except KeyError:
             raise serializers.ValidationError(_('Missing required field content type'))
-        data = _extract_data(validated_data, content_type)
+
+        try:
+            secret_data = validated_data.pop('secret_data')
+        except KeyError:
+            raise serializers.ValidationError(_('Missing required field secret_data'))
+
+        data = _extract_data(secret_data, content_type)
         if not data:
             raise serializers.ValidationError("missing secret field (e.g. 'password')")
 
         instance = self.Meta.model.objects.create(**validated_data)
-        instance.content_type = content_type
+
+        # transform string repr into integers
+        instance.content_type = REPR_CONTENT_TYPE[content_type]
         instance._data = data
         instance.shared_users.add(instance.created_by)
         return instance
