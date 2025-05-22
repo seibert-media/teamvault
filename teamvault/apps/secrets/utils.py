@@ -10,6 +10,8 @@ from .models import Secret
 def extract_url_and_params(data):
     data_as_url = urlparse(data)
     data_params = parse_qs(data_as_url.query)
+    for key, value in data_params.items():
+        data_params[key] = value[0]
     return data_as_url, data_params
 
 
@@ -19,12 +21,9 @@ def serialize_add_edit_data(cleaned_data, secret):
         cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data["otp_key_data"])
         if cleaned_data.get("password"):
             plaintext_data['password'] = cleaned_data['password']
-        if data_params.get("secret"):
-            plaintext_data["otp_key"] = data_params["secret"][0]
-        if data_params.get("digits"):
-            plaintext_data["digits"] = data_params["digits"][0]
-        if data_params.get("algorithm"):
-            plaintext_data["algorithm"] = data_params["algorithm"][0]
+        for attr in ['secret', 'digits', 'algorithm']:
+            if data_params.get(attr):
+                plaintext_data[attr] = data_params[attr]
     elif secret.content_type == Secret.CONTENT_FILE:
         plaintext_data["file_content"] = cleaned_data['file'].read().decode("utf-8")
         secret.filename = cleaned_data['file'].name

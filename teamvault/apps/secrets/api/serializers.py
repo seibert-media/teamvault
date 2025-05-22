@@ -1,13 +1,20 @@
 from base64 import b64decode
-from json import dumps
 
 from django.contrib.auth.models import Group, User
+from django.db import models
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
 
 from ..models import Secret, SecretRevision, SharedSecretData
+
+
+class ContentType(models.TextChoices):
+    PASSWORD = 'password', _('Password')
+    CC = 'cc', _('Credit Card')
+    FILE = 'file', _('File')
+
 
 ACCESS_POLICY_REPR = {
     Secret.ACCESS_POLICY_ANY: "any",
@@ -33,37 +40,47 @@ SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number', 'security_code'}
 
 
-def _extract_data(validated_data):
-    if 'password' in validated_data and not \
-            REQUIRED_CC_FIELDS.intersection(set(validated_data.keys())):
-        return (
-            validated_data.pop('password'),
-            Secret.CONTENT_PASSWORD,
-        )
-    elif 'file' in validated_data:
-        return (
-            b64decode(validated_data.pop('file').encode('ascii')),
-            Secret.CONTENT_FILE,
-        )
-    elif REQUIRED_CC_FIELDS.intersection(set(validated_data.keys())):
-        data = {}
-        for cc_field in REQUIRED_CC_FIELDS:
-            try:
-                data[cc_field] = str(validated_data.pop(cc_field))
-            except KeyError:
-                raise serializers.ValidationError(
-                    "missing required CC field '{}'".format(cc_field)
-                )
-        if 'password' in validated_data:
-            data['password'] = validated_data.pop('password')
-        else:
-            data['password'] = ""
-        return (
-            dumps(data),
-            Secret.CONTENT_CC,
-        )
+def serialize_password(secret_data):
+    return {
+        'password': secret_data['password'],
+        'otp_key_data': secret_data.get('otp_key_data', '')
+    }
+
+
+def serialize_cc(secret_data):
+    try:
+        return {
+            'holder': secret_data['holder'],
+            'expiration_month': secret_data['expiration_month'],
+            'expiration_year': secret_data['expiration_year'],
+            'number': secret_data['number'],
+            'security_code': secret_data['security_code'],
+            'password': secret_data['password']
+        }
+    except KeyError as e:
+        raise serializers.ValidationError(_(f'Missing required credit card field {e}'))
+
+
+def serialize_file(secret_data):
+    return {
+        'filname': secret_data['filename'],
+        'file': b64decode(secret_data['file'].encode('ascii'))
+    }
+
+
+def _extract_data(secret_data, content_type: ContentType):
+    if content_type == ContentType.PASSWORD:
+        data = serialize_password(secret_data)
+    elif content_type == ContentType.CC:
+        data = serialize_cc(secret_data)
+    elif content_type == ContentType.FILE:
+        data = serialize_file(secret_data)
     else:
-        return None, None
+        raise ValidationError(
+            f'Selected content_type {content_type} is invalid. '
+            f'Choose one of {", ".join([str(ct) for ct in CONTENT_TYPE_REPR])}'
+        )
+    return data
 
 
 class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
@@ -108,6 +125,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         lookup_field='hashid',
         view_name='api.secret_detail',
     )
+    content_type = serializers.ChoiceField(
+        choices=ContentType.choices,
+        required=True
+    )
     created_by = serializers.SlugRelatedField(
         default=serializers.CurrentUserDefault(),
         read_only=True,
@@ -123,46 +144,34 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         required=False,
         source='id',
     )
-    expiration_month = serializers.CharField(
-        required=False,
-        write_only=True,
-    )
-    expiration_year = serializers.CharField(
-        required=False,
-        write_only=True,
-    )
-    file = serializers.CharField(
-        required=False,
-        write_only=True,
-    )
-    holder = serializers.CharField(
-        required=False,
-        write_only=True,
-    )
-    number = serializers.CharField(
-        required=False,
-        write_only=True,
-    )
-    password = serializers.CharField(
-        required=False,
-        write_only=True,
-    )
-    security_code = serializers.CharField(
-        required=False,
-        write_only=True,
-    )
     web_url = serializers.CharField(
         required=False,
         read_only=True,
     )
+    secret_data = serializers.JSONField(
+        required=False,
+        write_only=True,
+    )
 
     def create(self, validated_data):
-        data, content_type = _extract_data(validated_data)
+        try:
+            content_type = validated_data.pop('content_type')
+        except KeyError:
+            raise serializers.ValidationError(_('Missing required field content type'))
+
+        try:
+            secret_data = validated_data.pop('secret_data')
+        except KeyError:
+            raise serializers.ValidationError(_('Missing required field secret_data'))
+
+        data = _extract_data(secret_data, content_type)
         if not data:
             raise serializers.ValidationError("missing secret field (e.g. 'password')")
 
         instance = self.Meta.model.objects.create(**validated_data)
-        instance.content_type = content_type
+
+        # transform string repr into integers
+        instance.content_type = REPR_CONTENT_TYPE[content_type]
         instance._data = data
         instance.shared_users.add(instance.created_by)
         return instance
@@ -193,9 +202,11 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         return rep
 
     def update(self, instance, validated_data):
-        data, content_type = _extract_data(validated_data)
-        if content_type and content_type != instance.content_type:
-            raise serializers.ValidationError("wrong secret content type")
+        try:
+            content_type = validated_data.pop('content_type')
+        except KeyError:
+            raise serializers.ValidationError(_('Missing required field content_type'))
+        data = _extract_data(validated_data, content_type)
         if data:
             instance._data = data
         return instance
@@ -203,7 +214,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     def validate(self, data):
         if 'file' in data or 'filename' in data:
             if not ('file' in data and 'filename' in data):
-                raise serializers.ValidationError("must include both file and filename")
+                raise serializers.ValidationError(_('Must include both file and filename'))
         return data
 
     class Meta:
@@ -217,17 +228,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'current_revision',
             'data_readable',
             'description',
-            'expiration_month',
-            'expiration_year',
-            'file',
-            'filename',
-            'holder',
             'last_read',
             'name',
             'needs_changing_on_leave',
-            'number',
-            'password',
-            'security_code',
+            'secret_data',
             'status',
             'url',
             'username',
