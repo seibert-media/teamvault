@@ -261,7 +261,7 @@ class Secret(HashIDModel):
         else:
             data = self.get_data(request.user)
         otp_key = data['secret']
-        digits = int(data['digits'])
+        digits = int(data.get('digits', 6))
         request.session["otp_key_data"] = {'secret': otp_key, 'digits': digits}
         totp = TOTP(otp_key, digits=digits)
         return totp.now()
