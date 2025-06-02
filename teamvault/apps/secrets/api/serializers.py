@@ -64,7 +64,7 @@ def serialize_cc(secret_data):
 
 def serialize_file(secret_data):
     return {
-        'filname': secret_data['filename'],
+        'filename': secret_data['filename'],
         'file': b64decode(secret_data['file'].encode('ascii'))
     }
 
