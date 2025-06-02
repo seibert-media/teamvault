@@ -10,9 +10,7 @@ import ClipboardJS from "clipboard";
 import DOMPurify from 'dompurify';
 import {TempusDominus} from '@eonasdan/tempus-dominus'
 
-import {zxcvbn, zxcvbnOptions} from '@zxcvbn-ts/core'
-import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
-import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
+import {initZxcvbn} from './zxcvbn.ts'
 
 import * as teamvault from './utils'
 import * as otp from './otp'
@@ -57,17 +55,8 @@ window.DOMPurify = DOMPurify
 // Tempus Dominus
 window.TempusDominus = TempusDominus
 
-
 // zxcvbn
-zxcvbnOptions.setOptions({
-  translations: zxcvbnEnPackage.translations,
-  graphs: zxcvbnCommonPackage.adjacencyGraphs,
-  dictionary: {
-    ...zxcvbnCommonPackage.dictionary,
-    ...zxcvbnEnPackage.dictionary,
-  },
-})
-window.zxcvbn = zxcvbn
+window.zxcvbn = initZxcvbn()
 
 // Select2
 require('select2');
