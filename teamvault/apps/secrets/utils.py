@@ -25,7 +25,7 @@ def serialize_add_edit_data(cleaned_data, secret):
             if data_params.get(attr):
                 plaintext_data[attr] = data_params[attr]
     elif secret.content_type == Secret.CONTENT_FILE:
-        plaintext_data["file_content"] = cleaned_data['file'].read().decode("utf-8")
+        plaintext_data = cleaned_data['file'].read()
         secret.filename = cleaned_data['file'].name
         secret.save()
     elif secret.content_type == Secret.CONTENT_CC:

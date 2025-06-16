@@ -243,6 +243,12 @@ class Secret(HashIDModel):
         self.last_read = now()
         self.save()
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+
+        # HOTFIX! - mre, 2025-06-16
+        if self.content_type == Secret.CONTENT_FILE:
+            plaintext_data = f.decrypt(self.current_revision.encrypted_data)
+            return plaintext_data
+
         plaintext_data = self.current_revision.encrypted_data
         plaintext_data = f.decrypt(plaintext_data).decode('utf-8')
         try:
@@ -408,12 +414,15 @@ class Secret(HashIDModel):
             ))
         # save the length before encoding so multi-byte characters don't
         # mess up the result
-        set_password = "password" in plaintext_data and self.content_type == Secret.CONTENT_PASSWORD
-        set_otp = "secret" in plaintext_data
+        set_password = self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data
+        set_otp = self.content_type == Secret.CONTENT_PASSWORD and "secret" in plaintext_data
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if set_password:
             plaintext_data_sha256 = sha256(plaintext_data["password"].encode('utf-8')).hexdigest()
+        elif self.content_type == Secret.CONTENT_FILE:
+            # HOTFIX!
+            plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
         else:
             plaintext_data_sha256 = sha256(dumps(plaintext_data).encode('utf-8')).hexdigest()
         try:
@@ -442,7 +451,11 @@ class Secret(HashIDModel):
             plaintext_length = len(plaintext_data["password"])
         if set_otp:
             p.otp_key_set = True
-        plaintext_data = dumps(plaintext_data).encode('utf-8')
+
+        # HOTFIX!
+        if self.content_type != Secret.CONTENT_FILE:
+            plaintext_data = dumps(plaintext_data).encode('utf-8')
+
         p.encrypted_data = f.encrypt(plaintext_data)
         p.length = plaintext_length
         p.plaintext_data_sha256 = plaintext_data_sha256
