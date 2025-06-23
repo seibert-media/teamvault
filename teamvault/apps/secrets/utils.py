@@ -1,3 +1,4 @@
+import base64
 import secrets
 import string
 from urllib.parse import urlparse, parse_qs
@@ -25,9 +26,12 @@ def serialize_add_edit_data(cleaned_data, secret):
             if data_params.get(attr):
                 plaintext_data[attr] = data_params[attr]
     elif secret.content_type == Secret.CONTENT_FILE:
-        plaintext_data = cleaned_data['file'].read()
-        secret.filename = cleaned_data['file'].name
-        secret.save()
+        try:
+            plaintext_data['file_content'] = base64.b64encode(cleaned_data['file'].read()).decode()
+            secret.filename = cleaned_data['file'].name
+            secret.save()
+        except Exception as e:
+            raise ('File type not suported', e)
     elif secret.content_type == Secret.CONTENT_CC:
         plaintext_data = {
             'holder': cleaned_data['holder'],

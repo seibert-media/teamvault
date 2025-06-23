@@ -1,3 +1,4 @@
+import base64
 from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
@@ -244,17 +245,12 @@ class Secret(HashIDModel):
         self.save()
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
 
-        # HOTFIX! - mre, 2025-06-16
-        if self.content_type == Secret.CONTENT_FILE:
-            plaintext_data = f.decrypt(self.current_revision.encrypted_data)
-            return plaintext_data
-
         plaintext_data = self.current_revision.encrypted_data
         plaintext_data = f.decrypt(plaintext_data).decode('utf-8')
         try:
             plaintext_data = loads(plaintext_data)
             if self.content_type == Secret.CONTENT_FILE:
-                plaintext_data = plaintext_data["file_content"]
+                plaintext_data = base64.b64decode(plaintext_data["file_content"])
         except JSONDecodeError:
             if self.content_type == self.CONTENT_PASSWORD:
                 plaintext_data = dict(password=plaintext_data)
@@ -420,9 +416,6 @@ class Secret(HashIDModel):
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if set_password:
             plaintext_data_sha256 = sha256(plaintext_data["password"].encode('utf-8')).hexdigest()
-        elif self.content_type == Secret.CONTENT_FILE:
-            # HOTFIX!
-            plaintext_data_sha256 = sha256(plaintext_data).hexdigest()
         else:
             plaintext_data_sha256 = sha256(dumps(plaintext_data).encode('utf-8')).hexdigest()
         try:
@@ -451,10 +444,7 @@ class Secret(HashIDModel):
             plaintext_length = len(plaintext_data["password"])
         if set_otp:
             p.otp_key_set = True
-
-        # HOTFIX!
-        if self.content_type != Secret.CONTENT_FILE:
-            plaintext_data = dumps(plaintext_data).encode('utf-8')
+        plaintext_data = dumps(plaintext_data).encode("utf-8")
 
         p.encrypted_data = f.encrypt(plaintext_data)
         p.length = plaintext_length
