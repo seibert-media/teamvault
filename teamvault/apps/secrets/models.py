@@ -411,7 +411,7 @@ class Secret(HashIDModel):
         # save the length before encoding so multi-byte characters don't
         # mess up the result
         set_password = self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data
-        set_otp = self.content_type == Secret.CONTENT_PASSWORD and "secret" in plaintext_data
+        set_otp = self.content_type == Secret.CONTENT_PASSWORD and "otp_key" in plaintext_data
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if set_password:
