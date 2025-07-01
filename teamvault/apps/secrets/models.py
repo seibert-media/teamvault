@@ -1,3 +1,4 @@
+import base64
 from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
@@ -243,12 +244,13 @@ class Secret(HashIDModel):
         self.last_read = now()
         self.save()
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+
         plaintext_data = self.current_revision.encrypted_data
         plaintext_data = f.decrypt(plaintext_data).decode('utf-8')
         try:
             plaintext_data = loads(plaintext_data)
             if self.content_type == Secret.CONTENT_FILE:
-                plaintext_data = plaintext_data["file_content"]
+                plaintext_data = base64.b64decode(plaintext_data["file_content"])
         except JSONDecodeError:
             if self.content_type == self.CONTENT_PASSWORD:
                 plaintext_data = dict(password=plaintext_data)
@@ -260,9 +262,9 @@ class Secret(HashIDModel):
             data = request.session["otp_key_data"]
         else:
             data = self.get_data(request.user)
-        otp_key = data['secret']
+            request.session["otp_key_data"] = {'otp_key': data['otp_key'], 'digits': int(data.get('digits', 6))}
+        otp_key = data['otp_key']
         digits = int(data.get('digits', 6))
-        request.session["otp_key_data"] = {'secret': otp_key, 'digits': digits}
         totp = TOTP(otp_key, digits=digits)
         return totp.now()
 
@@ -408,8 +410,8 @@ class Secret(HashIDModel):
             ))
         # save the length before encoding so multi-byte characters don't
         # mess up the result
-        set_password = "password" in plaintext_data and self.content_type == Secret.CONTENT_PASSWORD
-        set_otp = "secret" in plaintext_data
+        set_password = self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data
+        set_otp = self.content_type == Secret.CONTENT_PASSWORD and "otp_key" in plaintext_data
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if set_password:
@@ -436,13 +438,16 @@ class Secret(HashIDModel):
                 plaintext_data["password"] = old_data["password"]
             if not set_otp and "otp_key" in old_data:
                 for key in ["otp_key", "digits", "algorithm"]:
-                    plaintext_data[key] = old_data[key]
-                    set_otp = True
+                    if key in old_data:
+                        plaintext_data[key] = old_data[key]
+                        set_otp = True
+
         if self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data.keys():
             plaintext_length = len(plaintext_data["password"])
         if set_otp:
             p.otp_key_set = True
-        plaintext_data = dumps(plaintext_data).encode('utf-8')
+        plaintext_data = dumps(plaintext_data).encode("utf-8")
+
         p.encrypted_data = f.encrypt(plaintext_data)
         p.length = plaintext_length
         p.plaintext_data_sha256 = plaintext_data_sha256
