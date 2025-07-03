@@ -18,7 +18,7 @@ from django_htmx.http import trigger_client_event
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
-from .models import AccessPermissionTypes, Secret, SecretShareQuerySet, SharedSecretData
+from .models import AccessPermissionTypes, Secret, SecretRevision, SecretShareQuerySet, SharedSecretData
 from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
@@ -543,3 +543,16 @@ def secret_search(request):
             'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
         })
     return JsonResponse({'count': raw_results.count(), 'results': search_results})
+
+
+@login_required
+@require_http_methods(["GET"])
+def secret_revisions(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
+    secret.check_read_access(request.user)
+    revisions = SecretRevision.objects.filter(secret=secret).order_by('-created')
+    context = {
+        'secret': secret,
+        'revisions': revisions,
+    }
+    return render(request, "secrets/secret_revisions.html", context)
