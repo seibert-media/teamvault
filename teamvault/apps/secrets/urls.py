@@ -39,6 +39,11 @@ urlpatterns = (
         name='secrets.secret-edit',
     ),
     path(
+        'secrets/<str:hashid>/revisions',
+        views.secret_revisions,
+        name='secrets.secret-revisions',
+    ),
+    path(
         'secrets/<str:hashid>/metadata',
         views.secret_metadata,
         name='secrets.secret-metadata',
