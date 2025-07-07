@@ -580,6 +580,78 @@ class SecretRevision(HashIDModel):
         # the employee.
         unique_together = (('plaintext_data_sha256', 'secret'),)
 
+
+    def is_readable_by_user(self, user):
+        if self.status != self.STATUS_DELETED:
+            shares = self.share_data.with_expiry_state().filter(
+                Q(user=user) | Q(group__user=user)
+            ).exclude(is_expired=True)
+
+            if self.access_policy == self.ACCESS_POLICY_ANY or shares.filter(granted_until__isnull=True).exists():
+                return AccessPermissionTypes.ALLOWED
+
+            if shares.exists():
+                return AccessPermissionTypes.TEMPORARILY_ALLOWED
+
+        if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+
+        return AccessPermissionTypes.NOT_ALLOWED
+
+
+    def get_data(self, user):
+        read_allowed = self.is_readable_by_user(user)
+        if not read_allowed:
+            log(
+                _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
+                actor=user,
+                category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
+                level='warning',
+                secret=self,
+            )
+            raise PermissionError(_(
+                "{user} not allowed access to '{name}' ({id})"
+            ).format(
+                id=self.id,
+                name=self.name,
+                user=user.username,
+            ))
+        if read_allowed == AccessPermissionTypes.SUPERUSER_ALLOWED:
+            category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
+            log_message = _("{user} used superuser privileges to read '{name}'")
+        else:
+            category = AuditLogCategoryChoices.SECRET_READ
+            log_message = _("{user} read '{name}'")
+        log(
+            log_message.format(
+                name=self.name,
+                user=user.username,
+            ),
+            actor=user,
+            category=category,
+            level='info',
+            secret=self,
+            secret_revision=self.current_revision,
+        )
+
+        # Record that this user has now seen this specific revision's data
+        self.accessed_by.add(user)
+        self.last_read = now()
+        self.save()
+ 
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+
+        plaintext_data = f.decrypt(self.encrypted_data).decode('utf-8')
+        try:
+            plaintext_data = loads(plaintext_data)
+            if self.content_type == Secret.CONTENT_FILE:
+                plaintext_data = base64.b64decode(plaintext_data["file_content"])
+        except JSONDecodeError:
+            if self.content_type == self.CONTENT_PASSWORD:
+                plaintext_data = dict(password=plaintext_data)
+
+        return plaintext_data
+
     def __repr__(self):
         return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
 
