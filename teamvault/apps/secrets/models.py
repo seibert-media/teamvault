@@ -451,6 +451,14 @@ class Secret(HashIDModel):
             p.otp_key_set = True
         plaintext_data = dumps(plaintext_data).encode("utf-8")
 
+        p.name = self.name
+        p.description = self.description
+        p.username = self.username
+        p.url = self.url
+        p.filename = self.filename
+        p.access_policy = self.access_policy
+        p.needs_changing_on_leave = self.needs_changing_on_leave
+        p.status = self.status
         p.encrypted_data = f.encrypt(plaintext_data)
         p.length = plaintext_length
         p.plaintext_data_sha256 = plaintext_data_sha256
@@ -549,6 +557,14 @@ class SecretRevision(HashIDModel):
         models.PROTECT,
         related_name='password_revisions_set',
     )
+    name = models.CharField(max_length=92)
+    description = models.TextField(blank=True, null=True)
+    username = models.CharField(blank=True, max_length=255, null=True)
+    url = models.CharField(blank=True, max_length=255, null=True, validators=[validate_url])
+    filename = models.CharField(blank=True, max_length=255, null=True)
+    access_policy = models.PositiveSmallIntegerField(choices=Secret.ACCESS_POLICY_CHOICES)
+    needs_changing_on_leave = models.BooleanField()
+    status = models.PositiveSmallIntegerField(choices=Secret.STATUS_CHOICES)
 
     class Meta:
         ordering = ('-created',)
