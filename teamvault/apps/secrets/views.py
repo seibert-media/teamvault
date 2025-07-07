@@ -563,3 +563,29 @@ def secret_revisions(request, hashid):
         'revisions': revisions,
     }
     return render(request, "secrets/secret_revisions.html", context)
+
+@login_required
+@require_http_methods(["GET"])
+def secret_revision_detail(request, revision_hashid):
+    """Displays the state of a secret at a specific point in time, based on a
+    SecretRevision.
+    """
+    try:
+        revision = SecretRevision.objects.select_related('secret', 'set_by').get(hashid=revision_hashid)
+    except SecretRevision.DoesNotExist:
+        raise Http404
+
+    # Perform permission check against the parent secret
+    revision.secret.check_read_access(request.user)
+
+    # Decrypt the revision's data for display
+    decrypted_data = revision.get_data(request.user)
+
+    context = {
+        'revision': revision,
+        'secret': revision.secret,  # Pass the parent secret for breadcrumbs/links
+        'decrypted_data': decrypted_data,
+        'is_revision_view': True, # A flag for the template
+    }
+
+    return render(request, "secrets/secret_revision_detail.html", context)
