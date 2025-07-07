@@ -155,7 +155,14 @@ class SecretEdit(UpdateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
         plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
-        if plaintext_data is not None:
+
+        if plaintext_data is None: # Only metadata changed
+            if form.changed_data:
+                # Re-use the existing encrypted data to create a new revision
+                if secret.current_revision:
+                    current_data = secret.current_revision.get_data(self.request.user)
+                    secret.set_data(self.request.user, current_data)
+        else:
             secret.set_data(self.request.user, plaintext_data)
 
         # clear saved otp key data cache after change
