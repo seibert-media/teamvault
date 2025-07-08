@@ -31,37 +31,7 @@ class AccessPermissionTypes(models.IntegerChoices):
     ALLOWED = 1
     TEMPORARILY_ALLOWED = 2
     SUPERUSER_ALLOWED = 3
-
-
-class ShareQuerySet(t.Protocol):
-    def with_expiry_state(self) -> QuerySet: ...
-    def filter(self, *args, **kwargs) -> QuerySet: ...
-    def exclude(self, *args, **kwargs) -> QuerySet: ...
-    def exists(self) -> bool: ...
-    def values(self, *fields) -> QuerySet: ...
-
-
-@t.runtime_checkable
-class SecretLike(t.Protocol):
-    # constants
-    STATUS_DELETED: int
-    ACCESS_POLICY_ANY: int
-    ACCESS_POLICY_DISCOVERABLE: int
-
-    # fields
-    status: int
-    access_policy: int
-    share_data: Manager[ShareQuerySet]
-
     
-TSecret = t.TypeVar("TSecret", bound=SecretLike)
-
-class PermissionChecker(t.Generic[TSecret]):
-    def __init__(self, user: User, obj: TSecret):
-        self.user = user
-        self.obj = obj
-        self._shares_qs: QuerySet | None = None
-
 def validate_url(value):
     if "://" not in value or \
             value.startswith("javascript:") or \
@@ -210,7 +180,7 @@ class Secret(HashIDModel):
         return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
 
     def check_permissions(self, user):
-        return SecretPermissionChecker(user, self)
+        return PermissionChecker(user, self)
 
     def check_read_access(self, user):
         permissions = self.check_permissions(user)
@@ -220,7 +190,7 @@ class Secret(HashIDModel):
         readable = permissions.is_readable()
         if not readable:
             raise PermissionDenied()
-        return True
+        return readable
 
     def check_share_access(self, user):
         permissions = self.check_permissions(user)
@@ -229,7 +199,7 @@ class Secret(HashIDModel):
 
         if not permissions.is_shareable():
             raise PermissionDenied()
-        return shareable
+        return permissions.is_shareable()
 
     @property
     def full_url(self):
@@ -395,16 +365,6 @@ class Secret(HashIDModel):
         else:
             return result
 
-    def is_visible_to_user(self, user):
-        readable = self.check_permissions(user).is_readable()
-        if self.status != self.STATUS_DELETED:
-            if (
-                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
-                    readable in {AccessPermissionTypes.ALLOWED, AccessPermissionTypes.SUPERUSER_ALLOWED}
-            ):
-                return readable
-        return AccessPermissionTypes.NOT_ALLOWED
-
     def set_data(self, user, plaintext_data, skip_access_check=False):
         # skip_access_check is used when initially creating a secret
         # and makes it possible to create secrets you don't have access
@@ -529,7 +489,7 @@ class Secret(HashIDModel):
             actor=granted_by,
             category=(
                 AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
-                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+                if shareable == AccessPermissionTypes.SUPERUSER_ALLOWED
                 else AuditLogCategoryChoices.SECRET_SHARED
             ),
             level='warning',
@@ -542,6 +502,9 @@ class Secret(HashIDModel):
 
 class SecretRevision(HashIDModel):
     HASHID_NAMESPACE = "SecretRevision"
+    ACCESS_POLICY_DISCOVERABLE = 1
+    ACCESS_POLICY_ANY = 2
+    STATUS_DELETED = 3
 
     accessed_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -564,6 +527,7 @@ class SecretRevision(HashIDModel):
         models.PROTECT,
         related_name='password_revisions_set',
     )
+    # TODO custom name for revision? Mainly for logging
     name = models.CharField(max_length=92)
     description = models.TextField(blank=True, null=True)
     username = models.CharField(blank=True, max_length=255, null=True)
@@ -588,60 +552,13 @@ class SecretRevision(HashIDModel):
         unique_together = (('plaintext_data_sha256', 'secret'),)
 
 
-    def is_readable_by_user(self, user):
-        if self.status != 3: # 3 == STATUS_DELETED # TODO
-            shares = self.share_data.with_expiry_state().filter(
-                Q(user=user) | Q(group__user=user)
-            ).exclude(is_expired=True)
+    def check_permissions(self, user):
+        return PermissionChecker(user, self)
 
-            if self.access_policy == self.ACCESS_POLICY_ANY or shares.filter(granted_until__isnull=True).exists():
-                return AccessPermissionTypes.ALLOWED
-
-            if shares.exists():
-                return AccessPermissionTypes.TEMPORARILY_ALLOWED
-
-        if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
-            return AccessPermissionTypes.SUPERUSER_ALLOWED
-
-        return AccessPermissionTypes.NOT_ALLOWED
-
-    def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
-        if (user and group) or (not user and not group):
-            raise ValueError('Specify either a user or a group!')
-
-        if not isinstance(granted_by, User):
-            raise ValueError('granted_by has to be a User object!')
-
-        shareable = self.check_permissions(granted_by).is_shareable
-        if not shareable:
-            raise PermissionDenied()
-
-        share_obj = self.share_data.create(
-            grant_description=grant_description,
-            granted_by=granted_by,
-            granted_until=granted_until,
-            group=group,
-            user=user,
-        )
-        log(
-            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
-                shared_entity_type=share_obj.shared_entity_type,
-                name=share_obj.shared_entity_name,
-                user=granted_by.username,
-                time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
-            ),
-            actor=granted_by,
-            category=(
-                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
-                if shareable == AccessPermissionTypes.SUPERUSER_ALLOWED
-                else AuditLogCategoryChoices.SECRET_SHARED
-            ),
-            level='warning',
-            reason=grant_description,
-            secret=self,
-        )
-
-        return share_obj
+    @property
+    def share_data(self):
+        # delegate to the parent secret’s related manager
+        return self.secret.share_data
 
     def get_data(self, user):
         readable = self.check_permissions(user).is_readable()
@@ -673,9 +590,9 @@ class SecretRevision(HashIDModel):
             ),
             actor=user,
             category=category,
-            level='info',
-            secret=self,
-            secret_revision=self.current_revision,
+            level="info",
+            secret=self.secret,
+            secret_revision=self,
         )
 
         # Record that this user has now seen this specific revision's data
@@ -688,10 +605,10 @@ class SecretRevision(HashIDModel):
         plaintext_data = f.decrypt(self.encrypted_data).decode('utf-8')
         try:
             plaintext_data = loads(plaintext_data)
-            if self.content_type == Secret.CONTENT_FILE:
+            if self.secret.content_type == Secret.CONTENT_FILE:
                 plaintext_data = base64.b64decode(plaintext_data["file_content"])
         except JSONDecodeError:
-            if self.content_type == self.CONTENT_PASSWORD:
+            if self.secret.content_type == Secret.CONTENT_PASSWORD:
                 plaintext_data = dict(password=plaintext_data)
 
         return plaintext_data
@@ -827,39 +744,63 @@ def update_search_index(sender, **kwargs):
         ),
     )
 
-class SecretPermissionChecker:
-    def __init__(self, user, secret: Secret):
+
+class ShareQuerySet(t.Protocol):
+    def with_expiry_state(self) -> QuerySet: ...
+    def filter(self, *args, **kwargs) -> QuerySet: ...
+    def exclude(self, *args, **kwargs) -> QuerySet: ...
+    def exists(self) -> bool: ...
+    def values(self, *fields) -> QuerySet: ...
+
+
+class SecretLike(t.Protocol):
+    # constants
+    STATUS_DELETED: int
+    ACCESS_POLICY_ANY: int
+    ACCESS_POLICY_DISCOVERABLE: int
+
+    # fields
+    status: int
+    access_policy: int
+    share_data: Manager[ShareQuerySet]
+
+
+TSecret = t.TypeVar("TSecret", bound=SecretLike)
+
+
+class PermissionChecker(t.Generic[TSecret]):
+    def __init__(self, user, obj: TSecret):
         self.user = user
-        self.secret = secret
-        self._shares_cache: QuerySet | None = None
+        self.obj = obj
+        self._shares_qs: QuerySet | None = None
 
     def _secret_deleted(self) -> bool:
-        return self.secret.status == self.secret.STATUS_DELETED
+        return self.obj.status == self.obj.STATUS_DELETED
 
     def _superuser_override(self) -> bool:
         return self.user.is_superuser
 
     def _policy_allows_any(self) -> bool:
-        return self.secret.access_policy == self.secret.ACCESS_POLICY_ANY
+        return self.obj.access_policy == self.obj.ACCESS_POLICY_ANY
 
     def _policy_discoverable(self) -> bool:
-        return self.secret.access_policy in {
-            self.secret.ACCESS_POLICY_ANY,
-            self.secret.ACCESS_POLICY_DISCOVERABLE,
+        return self.obj.access_policy in {
+            self.obj.ACCESS_POLICY_ANY,
+            self.obj.ACCESS_POLICY_DISCOVERABLE,
         }
         
-    def _valid_shares(self):
+    def _valid_shares(self) -> QuerySet:
         """Return (and cache) all non-expired shares for user or their groups."""
-        if self._shares_cache is None:
-            self._shares_cache = (
-                self.secret.share_data.with_expiry_state()
+        if self._shares_qs is None:
+            self._shares_qs = (
+                self.obj.share_data.with_expiry_state()
                 .filter(
                     Q(user=self.user) |
                     Q(group__user=self.user)
                 )
                 .exclude(is_expired=True)
             )
-        return self._shares_cache
+        return self._shares_qs
 
     @staticmethod
     def _has_permanent_share(shares: models.QuerySet) -> bool:
@@ -874,7 +815,7 @@ class SecretPermissionChecker:
         shares = self._valid_shares()
         if self._policy_allows_any() or self._has_permanent_share(shares):
             return AccessPermissionTypes.ALLOWED
-        if shares and shares.exists():
+        if shares.exists():
             return AccessPermissionTypes.TEMPORARILY_ALLOWED
         return AccessPermissionTypes.NOT_ALLOWED
 
@@ -893,19 +834,21 @@ class SecretPermissionChecker:
 
     def is_visible(self) -> int:
         """Checks if the secret is visible to the user in lists."""
-        if self.secret.status == self.secret.STATUS_DELETED:
+        if self.obj.status == self.obj.STATUS_DELETED:
              return AccessPermissionTypes.NOT_ALLOWED
 
         # It's visible if the policy allows it or if the user has any form of read access
-        is_discoverable = self.secret.access_policy in (
-            self.secret.ACCESS_POLICY_ANY,
-            self.secret.ACCESS_POLICY_DISCOVERABLE,
+        is_discoverable = self.obj.access_policy in (
+            self.obj.ACCESS_POLICY_ANY,
+            self.obj.ACCESS_POLICY_DISCOVERABLE,
         )
 
-        if is_discoverable or self.is_readable():
-             return AccessPermissionTypes.ALLOWED
-
-        if self.user.is_superuser:
-            return AccessPermissionTypes.SUPERUSER_ALLOWED
+        readable = self.is_readable()
+        if is_discoverable or readable in {
+            AccessPermissionTypes.ALLOWED,
+            AccessPermissionTypes.TEMPORARILY_ALLOWED,
+            AccessPermissionTypes.SUPERUSER_ALLOWED
+        }:
+            return AccessPermissionTypes.ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
