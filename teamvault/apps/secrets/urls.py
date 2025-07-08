@@ -49,6 +49,11 @@ urlpatterns = (
         name='secrets.revision-detail',
     ),
     path(
+        "revisions/<str:revision_hashid>/download/",
+        views.secret_revision_download,
+        name="secrets.revision-download",
+    ),
+    path(
         'secrets/<str:hashid>/metadata',
         views.secret_metadata,
         name='secrets.secret-metadata',
