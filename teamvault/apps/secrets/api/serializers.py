@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
+from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 
 from ..models import Secret, SecretRevision, SharedSecretData
 
@@ -17,23 +18,23 @@ class ContentType(models.TextChoices):
 
 
 ACCESS_POLICY_REPR = {
-    Secret.ACCESS_POLICY_ANY: "any",
-    Secret.ACCESS_POLICY_HIDDEN: "hidden",
-    Secret.ACCESS_POLICY_DISCOVERABLE: "discoverable",
+    AccessPolicy.ANY: "any",
+    AccessPolicy.HIDDEN: "hidden",
+    AccessPolicy.DISCOVERABLE: "discoverable",
 }
 REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
 
 CONTENT_TYPE_REPR = {
-    Secret.CONTENT_CC: "cc",
-    Secret.CONTENT_FILE: "file",
-    Secret.CONTENT_PASSWORD: "password",
+    ContentTypeEnum.CC: "cc",
+    ContentTypeEnum.FILE: "file",
+    ContentTypeEnum.PASSWORD: "password",
 }
 REPR_CONTENT_TYPE = {v: k for k, v in CONTENT_TYPE_REPR.items()}
 
 SECRET_STATUS_REPR = {
-    Secret.STATUS_DELETED: "deleted",
-    Secret.STATUS_NEEDS_CHANGING: "needs_changing",
-    Secret.STATUS_OK: "ok",
+    SecretStatus.DELETED: "deleted",
+    SecretStatus.NEEDS_CHANGING: "needs_changing",
+    SecretStatus.OK: "ok",
 }
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
@@ -70,11 +71,11 @@ def serialize_file(secret_data):
 
 
 def _extract_data(secret_data, content_type: ContentType | int):
-    if content_type in [ContentType.PASSWORD, Secret.CONTENT_PASSWORD]:
+    if content_type in [ContentType.PASSWORD, ContentType.PASSWORD]:
         data = serialize_password(secret_data)
-    elif content_type in [ContentType.CC, Secret.CONTENT_CC]:
+    elif content_type in [ContentType.CC, ContentType.CC]:
         data = serialize_cc(secret_data)
-    elif content_type in [ContentType.FILE, Secret.CONTENT_FILE]:
+    elif content_type in [ContentType.FILE, ContentType.FILE]:
         data = serialize_file(secret_data)
     else:
         raise ValidationError(

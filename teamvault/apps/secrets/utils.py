@@ -4,8 +4,7 @@ import string
 from urllib.parse import urlparse, parse_qs
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
-
-from .models import Secret
+from teamvault.apps.secrets.enums import ContentType
 
 
 def extract_url_and_params(data):
@@ -18,7 +17,7 @@ def extract_url_and_params(data):
 
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
-    if secret.content_type == Secret.CONTENT_PASSWORD:
+    if secret.content_type == ContentType.PASSWORD:
         cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data["otp_key_data"])
         if cleaned_data.get("password"):
             plaintext_data['password'] = cleaned_data['password']
@@ -28,14 +27,14 @@ def serialize_add_edit_data(cleaned_data, secret):
                     plaintext_data['otp_key'] = data_params[attr]
                 else:
                     plaintext_data[attr] = data_params[attr]
-    elif secret.content_type == Secret.CONTENT_FILE:
+    elif secret.content_type == ContentType.FILE:
         try:
             plaintext_data['file_content'] = base64.b64encode(cleaned_data['file'].read()).decode()
             secret.filename = cleaned_data['file'].name
             secret.save()
         except Exception as e:
             raise ('File type not suported', e)
-    elif secret.content_type == Secret.CONTENT_CC:
+    elif secret.content_type == ContentType.CC:
         plaintext_data = {
             'holder': cleaned_data['holder'],
             'number': cleaned_data['number'],

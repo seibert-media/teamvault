@@ -21,6 +21,8 @@ from hashids import Hashids
 from pyotp import TOTP
 import typing as t
 
+from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
+
 from .exceptions import PermissionError
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
@@ -72,38 +74,13 @@ class HashIDModel(models.Model):
 class Secret(HashIDModel):
     HASHID_NAMESPACE = "Secret"
 
-    ACCESS_POLICY_DISCOVERABLE = 1
-    ACCESS_POLICY_ANY = 2
-    ACCESS_POLICY_HIDDEN = 3
-    ACCESS_POLICY_CHOICES = (
-        (ACCESS_POLICY_DISCOVERABLE, _("discoverable")),
-        (ACCESS_POLICY_ANY, _("everyone")),
-        (ACCESS_POLICY_HIDDEN, _("hidden")),
-    )
-    CONTENT_PASSWORD = 1
-    CONTENT_CC = 2
-    CONTENT_FILE = 3
-    CONTENT_CHOICES = (
-        (CONTENT_PASSWORD, _("Password")),
-        (CONTENT_CC, _("Credit Card")),
-        (CONTENT_FILE, _("File")),
-    )
-    STATUS_OK = 1
-    STATUS_NEEDS_CHANGING = 2
-    STATUS_DELETED = 3
-    STATUS_CHOICES = (
-        (STATUS_OK, _("OK")),
-        (STATUS_NEEDS_CHANGING, _("needs changing")),
-        (STATUS_DELETED, _("deleted")),
-    )
-
     access_policy = models.PositiveSmallIntegerField(
-        choices=ACCESS_POLICY_CHOICES,
-        default=ACCESS_POLICY_DISCOVERABLE,
+        choices=AccessPolicy,
+        default=AccessPolicy.DISCOVERABLE,
     )
     content_type = models.PositiveSmallIntegerField(
-        choices=CONTENT_CHOICES,
-        default=CONTENT_PASSWORD,
+        choices=ContentType,
+        default=ContentType.PASSWORD,
     )
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -153,8 +130,8 @@ class Secret(HashIDModel):
         through_fields=("secret", "user"),
     )
     status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_OK,
+        choices=SecretStatus,
+        default=SecretStatus.OK,
     )
     url = models.CharField(
         blank=True,
@@ -260,10 +237,10 @@ class Secret(HashIDModel):
         plaintext_data = f.decrypt(plaintext_data).decode("utf-8")
         try:
             plaintext_data = loads(plaintext_data)
-            if self.content_type == Secret.CONTENT_FILE:
+            if self.content_type == ContentType.FILE:
                 plaintext_data = base64.b64decode(plaintext_data["file_content"])
         except JSONDecodeError:
-            if self.content_type == self.CONTENT_PASSWORD:
+            if self.content_type == ContentType.PASSWORD:
                 plaintext_data = dict(password=plaintext_data)
 
         return plaintext_data
@@ -295,9 +272,9 @@ class Secret(HashIDModel):
         )
         return (
             cls.objects.filter(
-                Q(access_policy=cls.ACCESS_POLICY_ANY) | Q(pk__in=allowed_shares)
+                Q(access_policy=AccessPolicy.ANY) | Q(pk__in=allowed_shares)
             )
-            .exclude(status=cls.STATUS_DELETED)
+            .exclude(status=SecretStatus.DELETED)
             .distinct()
         )
 
@@ -319,13 +296,13 @@ class Secret(HashIDModel):
             queryset.filter(
                 Q(
                     access_policy__in=(
-                        cls.ACCESS_POLICY_ANY,
-                        cls.ACCESS_POLICY_DISCOVERABLE,
+                        AccessPolicy.ANY,
+                        AccessPolicy.DISCOVERABLE,
                     )
                 )
                 | Q(pk__in=allowed_shares)
             )
-            .exclude(status=cls.STATUS_DELETED)
+            .exclude(status=SecretStatus.DELETED)
             .distinct()
         )
 
@@ -412,11 +389,11 @@ class Secret(HashIDModel):
         # save the length before encoding so multi-byte characters don't
         # mess up the result
         set_password = (
-            self.content_type == Secret.CONTENT_PASSWORD
+            self.content_type == ContentType.PASSWORD
             and "password" in plaintext_data
         )
         set_otp = (
-            self.content_type == Secret.CONTENT_PASSWORD and "otp_key" in plaintext_data
+            self.content_type == ContentType.PASSWORD and "otp_key" in plaintext_data
         )
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
@@ -436,7 +413,7 @@ class Secret(HashIDModel):
             )
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
-        if self.current_revision and self.content_type == Secret.CONTENT_PASSWORD:
+        if self.current_revision and self.content_type == ContentType.PASSWORD:
             old_data = f.decrypt(self.current_revision.encrypted_data).decode("utf-8")
             # If not already dict convert to dict since password and otp key are now stored together in dict format.
             # To keep everything uniform CC and file secrets stored as a dict as well
@@ -453,7 +430,7 @@ class Secret(HashIDModel):
                         set_otp = True
 
         if (
-            self.content_type == Secret.CONTENT_PASSWORD
+            self.content_type == ContentType.PASSWORD
             and "password" in plaintext_data.keys()
         ):
             plaintext_length = len(plaintext_data["password"])
@@ -484,8 +461,8 @@ class Secret(HashIDModel):
         self.current_revision = p
         self.last_changed = now()
         self.last_read = now()
-        if self.status == self.STATUS_NEEDS_CHANGING:
-            self.status = self.STATUS_OK
+        if self.status == SecretStatus.NEEDS_CHANGING:
+            self.status = SecretStatus.OK
         self.save()
         log(
             _("{user} set a new secret for '{name}' ({oldrev}->{newrev})").format(
@@ -502,7 +479,7 @@ class Secret(HashIDModel):
         )
 
     def needs_changing(self):
-        return self.status == self.STATUS_NEEDS_CHANGING
+        return self.status == SecretStatus.NEEDS_CHANGING
 
     def share(
         self, grant_description, granted_by, user=None, group=None, granted_until=None
@@ -549,9 +526,6 @@ class Secret(HashIDModel):
 
 class SecretRevision(HashIDModel):
     HASHID_NAMESPACE = "SecretRevision"
-    ACCESS_POLICY_DISCOVERABLE = 1
-    ACCESS_POLICY_ANY = 2
-    STATUS_DELETED = 3
 
     accessed_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -583,10 +557,10 @@ class SecretRevision(HashIDModel):
     )
     filename = models.CharField(blank=True, max_length=255, null=True)
     access_policy = models.PositiveSmallIntegerField(
-        choices=Secret.ACCESS_POLICY_CHOICES
+        choices=AccessPolicy
     )
     needs_changing_on_leave = models.BooleanField()
-    status = models.PositiveSmallIntegerField(choices=Secret.STATUS_CHOICES)
+    status = models.PositiveSmallIntegerField(choices=SecretStatus)
 
     class Meta:
         ordering = ("-created",)
@@ -657,10 +631,10 @@ class SecretRevision(HashIDModel):
         plaintext_data = f.decrypt(self.encrypted_data).decode("utf-8")
         try:
             plaintext_data = loads(plaintext_data)
-            if self.secret.content_type == Secret.CONTENT_FILE:
+            if self.secret.content_type == ContentType.FILE:
                 plaintext_data = base64.b64decode(plaintext_data["file_content"])
         except JSONDecodeError:
-            if self.secret.content_type == Secret.CONTENT_PASSWORD:
+            if self.secret.content_type == ContentType.PASSWORD:
                 plaintext_data = dict(password=plaintext_data)
 
         return plaintext_data
@@ -810,14 +784,9 @@ class ShareQuerySet(t.Protocol):
 
 
 class SecretLike(t.Protocol):
-    # constants
-    STATUS_DELETED: int
-    ACCESS_POLICY_ANY: int
-    ACCESS_POLICY_DISCOVERABLE: int
-
     # fields
-    status: int
-    access_policy: int
+    status: SecretStatus
+    access_policy: AccessPolicy
     share_data: Manager[ShareQuerySet]
 
 
@@ -831,18 +800,18 @@ class PermissionChecker(t.Generic[TSecret]):
         self._shares_qs: QuerySet | None = None
 
     def _secret_deleted(self) -> bool:
-        return self.obj.status == self.obj.STATUS_DELETED
+        return self.obj.status == SecretStatus.DELETED
 
     def _superuser_override(self) -> bool:
         return self.user.is_superuser
 
     def _policy_allows_any(self) -> bool:
-        return self.obj.access_policy == self.obj.ACCESS_POLICY_ANY
+        return self.obj.access_policy == AccessPolicy.ANY
 
     def _policy_discoverable(self) -> bool:
         return self.obj.access_policy in {
-            self.obj.ACCESS_POLICY_ANY,
-            self.obj.ACCESS_POLICY_DISCOVERABLE,
+            AccessPolicy.ANY,
+            AccessPolicy.DISCOVERABLE,
         }
 
     def _valid_shares(self) -> QuerySet:
@@ -887,13 +856,13 @@ class PermissionChecker(t.Generic[TSecret]):
 
     def is_visible(self) -> int:
         """Checks if the secret is visible to the user in lists."""
-        if self.obj.status == self.obj.STATUS_DELETED:
+        if self.obj.status == SecretStatus.DELETED:
             return AccessPermissionTypes.NOT_ALLOWED
 
         # It's visible if the policy allows it or if the user has any form of read access
         is_discoverable = self.obj.access_policy in (
-            self.obj.ACCESS_POLICY_ANY,
-            self.obj.ACCESS_POLICY_DISCOVERABLE,
+            AccessPolicy.ANY,
+            AccessPolicy.DISCOVERABLE,
         )
 
         readable = self.is_readable()
