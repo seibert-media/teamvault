@@ -1,0 +1,79 @@
+name: Create Build and Python Package on Release
+
+on:
+  release:
+    types: [ created ]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Frontend Install Dependencies and Build
+        run: |
+          bun install
+          bun run build
+
+      - name: Zip Bundle
+        run: |
+          cd teamvault/static
+          zip -r bundled.zip bundled
+
+      - name: Upload Webpack Bundle to Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./teamvault/static/bundled.zip
+          asset_name: frontend-bundle-${{ github.sha }}.zip
+          asset_content_type: application/zip
+
+  pypi-publish:
+    name: Upload Release to PyPI
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build wheel
+        id: wheel
+        run: |
+          uv build --no-sources
+          full_path=$(ls dist/*.whl)
+          echo "wheel=$full_path"        >> "$GITHUB_OUTPUT"
+          echo "wheel_name=$(basename "$full_path")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload wheel to GitHub Release
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url:  ${{ github.event.release.upload_url }}
+          asset_path:  ${{ steps.wheel.outputs.wheel       }}
+          asset_name:  ${{ steps.wheel.outputs.wheel_name  }}
+          asset_content_type: application/zip
+
+      - name: Publish package distributions to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
