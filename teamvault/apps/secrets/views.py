@@ -570,9 +570,12 @@ def secret_revision_detail(request, revision_hashid):
     SecretRevision.
     """
     try:
-        revision = SecretRevision.objects.select_related('secret', 'set_by').get(hashid=revision_hashid)
+        revision = SecretRevision.objects.select_related('secret').get(hashid=revision_hashid)
     except SecretRevision.DoesNotExist:
         raise Http404
+
+    if revision.is_current_revision:
+        return redirect(revision.secret.get_absolute_url())
 
     # Perform permission check against the parent secret
     revision.secret.check_read_access(request.user)
@@ -584,7 +587,7 @@ def secret_revision_detail(request, revision_hashid):
         'revision': revision,
         'secret': revision.secret,  # Pass the parent secret for breadcrumbs/links
         'decrypted_data': decrypted_data,
-        'is_revision_view': True, # A flag for the template
+        'ContentType': ContentType,
     }
 
     return render(request, "secrets/secret_revision_detail.html", context)
