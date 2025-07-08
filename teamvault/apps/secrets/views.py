@@ -15,6 +15,7 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django_htmx.http import trigger_client_event
+from teamvault.apps.secrets.enums import ContentType, SecretStatus
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
@@ -31,16 +32,16 @@ CONTENT_TYPE_FORMS = {
     'password': PasswordForm,
 }
 CONTENT_TYPE_IDS = {
-    'cc': Secret.CONTENT_CC,
-    'file': Secret.CONTENT_FILE,
-    'password': Secret.CONTENT_PASSWORD,
+    'cc': ContentType.CC,
+    'file': ContentType.FILE,
+    'password': ContentType.PASSWORD,
 }
 CONTENT_TYPE_IDENTIFIERS = {v: k for k, v in CONTENT_TYPE_IDS.items()}
-_CONTENT_TYPES = dict(Secret.CONTENT_CHOICES)
+_CONTENT_TYPES = dict(ContentType.choices)
 CONTENT_TYPE_NAMES = {
-    'cc': _CONTENT_TYPES[Secret.CONTENT_CC],
-    'file': _CONTENT_TYPES[Secret.CONTENT_FILE],
-    'password': _CONTENT_TYPES[Secret.CONTENT_PASSWORD],
+    'cc': _CONTENT_TYPES[ContentType.CC],
+    'file': _CONTENT_TYPES[ContentType.FILE],
+    'password': _CONTENT_TYPES[ContentType.PASSWORD],
 }
 
 
@@ -90,7 +91,7 @@ class SecretAdd(CreateView):
 
         # Create share objects
         secret.share_data.create(user=self.request.user)
-        if form.cleaned_data['access_policy'] != Secret.ACCESS_POLICY_ANY:
+        if form.cleaned_data['access_policy'] != AccessPolicy.ANY:
             try:
                 secret.share_data.bulk_create(
                     [
@@ -193,7 +194,7 @@ class SecretEdit(UpdateView):
         return form
 
     def get_initial(self):
-        if self.object.content_type == Secret.CONTENT_CC:
+        if self.object.content_type == ContentType.CC:
             data = self.object.get_data(self.request.user)
             return {
                 'holder': data['holder'],
@@ -237,7 +238,7 @@ def secret_delete(request, hashid):
             secret=secret,
             secret_revision=secret.current_revision,
         )
-        secret.status = Secret.STATUS_DELETED
+        secret.status = SecretStatus.DELETED
         secret.save()
         messages.success(request, _('Successfully deleted secret'))
         return HttpResponseRedirect(
@@ -266,7 +267,7 @@ def secret_restore(request, hashid):
             secret=secret,
             secret_revision=secret.current_revision,
         )
-        secret.status = Secret.STATUS_OK
+        secret.status = SecretStatus.OK
         secret.save()
         messages.success(request, _('Successfully restored secret'))
         return redirect(secret.get_absolute_url())
@@ -278,7 +279,7 @@ def secret_restore(request, hashid):
 @require_http_methods(["GET"])
 def secret_download(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    if secret.content_type != Secret.CONTENT_FILE:
+    if secret.content_type != ContentType.FILE:
         raise Http404
     secret.check_read_access(request.user)
 
@@ -302,7 +303,7 @@ class SecretDetail(DetailView):
         context['secret_revision'] = secret.current_revision
         context['readable'] = secret.check_permissions(self.request.user).is_readable()
         context['shareable'] = secret.check_permissions(self.request.user).is_shareable()
-        context['secret_deleted'] = True if secret.status == Secret.STATUS_DELETED else False
+        context['secret_deleted'] = True if secret.status == SecretStatus.DELETED else False
         context['secret_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'hashid': secret.current_revision.hashid},
@@ -313,7 +314,7 @@ class SecretDetail(DetailView):
             context['placeholder'] = secret.current_revision.length * "•"
             if context['readable'] == AccessPermissionTypes.SUPERUSER_ALLOWED:
                 context['su_access'] = True
-            if secret.status == Secret.STATUS_NEEDS_CHANGING and settings.PASSWORD_UPDATE_ALERT_ACTIVATED:
+            if secret.status == SecretStatus.NEEDS_CHANGING and settings.PASSWORD_UPDATE_ALERT_ACTIVATED:
                 context['show_password_update_alert'] = True
         return context
 
@@ -365,7 +366,7 @@ class SecretList(ListView, FilterMixin):
 
         try:
             if '3' not in self.request.GET.get('status', []) and self.request.user.profile.hide_deleted_secrets:
-                queryset = queryset.exclude(status=Secret.STATUS_DELETED)
+                queryset = queryset.exclude(status=SecretStatus.DELETED)
         except ObjectDoesNotExist:
             pass
 
@@ -522,13 +523,13 @@ def secret_search(request):
         metadata = ''
         icon = "lock-open"
         if secret.check_permissions(request.user).is_readable():
-            if secret.content_type == secret.CONTENT_PASSWORD:
+            if secret.content_type == ContentType.PASSWORD:
                 icon = "user"
                 metadata = getattr(secret, 'username')
-            elif secret.content_type == secret.CONTENT_FILE:
+            elif secret.content_type == ContentType.FILE:
                 icon = "file"
                 metadata = getattr(secret, 'filename')
-            elif secret.content_type == secret.CONTENT_CC:
+            elif secret.content_type == ContentType.CC:
                 icon = "credit-card"
                 metadata = getattr(secret, 'description')
             sorted_secrets.append((secret, icon, metadata))
