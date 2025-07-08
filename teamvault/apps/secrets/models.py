@@ -31,11 +31,14 @@ class AccessPermissionTypes(models.IntegerChoices):
     ALLOWED = 1
     TEMPORARILY_ALLOWED = 2
     SUPERUSER_ALLOWED = 3
-    
+
+
 def validate_url(value):
-    if "://" not in value or \
-            value.startswith("javascript:") or \
-            value.startswith("data:"):
+    if (
+        "://" not in value
+        or value.startswith("javascript:")
+        or value.startswith("data:")
+    ):
         raise ValidationError(_("invalid URL"))
 
 
@@ -62,7 +65,7 @@ class HashIDModel(models.Model):
             self.hashid = hasher.encode(self.pk)
         # we cannot force insert anymore because we might already have
         # created the object
-        kwargs['force_insert'] = False
+        kwargs["force_insert"] = False
         return super(HashIDModel, self).save(*args, **kwargs)
 
 
@@ -108,19 +111,19 @@ class Secret(HashIDModel):
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         models.PROTECT,
-        related_name='passwords_created',
+        related_name="passwords_created",
     )
     current_revision = models.ForeignKey(
-        'SecretRevision',
+        "SecretRevision",
         models.PROTECT,
         blank=True,
         null=True,
-        related_name='_password_current_revision',
+        related_name="_password_current_revision",
     )
     description = models.TextField(
         blank=True,
         null=True,
-        help_text=_('Further information on the secret.'),
+        help_text=_("Further information on the secret."),
     )
     filename = models.CharField(
         blank=True,
@@ -133,21 +136,23 @@ class Secret(HashIDModel):
     last_read = models.DateTimeField(
         default=now,
     )
-    name = models.CharField(max_length=92, help_text=_('Enter a unique name for the secret'))
+    name = models.CharField(
+        max_length=92, help_text=_("Enter a unique name for the secret")
+    )
     needs_changing_on_leave = models.BooleanField(
         default=True,
     )
     shared_groups = models.ManyToManyField(
         Group,
         blank=True,
-        through='SharedSecretData',
-        through_fields=('secret', 'group'),
+        through="SharedSecretData",
+        through_fields=("secret", "group"),
     )
     shared_users = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
         blank=True,
-        through='SharedSecretData',
-        through_fields=('secret', 'user'),
+        through="SharedSecretData",
+        through_fields=("secret", "user"),
     )
     status = models.PositiveSmallIntegerField(
         choices=STATUS_CHOICES,
@@ -171,7 +176,7 @@ class Secret(HashIDModel):
     search_index = SearchVectorField(blank=True, null=True)
 
     class Meta:
-        ordering = ('name', 'username')
+        ordering = ("name", "username")
 
     def __str__(self):
         return self.name
@@ -206,7 +211,7 @@ class Secret(HashIDModel):
         return settings.BASE_URL.rstrip("/") + self.get_absolute_url()
 
     def get_absolute_url(self):
-        return reverse('secrets.secret-detail', args=[str(self.hashid)])
+        return reverse("secrets.secret-detail", args=[str(self.hashid)])
 
     def get_data(self, user):
         if not self.current_revision:
@@ -215,19 +220,21 @@ class Secret(HashIDModel):
         readable = self.check_permissions(user).is_readable()
         if not readable:
             log(
-                _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
+                _("{user} tried to access '{name}' without permission").format(
+                    name=self.name, user=user.username
+                ),
                 actor=user,
                 category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
-                level='warning',
+                level="warning",
                 secret=self,
             )
-            raise PermissionError(_(
-                "{user} not allowed access to '{name}' ({id})"
-            ).format(
-                id=self.id,
-                name=self.name,
-                user=user.username,
-            ))
+            raise PermissionError(
+                _("{user} not allowed access to '{name}' ({id})").format(
+                    id=self.id,
+                    name=self.name,
+                    user=user.username,
+                )
+            )
         if readable == AccessPermissionTypes.SUPERUSER_ALLOWED:
             category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
             log_message = _("{user} used superuser privileges to read '{name}'")
@@ -241,7 +248,7 @@ class Secret(HashIDModel):
             ),
             actor=user,
             category=category,
-            level='info',
+            level="info",
             secret=self,
             secret_revision=self.current_revision,
         )
@@ -252,7 +259,7 @@ class Secret(HashIDModel):
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
 
         plaintext_data = self.current_revision.encrypted_data
-        plaintext_data = f.decrypt(plaintext_data).decode('utf-8')
+        plaintext_data = f.decrypt(plaintext_data).decode("utf-8")
         try:
             plaintext_data = loads(plaintext_data)
             if self.content_type == Secret.CONTENT_FILE:
@@ -269,9 +276,12 @@ class Secret(HashIDModel):
             data = request.session[cached_otp_session_key]
         else:
             data = self.get_data(request.user)
-            request.session[cached_otp_session_key] = {'otp_key': data['otp_key'], 'digits': int(data.get('digits', 6))}
-        otp_key = data['otp_key']
-        digits = int(data.get('digits', 6))
+            request.session["otp_key_data"] = {
+                "otp_key": data["otp_key"],
+                "digits": int(data.get("digits", 6)),
+            }
+        otp_key = data["otp_key"]
+        digits = int(data.get("digits", 6))
         totp = TOTP(otp_key, digits=digits)
         return totp.now()
 
@@ -280,12 +290,19 @@ class Secret(HashIDModel):
         if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
             return cls.objects.all()
 
-        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
-            Q(user=user) | Q(group__user=user)
-        ).exclude(is_expired=True).values('secret__pk')
-        return cls.objects.filter(
-            Q(access_policy=cls.ACCESS_POLICY_ANY) | Q(pk__in=allowed_shares)
-        ).exclude(status=cls.STATUS_DELETED).distinct()
+        allowed_shares = (
+            SharedSecretData.objects.with_expiry_state()
+            .filter(Q(user=user) | Q(group__user=user))
+            .exclude(is_expired=True)
+            .values("secret__pk")
+        )
+        return (
+            cls.objects.filter(
+                Q(access_policy=cls.ACCESS_POLICY_ANY) | Q(pk__in=allowed_shares)
+            )
+            .exclude(status=cls.STATUS_DELETED)
+            .distinct()
+        )
 
     @classmethod
     def get_all_visible_to_user(cls, user, queryset=None):
@@ -295,46 +312,63 @@ class Secret(HashIDModel):
         if user.is_superuser:
             return queryset
 
-        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
-            Q(user=user) | Q(group__user=user)
-        ).exclude(is_expired=True).values('secret__pk')
-        return queryset.filter(
-            Q(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_DISCOVERABLE)) | Q(pk__in=allowed_shares)
-        ).exclude(status=cls.STATUS_DELETED).distinct()
+        allowed_shares = (
+            SharedSecretData.objects.with_expiry_state()
+            .filter(Q(user=user) | Q(group__user=user))
+            .exclude(is_expired=True)
+            .values("secret__pk")
+        )
+        return (
+            queryset.filter(
+                Q(
+                    access_policy__in=(
+                        cls.ACCESS_POLICY_ANY,
+                        cls.ACCESS_POLICY_DISCOVERABLE,
+                    )
+                )
+                | Q(pk__in=allowed_shares)
+            )
+            .exclude(status=cls.STATUS_DELETED)
+            .distinct()
+        )
 
     @classmethod
     def get_most_used_for_user(cls, user, limit=5):
         since = now() - timedelta(days=90)
-        accessed_secrets = LogEntry.objects.filter(
-            actor=user,
-            secret__isnull=False,
-            time__gte=since,
-        ).order_by(
-            'secret'
-        ).values(
-            'secret'
-        ).annotate(
-            access_count=models.Count('secret'),
+        accessed_secrets = (
+            LogEntry.objects.filter(
+                actor=user,
+                secret__isnull=False,
+                time__gte=since,
+            )
+            .order_by("secret")
+            .values("secret")
+            .annotate(
+                access_count=models.Count("secret"),
+            )
         )
-        ordered_secrets = sorted(accessed_secrets, key=itemgetter('access_count'), reverse=True)
-        return [cls.objects.get(id=item['secret']) for item in ordered_secrets[:limit]]
+        ordered_secrets = sorted(
+            accessed_secrets, key=itemgetter("access_count"), reverse=True
+        )
+        return [cls.objects.get(id=item["secret"]) for item in ordered_secrets[:limit]]
 
     @classmethod
     def get_most_recently_used_for_user(cls, user, limit=5):
-        log_entries = LogEntry.objects.filter(
-            actor=user
-        ).values(
-            'secret'
-        ).annotate(
-            latest_time=Max('time')
-        ).order_by(
-            '-latest_time'
-        )[:limit]
+        log_entries = (
+            LogEntry.objects.filter(actor=user)
+            .values("secret")
+            .annotate(latest_time=Max("time"))
+            .order_by("-latest_time")[:limit]
+        )
 
-        ordered_secret_ids = [access['secret'] for access in log_entries]
+        ordered_secret_ids = [access["secret"] for access in log_entries]
         unordered_secrets = Secret.objects.filter(id__in=ordered_secret_ids)
         secret_map = {secret.id: secret for secret in unordered_secrets}
-        ordered_secrets = [secret_map[secret_id] for secret_id in ordered_secret_ids if secret_id in secret_map]
+        ordered_secrets = [
+            secret_map[secret_id]
+            for secret_id in ordered_secret_ids
+            if secret_id in secret_map
+        ]
         return ordered_secrets
 
     @classmethod
@@ -349,10 +383,10 @@ class Secret(HashIDModel):
         substr_hits = Secret.objects.none()
         if substr_search:
             substr_hits = base_queryset.filter(
-                models.Q(filename__icontains=term) |
-                models.Q(url__icontains=term) |
-                models.Q(username__icontains=term) |
-                models.Q(hashid__exact=term)
+                models.Q(filename__icontains=term)
+                | models.Q(url__icontains=term)
+                | models.Q(username__icontains=term)
+                | models.Q(hashid__exact=term)
             )
         if limit:
             name_hits = name_hits[:limit]
@@ -371,23 +405,32 @@ class Secret(HashIDModel):
         # to
         readable = self.check_permissions(user).is_readable()
         if not skip_access_check and not readable:
-            raise PermissionError(_(
-                "{user} not allowed access to '{name}' ({id})"
-            ).format(
-                id=self.id,
-                name=self.name,
-                user=user.username,
-            ))
+            raise PermissionError(
+                _("{user} not allowed access to '{name}' ({id})").format(
+                    id=self.id,
+                    name=self.name,
+                    user=user.username,
+                )
+            )
         # save the length before encoding so multi-byte characters don't
         # mess up the result
-        set_password = self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data
-        set_otp = self.content_type == Secret.CONTENT_PASSWORD and "otp_key" in plaintext_data
+        set_password = (
+            self.content_type == Secret.CONTENT_PASSWORD
+            and "password" in plaintext_data
+        )
+        set_otp = (
+            self.content_type == Secret.CONTENT_PASSWORD and "otp_key" in plaintext_data
+        )
         plaintext_length = len(plaintext_data)
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
         if set_password:
-            plaintext_data_sha256 = sha256(plaintext_data["password"].encode('utf-8')).hexdigest()
+            plaintext_data_sha256 = sha256(
+                plaintext_data["password"].encode("utf-8")
+            ).hexdigest()
         else:
-            plaintext_data_sha256 = sha256(dumps(plaintext_data).encode('utf-8')).hexdigest()
+            plaintext_data_sha256 = sha256(
+                dumps(plaintext_data).encode("utf-8")
+            ).hexdigest()
         try:
             # see the comment on unique_together for SecretRevision
             p = SecretRevision.objects.get(
@@ -397,7 +440,7 @@ class Secret(HashIDModel):
         except SecretRevision.DoesNotExist:
             p = SecretRevision()
         if self.current_revision and self.content_type == Secret.CONTENT_PASSWORD:
-            old_data = f.decrypt(self.current_revision.encrypted_data).decode('utf-8')
+            old_data = f.decrypt(self.current_revision.encrypted_data).decode("utf-8")
             # If not already dict convert to dict since password and otp key are now stored together in dict format.
             # To keep everything uniform CC and file secrets stored as a dict as well
             try:
@@ -412,7 +455,10 @@ class Secret(HashIDModel):
                         plaintext_data[key] = old_data[key]
                         set_otp = True
 
-        if self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data.keys():
+        if (
+            self.content_type == Secret.CONTENT_PASSWORD
+            and "password" in plaintext_data.keys()
+        ):
             plaintext_length = len(plaintext_data["password"])
         if set_otp:
             p.otp_key_set = True
@@ -453,7 +499,7 @@ class Secret(HashIDModel):
             ),
             actor=user,
             category=AuditLogCategoryChoices.SECRET_CHANGED,
-            level='info',
+            level="info",
             secret=self,
             secret_revision=self.current_revision,
         )
@@ -461,12 +507,14 @@ class Secret(HashIDModel):
     def needs_changing(self):
         return self.status == self.STATUS_NEEDS_CHANGING
 
-    def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
+    def share(
+        self, grant_description, granted_by, user=None, group=None, granted_until=None
+    ):
         if (user and group) or (not user and not group):
-            raise ValueError('Specify either a user or a group!')
+            raise ValueError("Specify either a user or a group!")
 
         if not isinstance(granted_by, User):
-            raise ValueError('granted_by has to be a User object!')
+            raise ValueError("granted_by has to be a User object!")
 
         shareable = self.check_permissions(granted_by).is_shareable()
         if not shareable:
@@ -484,7 +532,9 @@ class Secret(HashIDModel):
                 shared_entity_type=share_obj.shared_entity_type,
                 name=share_obj.shared_entity_name,
                 user=granted_by.username,
-                time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
+                time=_("until ") + share_obj.granted_until.isoformat()
+                if share_obj.granted_until
+                else _("permanently"),
             ),
             actor=granted_by,
             category=(
@@ -492,7 +542,7 @@ class Secret(HashIDModel):
                 if shareable == AccessPermissionTypes.SUPERUSER_ALLOWED
                 else AuditLogCategoryChoices.SECRET_SHARED
             ),
-            level='warning',
+            level="warning",
             reason=grant_description,
             secret=self,
         )
@@ -525,20 +575,24 @@ class SecretRevision(HashIDModel):
     set_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         models.PROTECT,
-        related_name='password_revisions_set',
+        related_name="password_revisions_set",
     )
     # TODO custom name for revision? Mainly for logging
     name = models.CharField(max_length=92)
     description = models.TextField(blank=True, null=True)
     username = models.CharField(blank=True, max_length=255, null=True)
-    url = models.CharField(blank=True, max_length=255, null=True, validators=[validate_url])
+    url = models.CharField(
+        blank=True, max_length=255, null=True, validators=[validate_url]
+    )
     filename = models.CharField(blank=True, max_length=255, null=True)
-    access_policy = models.PositiveSmallIntegerField(choices=Secret.ACCESS_POLICY_CHOICES)
+    access_policy = models.PositiveSmallIntegerField(
+        choices=Secret.ACCESS_POLICY_CHOICES
+    )
     needs_changing_on_leave = models.BooleanField()
     status = models.PositiveSmallIntegerField(choices=Secret.STATUS_CHOICES)
 
     class Meta:
-        ordering = ('-created',)
+        ordering = ("-created",)
         # Consider the following scenario:
         # 1. an employee reads a password, it is "secret123"
         # 2. the password is changed to "secret234"
@@ -549,8 +603,7 @@ class SecretRevision(HashIDModel):
         # database object, retaining accessed_by. This way, when the
         # employee leaves, password 3 is correctly assumed known to
         # the employee.
-        unique_together = (('plaintext_data_sha256', 'secret'),)
-
+        unique_together = (("plaintext_data_sha256", "secret"),)
 
     def check_permissions(self, user):
         return PermissionChecker(user, self)
@@ -564,19 +617,21 @@ class SecretRevision(HashIDModel):
         readable = self.check_permissions(user).is_readable()
         if not readable:
             log(
-                _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
+                _("{user} tried to access '{name}' without permission").format(
+                    name=self.name, user=user.username
+                ),
                 actor=user,
                 category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
-                level='warning',
+                level="warning",
                 secret=self,
             )
-            raise PermissionError(_(
-                "{user} not allowed access to '{name}' ({id})"
-            ).format(
-                id=self.id,
-                name=self.name,
-                user=user.username,
-            ))
+            raise PermissionError(
+                _("{user} not allowed access to '{name}' ({id})").format(
+                    id=self.id,
+                    name=self.name,
+                    user=user.username,
+                )
+            )
         if readable == AccessPermissionTypes.SUPERUSER_ALLOWED:
             category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
             log_message = _("{user} used superuser privileges to read '{name}'")
@@ -599,10 +654,10 @@ class SecretRevision(HashIDModel):
         self.accessed_by.add(user)
         self.last_read = now()
         self.save()
- 
+
         f = Fernet(settings.TEAMVAULT_SECRET_KEY)
 
-        plaintext_data = f.decrypt(self.encrypted_data).decode('utf-8')
+        plaintext_data = f.decrypt(self.encrypted_data).decode("utf-8")
         try:
             plaintext_data = loads(plaintext_data)
             if self.secret.content_type == Secret.CONTENT_FILE:
@@ -614,7 +669,9 @@ class SecretRevision(HashIDModel):
         return plaintext_data
 
     def __repr__(self):
-        return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
+        return "<SecretRevision '{name}' ({id})>".format(
+            id=self.hashid, name=self.secret.name
+        )
 
     @property
     def is_current_revision(self):
@@ -624,20 +681,23 @@ class SecretRevision(HashIDModel):
 class SecretShareQuerySet(models.QuerySet):
     # TODO: Rename to group_shares, user_shares
     def groups(self):
-        return self.with_expiry_state().filter(group__isnull=False).order_by('group__name')
+        return (
+            self.with_expiry_state().filter(group__isnull=False).order_by("group__name")
+        )
 
     def users(self):
-        return self.with_expiry_state().filter(user__isnull=False).order_by('user__username')
+        return (
+            self.with_expiry_state()
+            .filter(user__isnull=False)
+            .order_by("user__username")
+        )
 
     def with_expiry_state(self):
         return self.annotate(
             is_expired=Case(
-                When(
-                    granted_until__lte=now(),
-                    then=Value(True)
-                ),
+                When(granted_until__lte=now(), then=Value(True)),
                 default=Value(False),
-                output_field=BooleanField()
+                output_field=BooleanField(),
             )
         )
 
@@ -649,31 +709,29 @@ class SharedSecretData(models.Model):
         Group,
         on_delete=models.CASCADE,
         null=True,
-        related_name='secret_share_data',
+        related_name="secret_share_data",
     )
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         null=True,
-        related_name='secret_share_data',
+        related_name="secret_share_data",
     )
 
     secret = models.ForeignKey(
-        'Secret',
+        "Secret",
         on_delete=models.CASCADE,
-        related_name='share_data',
+        related_name="share_data",
     )
 
-    grant_description = models.TextField(
-        null=True
-    )
+    grant_description = models.TextField(null=True)
 
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
         null=True,
-        related_name='+',
+        related_name="+",
     )
 
     granted_on = models.DateTimeField(
@@ -697,7 +755,7 @@ class SharedSecretData(models.Model):
 
     @property
     def shared_entity_type(self):
-        return 'group' if self.group else 'user'
+        return "group" if self.group else "user"
 
     @property
     def about_to_expire(self):
@@ -709,38 +767,38 @@ class SharedSecretData(models.Model):
     @property
     def expiry_icon(self):
         if not self.granted_until:
-            return 'success'
+            return "success"
 
         if self.about_to_expire:
             time_left = self.granted_until - now()
             if time_left <= timedelta(hours=8):
-                return 'danger'
-        return 'warning'
+                return "danger"
+        return "warning"
 
     def __str__(self):
-        return f'SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})'
+        return f"SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})"
 
     class Meta:
         constraints = [
             models.CheckConstraint(
                 check=(
-                        (Q(group__isnull=False) & Q(user__isnull=True)) |
-                        (Q(group__isnull=True) & Q(user__isnull=False))
+                    (Q(group__isnull=False) & Q(user__isnull=True))
+                    | (Q(group__isnull=True) & Q(user__isnull=False))
                 ),
-                name='only_one_set'
+                name="only_one_set",
             ),
         ]
-        unique_together = [('group', 'secret'), ('user', 'secret')]
+        unique_together = [("group", "secret"), ("user", "secret")]
 
 
 @receiver(post_save, sender=Secret)
 def update_search_index(sender, **kwargs):
-    Secret.objects.filter(id=kwargs['instance'].id).update(
+    Secret.objects.filter(id=kwargs["instance"].id).update(
         search_index=(
-                SearchVector('name', weight='A') +
-                SearchVector('description', weight='B') +
-                SearchVector('username', weight='C') +
-                SearchVector('filename', weight='D')
+            SearchVector("name", weight="A")
+            + SearchVector("description", weight="B")
+            + SearchVector("username", weight="C")
+            + SearchVector("filename", weight="D")
         ),
     )
 
@@ -788,16 +846,13 @@ class PermissionChecker(t.Generic[TSecret]):
             self.obj.ACCESS_POLICY_ANY,
             self.obj.ACCESS_POLICY_DISCOVERABLE,
         }
-        
+
     def _valid_shares(self) -> QuerySet:
         """Return (and cache) all non-expired shares for user or their groups."""
         if self._shares_qs is None:
             self._shares_qs = (
                 self.obj.share_data.with_expiry_state()
-                .filter(
-                    Q(user=self.user) |
-                    Q(group__user=self.user)
-                )
+                .filter(Q(user=self.user) | Q(group__user=self.user))
                 .exclude(is_expired=True)
             )
         return self._shares_qs
@@ -829,13 +884,13 @@ class PermissionChecker(t.Generic[TSecret]):
 
         if self.user.is_superuser:
             return AccessPermissionTypes.SUPERUSER_ALLOWED
-            
+
         return AccessPermissionTypes.NOT_ALLOWED
 
     def is_visible(self) -> int:
         """Checks if the secret is visible to the user in lists."""
         if self.obj.status == self.obj.STATUS_DELETED:
-             return AccessPermissionTypes.NOT_ALLOWED
+            return AccessPermissionTypes.NOT_ALLOWED
 
         # It's visible if the policy allows it or if the user has any form of read access
         is_discoverable = self.obj.access_policy in (
@@ -847,7 +902,7 @@ class PermissionChecker(t.Generic[TSecret]):
         if is_discoverable or readable in {
             AccessPermissionTypes.ALLOWED,
             AccessPermissionTypes.TEMPORARILY_ALLOWED,
-            AccessPermissionTypes.SUPERUSER_ALLOWED
+            AccessPermissionTypes.SUPERUSER_ALLOWED,
         }:
             return AccessPermissionTypes.ALLOWED
 
