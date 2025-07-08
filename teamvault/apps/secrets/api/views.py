@@ -11,6 +11,7 @@ from rest_framework.response import Response
 
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
+from teamvault.apps.secrets.enums import ContentType, SecretStatus
 from .serializers import SecretDetailSerializer, SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
 from ..models import AccessPermissionTypes, Secret, SecretRevision, SharedSecretData
 from ..utils import generate_password
@@ -22,7 +23,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def destroy(self, request, *args, **kwargs):
         obj = self.get_object()
-        obj.status = Secret.STATUS_DELETED
+        obj.status = SecretStatus.DELETED
         obj.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -151,11 +152,11 @@ def data_get(request, hashid):
     secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
     secret_revision.secret.check_read_access(request.user)
     data = secret_revision.secret.get_data(request.user)
-    if secret_revision.secret.content_type == Secret.CONTENT_PASSWORD:
+    if secret_revision.secret.content_type == ContentType.PASSWORD:
         return Response({'password': data["password"]})
-    elif secret_revision.secret.content_type == Secret.CONTENT_FILE:
+    elif secret_revision.secret.content_type == ContentType.FILE:
         return Response({'file': b64encode(data).decode('ascii')})
-    elif secret_revision.secret.content_type == Secret.CONTENT_CC:
+    elif secret_revision.secret.content_type == ContentType.CC:
         return Response(data)
 
 
