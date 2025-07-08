@@ -563,6 +563,7 @@ def secret_revisions(request, hashid):
     }
     return render(request, "secrets/secret_revisions.html", context)
 
+
 @login_required
 @require_http_methods(["GET"])
 def secret_revision_detail(request, revision_hashid):
@@ -591,3 +592,30 @@ def secret_revision_detail(request, revision_hashid):
     }
 
     return render(request, "secrets/secret_revision_detail.html", context)
+
+
+@login_required
+@require_http_methods(["GET"])
+def secret_revision_download(request, revision_hashid):
+    """
+    Download the file that belongs to a specific SecretRevision.
+    """
+    try:
+        revision = get_object_or_404(SecretRevision.objects.select_related("secret"), hashid=revision_hashid)
+    except SecretRevision.DoesNotExist:
+        raise Http404
+
+    # permission check against the parent secret
+    revision.secret.check_read_access(request.user)
+
+    if revision.secret.content_type != ContentType.FILE:
+        raise Http404
+
+    file_bytes = revision.get_data(request.user)  # returns raw bytes for FILE type
+    filename = revision.filename or revision.secret.filename or f"{revision.secret.name}"
+
+    response = HttpResponse(file_bytes, content_type="application/octet-stream")
+    response["Content-Disposition"] = (
+        "attachment; filename*=UTF-8''{}".format(quote(filename))
+    )
+    return response
