@@ -44,6 +44,55 @@ def validate_url(value):
         raise ValidationError(_("invalid URL"))
 
 
+def log_secret_read(
+    *,
+    readable: AccessPermissionTypes,
+    secret,
+    secret_revision,
+    user,
+):
+    """
+    Centralised audit-logging + permission handling for `get_data`.
+
+    Raises PermissionError on denied access
+    """
+    if not readable:
+        log(
+            _("{user} tried to access '{name}' without permission").format(
+                name=secret.name, user=user.username
+            ),
+            actor=user,
+            category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
+            level="warning",
+            secret=secret,
+        )
+        raise PermissionError(
+            _("{user} not allowed access to '{name}' ({id})").format(
+                id=secret.id,
+                name=secret.name,
+                user=user.username,
+            )
+        )
+
+    # Decide which success category applies
+    if readable == AccessPermissionTypes.SUPERUSER_ALLOWED:
+        category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
+        msg_tpl = _("{user} used superuser privileges to read '{name}'")
+    else:
+        category = AuditLogCategoryChoices.SECRET_READ
+        msg_tpl = _("{user} read '{name}'")
+
+    # Write the success log entry
+    log(
+        msg_tpl.format(name=secret.name, user=user.username),
+        actor=user,
+        category=category,
+        level="info",
+        secret=secret,
+        secret_revision=secret_revision,
+    )
+
+
 class HashIDModel(models.Model):
     hashid = models.CharField(
         max_length=24,
@@ -195,39 +244,11 @@ class Secret(HashIDModel):
             raise Http404
 
         readable = self.check_permissions(user).is_readable()
-        if not readable:
-            log(
-                _("{user} tried to access '{name}' without permission").format(
-                    name=self.name, user=user.username
-                ),
-                actor=user,
-                category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
-                level="warning",
-                secret=self,
-            )
-            raise PermissionError(
-                _("{user} not allowed access to '{name}' ({id})").format(
-                    id=self.id,
-                    name=self.name,
-                    user=user.username,
-                )
-            )
-        if readable == AccessPermissionTypes.SUPERUSER_ALLOWED:
-            category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
-            log_message = _("{user} used superuser privileges to read '{name}'")
-        else:
-            category = AuditLogCategoryChoices.SECRET_READ
-            log_message = _("{user} read '{name}'")
-        log(
-            log_message.format(
-                name=self.name,
-                user=user.username,
-            ),
-            actor=user,
-            category=category,
-            level="info",
+        log_secret_read(
+            readable=readable,
             secret=self,
             secret_revision=self.current_revision,
+            user=user,
         )
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
@@ -590,41 +611,12 @@ class SecretRevision(HashIDModel):
 
     def get_data(self, user):
         readable = self.check_permissions(user).is_readable()
-        if not readable:
-            log(
-                _("{user} tried to access '{name}' without permission").format(
-                    name=self.name, user=user.username
-                ),
-                actor=user,
-                category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
-                level="warning",
-                secret=self,
-            )
-            raise PermissionError(
-                _("{user} not allowed access to '{name}' ({id})").format(
-                    id=self.id,
-                    name=self.name,
-                    user=user.username,
-                )
-            )
-        if readable == AccessPermissionTypes.SUPERUSER_ALLOWED:
-            category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
-            log_message = _("{user} used superuser privileges to read '{name}'")
-        else:
-            category = AuditLogCategoryChoices.SECRET_READ
-            log_message = _("{user} read '{name}'")
-        log(
-            log_message.format(
-                name=self.name,
-                user=user.username,
-            ),
-            actor=user,
-            category=category,
-            level="info",
+        log_secret_read(
+            readable=readable,
             secret=self.secret,
             secret_revision=self,
+            user=user
         )
-
         # Record that this user has now seen this specific revision's data
         self.accessed_by.add(user)
         self.last_read = now()
@@ -787,7 +779,6 @@ class ShareQuerySet(t.Protocol):
 
 
 class SecretLike(t.Protocol):
-    # fields
     status: SecretStatus
     access_policy: AccessPolicy
     share_data: Manager[ShareQuerySet]
@@ -832,7 +823,7 @@ class PermissionChecker(t.Generic[TSecret]):
     def _has_permanent_share(shares: models.QuerySet) -> bool:
         return shares.filter(granted_until__isnull=True).exists()
 
-    def is_readable(self) -> int:
+    def is_readable(self) -> AccessPermissionTypes:
         if self._secret_deleted():
             return AccessPermissionTypes.NOT_ALLOWED
         if self._superuser_override():
@@ -845,7 +836,7 @@ class PermissionChecker(t.Generic[TSecret]):
             return AccessPermissionTypes.TEMPORARILY_ALLOWED
         return AccessPermissionTypes.NOT_ALLOWED
 
-    def is_shareable(self) -> int:
+    def is_shareable(self) -> AccessPermissionTypes:
         """Checks if the user can share the secret."""
         read_permission = self.is_readable()
 
@@ -858,7 +849,7 @@ class PermissionChecker(t.Generic[TSecret]):
 
         return AccessPermissionTypes.NOT_ALLOWED
 
-    def is_visible(self) -> int:
+    def is_visible(self) -> AccessPermissionTypes:
         """Checks if the secret is visible to the user in lists."""
         if self.obj.status == SecretStatus.DELETED:
             return AccessPermissionTypes.NOT_ALLOWED
