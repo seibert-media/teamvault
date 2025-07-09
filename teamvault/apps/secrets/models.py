@@ -551,6 +551,7 @@ class SecretRevision(HashIDModel):
         models.PROTECT,
         related_name="password_revisions_set",
     )
+    last_read = models.DateTimeField(auto_now=True)
     # TODO custom name for revision? Mainly for logging
     name = models.CharField(max_length=92)
     description = models.TextField(blank=True, null=True)
@@ -802,10 +803,11 @@ class PermissionChecker(t.Generic[TSecret]):
         self._shares_qs: QuerySet | None = None
 
     def _secret_deleted(self) -> bool:
-        return self.obj.status == SecretStatus.DELETED
+        base = getattr(self.obj, "secret", self.obj)
+        return base.status == SecretStatus.DELETED
 
     def _superuser_override(self) -> bool:
-        return self.user.is_superuser
+        return self.user.is_superuser and settings.ALLOW_SUPERUSER_READS
 
     def _policy_allows_any(self) -> bool:
         return self.obj.access_policy == AccessPolicy.ANY
@@ -833,7 +835,7 @@ class PermissionChecker(t.Generic[TSecret]):
     def is_readable(self) -> int:
         if self._secret_deleted():
             return AccessPermissionTypes.NOT_ALLOWED
-        if self._superuser_override() and settings.ALLOW_SUPERUSER_READS:
+        if self._superuser_override():
             return AccessPermissionTypes.SUPERUSER_ALLOWED
 
         shares = self._valid_shares()
@@ -850,8 +852,8 @@ class PermissionChecker(t.Generic[TSecret]):
         # Only users with permanent read access can share
         if read_permission == AccessPermissionTypes.ALLOWED:
             return AccessPermissionTypes.ALLOWED
-
-        if self.user.is_superuser:
+        # NOTE this originally didn't check ALLOW_SUPERUSER_READS. On purpose?
+        if self._superuser_override():
             return AccessPermissionTypes.SUPERUSER_ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
@@ -861,18 +863,7 @@ class PermissionChecker(t.Generic[TSecret]):
         if self.obj.status == SecretStatus.DELETED:
             return AccessPermissionTypes.NOT_ALLOWED
 
-        # It's visible if the policy allows it or if the user has any form of read access
-        is_discoverable = self.obj.access_policy in (
-            AccessPolicy.ANY,
-            AccessPolicy.DISCOVERABLE,
-        )
-
-        readable = self.is_readable()
-        if is_discoverable or readable in {
-            AccessPermissionTypes.ALLOWED,
-            AccessPermissionTypes.TEMPORARILY_ALLOWED,
-            AccessPermissionTypes.SUPERUSER_ALLOWED,
-        }:
+        if self._policy_discoverable() or self.is_readable():
             return AccessPermissionTypes.ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
