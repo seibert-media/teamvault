@@ -398,91 +398,15 @@ class Secret(HashIDModel):
             return result
 
     def set_data(self, user, plaintext_data, skip_access_check=False):
-        # skip_access_check is used when initially creating a secret
-        # and makes it possible to create secrets you don't have access
-        # to
-        readable = self.check_permissions(user).is_readable()
-        if not skip_access_check and not readable:
-            raise PermissionError(
-                _("{user} not allowed access to '{name}' ({id})").format(
-                    id=self.id,
-                    name=self.name,
-                    user=user.username,
-                )
-            )
-        # save the length before encoding so multi-byte characters don't
-        # mess up the result
-        set_password = (
-            self.content_type == ContentType.PASSWORD
-            and "password" in plaintext_data
+        old_rev = self.current_revision_id or _("none")
+        # Create a revision snapshot
+        new_rev = SecretRevision.create_from_secret(
+            secret=self,
+            set_by=user,
+            plaintext_data=plaintext_data,
+            skip_access_check=skip_access_check,
         )
-        set_otp = (
-            self.content_type == ContentType.PASSWORD and "otp_key" in plaintext_data
-        )
-        plaintext_length = len(plaintext_data)
-        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        if set_password:
-            plaintext_data_sha256 = sha256(
-                plaintext_data["password"].encode("utf-8")
-            ).hexdigest()
-        else:
-            plaintext_data_sha256 = sha256(
-                dumps(plaintext_data).encode("utf-8")
-            ).hexdigest()
-        try:
-            # see the comment on unique_together for SecretRevision
-            p = SecretRevision.objects.get(
-                plaintext_data_sha256=plaintext_data_sha256,
-                secret=self,
-            )
-        except SecretRevision.DoesNotExist:
-            p = SecretRevision()
-        if self.current_revision and self.content_type == ContentType.PASSWORD:
-            old_data = f.decrypt(self.current_revision.encrypted_data).decode("utf-8")
-            # If not already dict convert to dict since password and otp key are now stored together in dict format.
-            # To keep everything uniform CC and file secrets stored as a dict as well
-            try:
-                old_data = loads(old_data)
-            except JSONDecodeError:
-                old_data = dict(password=old_data)
-            if not set_password:
-                plaintext_data["password"] = old_data["password"]
-            if not set_otp and "otp_key" in old_data:
-                for key in ["otp_key", "digits", "algorithm"]:
-                    if key in old_data:
-                        plaintext_data[key] = old_data[key]
-                        set_otp = True
-
-        if (
-            self.content_type == ContentType.PASSWORD
-            and "password" in plaintext_data.keys()
-        ):
-            plaintext_length = len(plaintext_data["password"])
-        if set_otp:
-            p.otp_key_set = True
-        plaintext_data = dumps(plaintext_data).encode("utf-8")
-
-        p.name = self.name
-        p.description = self.description
-        p.username = self.username
-        p.url = self.url
-        p.filename = self.filename
-        p.access_policy = self.access_policy
-        p.needs_changing_on_leave = self.needs_changing_on_leave
-        p.status = self.status
-        p.encrypted_data = f.encrypt(plaintext_data)
-        p.length = plaintext_length
-        p.plaintext_data_sha256 = plaintext_data_sha256
-        p.set_by = user
-        p.secret = self
-        p.save()
-        p.accessed_by.add(user)
-
-        if self.current_revision:
-            previous_revision_id = self.current_revision.id
-        else:
-            previous_revision_id = _("none")
-        self.current_revision = p
+        self.current_revision = new_rev
         self.last_changed = now()
         self.last_read = now()
         if self.status == SecretStatus.NEEDS_CHANGING:
@@ -492,7 +416,7 @@ class Secret(HashIDModel):
             _("{user} set a new secret for '{name}' ({oldrev}->{newrev})").format(
                 name=self.name,
                 newrev=self.current_revision.id,
-                oldrev=previous_revision_id,
+                oldrev=old_rev,
                 user=user.username,
             ),
             actor=user,
@@ -600,6 +524,91 @@ class SecretRevision(HashIDModel):
         # employee leaves, password 3 is correctly assumed known to
         # the employee.
         unique_together = (("plaintext_data_sha256", "secret"),)
+
+    @classmethod
+    def create_from_secret(
+        cls,
+        *,
+        secret: Secret,
+        set_by: User,
+        plaintext_data,
+        skip_access_check: bool = False,
+    ) -> "SecretRevision":
+        # skip_access_check is used when initially creating a secret
+        # and makes it possible to create secrets you don't have access
+        # to
+        if not skip_access_check:
+            readable = secret.check_permissions(set_by).is_readable()
+            if not readable:
+                raise PermissionError(
+                    _("{user} not allowed access to '{name}' ({id})").format(
+                        id=secret.id,
+                        name=secret.name,
+                        user=set_by.username
+                    )
+                )
+
+        content_type = secret.content_type
+        set_password = (
+            content_type == ContentType.PASSWORD
+            and "password" in plaintext_data
+        )
+        set_otp = (
+            content_type == ContentType.PASSWORD and "otp_key" in plaintext_data
+        )
+
+        fernet = Fernet(settings.TEAMVAULT_SECRET_KEY)
+
+        if secret.current_revision and content_type == ContentType.PASSWORD:
+            old_dec = fernet.decrypt(secret.current_revision.encrypted_data).decode()
+            try:
+                old_data = loads(old_dec)
+            except JSONDecodeError:
+                old_data = {"password": old_dec}
+
+            if not set_password:
+                plaintext_data["password"] = old_data["password"]
+            if not set_otp and "otp_key" in old_data:
+                for k in ("otp_key", "digits", "algorithm"):
+                    if k in old_data:
+                        plaintext_data[k] = old_data[k]
+                        set_otp = True
+
+        if content_type == ContentType.PASSWORD and "password" in plaintext_data:
+            sha_src = plaintext_data["password"]
+        else:
+            sha_src = dumps(plaintext_data)
+
+        sha_sum = sha256(sha_src.encode("utf-8")).hexdigest()
+
+        revision, _ = cls.objects.get_or_create(
+            secret=secret,
+            plaintext_data_sha256=sha_sum,
+            defaults={
+                "otp_key_set": set_otp,
+                "set_by": set_by,
+            },
+        )
+
+        revision.name = secret.name
+        revision.description = secret.description
+        revision.username = secret.username
+        revision.url = secret.url
+        revision.filename = secret.filename
+        revision.access_policy = secret.access_policy
+        revision.needs_changing_on_leave = secret.needs_changing_on_leave
+        revision.status = secret.status
+        # save the length before encoding so multi-byte characters don't
+        # mess up the result
+        revision.length = (
+            len(plaintext_data["password"])
+            if content_type == ContentType.PASSWORD and "password" in plaintext_data
+            else len(plaintext_data)
+        )
+        revision.encrypted_data = fernet.encrypt(dumps(plaintext_data).encode())
+        revision.save()
+        revision.accessed_by.add(set_by)
+        return revision
 
     def check_permissions(self, user):
         return PermissionChecker(user, self)
