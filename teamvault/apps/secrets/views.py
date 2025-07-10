@@ -613,10 +613,10 @@ def secret_revision_download(request, revision_hashid):
         raise Http404
 
     file_bytes = revision.get_data(request.user)  # returns raw bytes for FILE type
-    filename = revision.filename or revision.secret.filename or f"{revision.secret.name}"
+    filename = revision.filename or revision.secret.filename or revision.secret.name
 
     response = HttpResponse(file_bytes, content_type="application/octet-stream")
     response["Content-Disposition"] = (
-        "attachment; filename*=UTF-8''{}".format(quote(filename))
+        f"attachment; filename*=UTF-8''{quote(filename)}"
     )
     return response
