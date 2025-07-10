@@ -44,14 +44,11 @@ jobs:
         working-directory: ${{ github.workspace }}/teamvault/static
 
       - name: Upload Webpack Bundle to Release
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ github.event.release.upload_url }}
-          asset_path: ${{ github.workspace }}/teamvault/static/bundled.zip
-          asset_name: frontend-bundle-${{ github.sha }}.zip
-          asset_content_type: application/zip
+          files: ${{ github.workspace }}/teamvault/static/bundled.zip
 
   pypi-publish:
     name: Upload Release to PyPI
@@ -64,7 +61,7 @@ jobs:
 
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.10"
+          python-version: "3.12"
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
@@ -77,15 +74,12 @@ jobs:
           echo "wheel=$WHEEL_PATH" >> "$GITHUB_OUTPUT"
           echo "wheel_name=$(basename "$WHEEL_PATH")" >> "$GITHUB_OUTPUT"
 
-      - name: Upload wheel to GitHub Release
-        uses: actions/upload-release-asset@v1
+      - name: Upload wheel to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.wheel.outputs.wheel }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url:  ${{ github.event.release.upload_url }}
-          asset_path:  ${{ steps.wheel.outputs.wheel       }}
-          asset_name:  ${{ steps.wheel.outputs.wheel_name  }}
-          asset_content_type: application/zip
 
       - name: Publish package distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
