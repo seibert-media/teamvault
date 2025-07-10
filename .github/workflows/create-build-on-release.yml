@@ -18,6 +18,14 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Restore bun cache
+        uses: actions/cache@v4
+        with:
+          path: /hoem/runner/.cache/bun
+          key: ${{ runner.os }}-bun-${{ steps.setup-bun.outputs.bun-version }}-${{ hashFiles('bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-${{ steps.setup-bun.outputs.bun-version }}-
+
       - name: Checkout Repo
         uses: actions/checkout@v4
 
