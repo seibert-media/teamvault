@@ -300,11 +300,12 @@ class SecretDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
+        permissions = secret.check_permissions(self.request.user)
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['secret_revision'] = secret.current_revision
-        context['readable'] = secret.check_permissions(self.request.user).is_readable()
-        context['shareable'] = secret.check_permissions(self.request.user).is_shareable()
         context['secret_deleted'] = True if secret.status == SecretStatus.DELETED else False
+        context['readable'] = permissions.is_readable()
+        context['shareable'] = permissions.is_shareable()
         context['secret_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'hashid': secret.current_revision.hashid},
