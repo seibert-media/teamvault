@@ -303,9 +303,9 @@ class SecretDetail(DetailView):
         permissions = secret.check_permissions(self.request.user)
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['secret_revision'] = secret.current_revision
-        context['secret_deleted'] = True if secret.status == SecretStatus.DELETED else False
         context['readable'] = permissions.is_readable()
         context['shareable'] = permissions.is_shareable()
+        context['secret_deleted'] = secret.status == SecretStatus.DELETED
         context['secret_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'hashid': secret.current_revision.hashid},
