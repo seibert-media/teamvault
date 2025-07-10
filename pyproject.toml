@@ -53,6 +53,7 @@ dev = [
     "django-stubs~=5.2.0",
     "djangorestframework-stubs~=3.16.0",
     "faker",
+    "ruff>=0.12.2",
 ]
 
 [project.scripts]
@@ -73,3 +74,61 @@ source-include = [
 
 [tool.uv.sources]
 teamvault = { workspace = true }
+
+[tool.ruff]
+src = ["teamvault"]
+target-version = "py310"
+line-length = 120
+indent-width = 4
+extend-exclude = [
+    "./teamvault/apps/*/migrations"
+]
+
+[tool.ruff.format]
+# Like Black, use single quotes for strings.
+quote-style = "single"
+
+[tool.ruff.lint]
+select = [
+    # Note: Preferably, we'd use the deactivated rules below, too. Once there's time, let's try to fix them one by one.
+    #
+    "ARG",   # flake8-unused-arguments - when enabling, make sure you keep the same signature of parent methods
+    "B",       # flake8-bugbear
+    "C4",      # flake8-comprehensions
+    "DJ",      # flake-django
+    "E",       # pycodestyle errors
+    "F",       # pyflakes
+    "G",     # flake8-logging-format
+    "FURB",  # refurb  - depends on enabled preview option
+    "I",       # isort
+    "INT",     # flake8-gettext
+    "ISC",     # flake8-implicit-str-concat
+    "PERF",    # perflint
+    "PLE",     # pylint errors
+    "PLR0",  # pylint refactor errors
+    "PTH",   # flake8-use-pathlib
+    "RUF100",  # ruff / unused-noqa
+    "SIM",   # flake8-simplify
+    "TCH",     # flake8-type-checking
+    "UP",      # pyupgrade
+    "W",       # pycodestyle warnings
+]
+ignore = [
+    "DJ008",   # django-model-without-dunder-str - Often, we don't care about these
+    "PERF401", # manual-list-comprehension - Forcing us to use list comprehensions with dicts inside them is weird.
+    "UP015",   # redundant-open-modes - We like to have the mode explicitly set in open() calls
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+no-lines-before = ["local-folder"]
+relative-imports-order = "closest-to-furthest"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 13
+
+[tool.ruff.lint.pylint]
+max-args = 15  # default is 5
+max-branches = 28  # default is 12
+max-returns = 13  # default is 6
+max-statements = 134  # default is 50
