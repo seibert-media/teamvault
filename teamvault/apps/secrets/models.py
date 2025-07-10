@@ -587,6 +587,9 @@ class SecretRevision(HashIDModel):
             defaults={
                 "otp_key_set": set_otp,
                 "set_by": set_by,
+                "access_policy": secret.access_policy,
+                "needs_changing_on_leave": secret.needs_changing_on_leave,
+                "status": secret.status,
             },
         )
 
