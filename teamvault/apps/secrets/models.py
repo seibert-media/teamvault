@@ -782,32 +782,24 @@ def update_search_index(sender, **kwargs):
     )
 
 
-class ShareQuerySet(t.Protocol):
-    def with_expiry_state(self) -> QuerySet: ...
-    def filter(self, *args, **kwargs) -> QuerySet: ...
-    def exclude(self, *args, **kwargs) -> QuerySet: ...
-    def exists(self) -> bool: ...
-    def values(self, *fields) -> QuerySet: ...
-
-
 class SecretLike(t.Protocol):
     status: SecretStatus
     access_policy: AccessPolicy
-    share_data: Manager[ShareQuerySet]
+    share_data: Manager
 
 
-TSecret = t.TypeVar("TSecret", bound=SecretLike)
-
-
-class PermissionChecker(t.Generic[TSecret]):
-    def __init__(self, user, obj: TSecret):
+class PermissionChecker[T: SecretLike]:
+    def __init__(self, user: User, obj: T):
         self.user = user
         self.obj = obj
         self._shares_qs: QuerySet | None = None
 
+    def _as_secret(self):
+        """Accesses the 'real' secret"""
+        return getattr(self.obj, "secret", self.obj)
+
     def _secret_deleted(self) -> bool:
-        base = getattr(self.obj, "secret", self.obj)
-        return base.status == SecretStatus.DELETED
+        return self._as_secret().status == SecretStatus.DELETED
 
     def _superuser_override(self) -> bool:
         return self.user.is_superuser and settings.ALLOW_SUPERUSER_READS
