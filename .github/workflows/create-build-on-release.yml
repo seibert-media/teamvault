@@ -22,10 +22,10 @@ jobs:
       - name: Restore bun cache
         uses: actions/cache@v4
         with:
-          path: /home/runner/.cache/bun
+          path: /home/runner/.bun/install/cache
           key: ${{ runner.os }}-bun-${{ steps.setup-bun.outputs.bun-version }}-${{ hashFiles('bun.lockb') }}
           restore-keys: |
-            ${{ runner.os }}-bun-${{ steps.setup-bun.outputs.bun-version }}-
+            ${{ runner.os }}-bun-
 
       - name: Checkout Repo
         uses: actions/checkout@v4
