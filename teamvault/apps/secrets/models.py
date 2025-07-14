@@ -590,7 +590,7 @@ class SecretRevision(HashIDModel):
             },
         )
 
-        revision.name = secret.name
+        revision.name = f"{secret.name} - {revision.hashid}"
         revision.description = secret.description
         revision.username = secret.username
         revision.url = secret.url
