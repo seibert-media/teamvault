@@ -533,7 +533,7 @@ class SecretRevision(HashIDModel):
         set_by: User,
         plaintext_data,
         skip_access_check: bool = False,
-    ) -> "SecretRevision":
+    ) -> t.Self:
         # skip_access_check is used when initially creating a secret
         # and makes it possible to create secrets you don't have access
         # to
@@ -612,6 +612,55 @@ class SecretRevision(HashIDModel):
         revision.save()
         revision.accessed_by.add(set_by)
         return revision
+
+    @classmethod
+    def create_from_revision(
+        cls,
+        *,
+        old_revision: t.Self,
+        set_by: User,
+        skip_access_check: bool = False,
+    ) -> t.Self:
+        """Re‑use the data of an existing revision to create a new one and
+        make it the secret’s current revision.
+
+        Returns the (new or reused) revision object that is now current.
+        """
+        secret = old_revision.secret
+
+        if not skip_access_check:
+            readable = secret.check_permissions(set_by).is_readable()
+            if not readable:
+                raise PermissionError(
+                    _("{user} not allowed to roll back '{name}' ({id})").format(
+                        id=secret.id,
+                        name=secret.name,
+                        user=set_by.username,
+                    )
+                )
+        new_rev, created = cls.objects.get_or_create(
+            secret=secret,
+            plaintext_data_sha256=old_revision.plaintext_data_sha256,
+            defaults={
+                "encrypted_data": old_revision.encrypted_data,
+                "otp_key_set": old_revision.otp_key_set,
+                "length": old_revision.length,
+                "set_by": set_by,
+                "access_policy": secret.access_policy,
+                "needs_changing_on_leave": secret.needs_changing_on_leave,
+                "status": secret.status,
+            },
+        )
+
+        new_rev.name = f"{secret.name} - {new_rev.hashid}"
+        new_rev.description = old_revision.description
+        new_rev.username = old_revision.username
+        new_rev.url = old_revision.url
+        new_rev.filename = old_revision.filename
+        new_rev.save()
+
+        new_rev.accessed_by.add(set_by)
+        return new_rev
 
     def check_permissions(self, user):
         return PermissionChecker(user, self)

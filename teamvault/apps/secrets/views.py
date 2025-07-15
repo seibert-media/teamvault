@@ -5,11 +5,12 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponseForbidden, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
 from django.utils.functional import cached_property
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
@@ -159,11 +160,10 @@ class SecretEdit(UpdateView):
         plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
 
         if plaintext_data is None: # Only metadata changed
-            if form.changed_data:
-                # Re-use the existing encrypted data to create a new revision
-                if secret.current_revision:
-                    current_data = secret.current_revision.get_data(self.request.user)
-                    secret.set_data(self.request.user, current_data)
+            # Re-use the existing encrypted data to create a new revision
+            if form.changed_data and secret.current_revision:
+                current_data = secret.current_revision.get_data(self.request.user)
+                secret.set_data(self.request.user, current_data)
         else:
             secret.set_data(self.request.user, plaintext_data)
 
@@ -591,6 +591,10 @@ def secret_revision_detail(request, revision_hashid):
         'secret': revision.secret,  # Pass the parent secret for breadcrumbs/links
         'decrypted_data': decrypted_data,
         'ContentType': ContentType,
+        # TODO also show this to secret owner
+        'restore_allowed':
+            revision.secret.check_permissions(request.user).is_readable()
+            == AccessPermissionTypes.SUPERUSER_ALLOWED,
     }
 
     return render(request, "secrets/secret_revision_detail.html", context)
@@ -599,8 +603,7 @@ def secret_revision_detail(request, revision_hashid):
 @login_required
 @require_http_methods(["GET"])
 def secret_revision_download(request, revision_hashid):
-    """
-    Download the file that belongs to a specific SecretRevision.
+    """Download the file that belongs to a specific SecretRevision.
     """
     try:
         revision = get_object_or_404(SecretRevision.objects.select_related("secret"), hashid=revision_hashid)
@@ -621,3 +624,34 @@ def secret_revision_download(request, revision_hashid):
         f"attachment; filename*=UTF-8''{quote(filename)}"
     )
     return response
+
+
+@login_required
+@require_http_methods(["POST"])
+def restore_secret_revision(request, secret_id, revision_id):
+    """Restores a specific revision of a secret by creating a new revision
+    with the same data and setting it as the current revision.
+    """
+    secret = get_object_or_404(Secret, pk=secret_id)
+    revision_to_restore = get_object_or_404(SecretRevision, pk=revision_id, secret=secret)
+
+    # Check if user has priviliges
+    access_permission = secret.check_read_access(request.user)
+    # TODO For now, only superuser can rollback, once we have it, secret owner, too
+    if access_permission != AccessPermissionTypes.SUPERUSER_ALLOWED:
+        messages.error(request, _("You are not allowed to restore secrets."))
+        return redirect(revision_to_restore.get_absolute_url())
+
+    new_rev = SecretRevision.create_from_revision(
+        old_revision=revision_to_restore,
+        set_by=request.user,
+    )
+    secret.current_revision = new_rev
+    secret.last_changed = now()
+    secret.save()
+
+    messages.success(request, f"Successfully restored revision {revision_to_restore.id}. "
+                              f"New revision {new_rev.id} is now the current version.")
+
+    # Redirect back to the main detail view for the secret
+    return redirect(secret.get_absolute_url())
