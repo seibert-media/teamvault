@@ -8,7 +8,7 @@ from django.utils.translation import gettext_lazy as _
 
 from .models import Secret, SharedSecretData
 from .utils import extract_url_and_params
-from .validators import is_valid_b32_string
+from .validators import is_valid_otp_secret
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
@@ -150,7 +150,7 @@ class PasswordForm(SecretForm):
         except Exception:
             raise forms.ValidationError(_('OTP key should have a format like this: ___?secret=___&digits=___ ...'))
         secret = data_params['secret'] if 'secret' in data_params else ''
-        is_valid_b32_string(secret)
+        is_valid_otp_secret(secret)
         return cleaned_otp_key_data
 
     class Meta:
