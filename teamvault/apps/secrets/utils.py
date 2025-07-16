@@ -15,6 +15,18 @@ def extract_url_and_params(data):
     return data_as_url, data_params
 
 
+def copy_meta_from_secret(secret) -> dict:
+    return {
+        "description": secret.description,
+        "username": secret.username,
+        "url": secret.url,
+        "filename": secret.filename,
+        "access_policy": secret.access_policy,
+        "needs_changing_on_leave": secret.needs_changing_on_leave,
+        "status": secret.status,
+    }
+
+
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
     if secret.content_type == ContentType.PASSWORD:

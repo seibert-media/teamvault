@@ -1,4 +1,5 @@
 from urllib.parse import quote, urlencode
+from itertools import chain
 
 from django.conf import settings
 from django.contrib import messages
@@ -20,7 +21,7 @@ from teamvault.apps.secrets.enums import ContentType, SecretStatus
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
-from .models import AccessPermissionTypes, Secret, SecretRevision, SecretShareQuerySet, SharedSecretData
+from .models import AccessPermissionTypes, Secret, SecretMetaSnapshot, SecretRevision, SecretShareQuerySet, SharedSecretData
 from .enums import AccessPolicy, ContentType, SecretStatus
 from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
@@ -558,12 +559,70 @@ def secret_search(request):
 def secret_revisions(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
     secret.check_read_access(request.user)
-    revisions = SecretRevision.objects.filter(secret=secret).order_by('-created')
-    context = {
-        'secret': secret,
-        'revisions': revisions,
-    }
-    return render(request, "secrets/secret_revisions.html", context)
+    revisions = (
+        secret.secretrevision_set
+              .select_related("set_by")
+    )
+
+    snapshots = (
+        SecretMetaSnapshot.objects
+                         .filter(revision__secret=secret)
+                         .select_related("revision")
+    )
+
+
+    def _meta_diff(new, prev):
+        fields = (
+            "description",
+            "username",
+            "url",
+            "filename",
+            "access_policy",
+            "status",
+            "needs_changing_on_leave",
+        )
+        return [
+            {
+                "label": field,
+                "old": getattr(prev, field, None),
+                "new": getattr(new, field, None),
+            }
+            for field in fields
+            if getattr(prev, field, None) != getattr(new, field, None)
+        ]
+    rows = []
+    for r in secret.secretrevision_set.select_related("set_by"):
+        rows.append({
+            "ts":    r.created,
+            "kind":  "payload",
+            "user":  r.set_by.username,
+            "name":  r.secret.name,
+            "uname": r.username,
+            "link":  reverse("secrets.revision-detail", args=[r.hashid]),
+            "current": r.is_current_revision,
+            "obj":   r,
+        })
+
+    for s in SecretMetaSnapshot.objects.filter(revision__secret=secret):
+        prev = s.revision.meta_snaps.exclude(pk=s.pk).first()
+        rows.append({
+            "ts":    s.created,
+            "kind":  "meta",
+            "user":  s.set_by,
+            "name":  s.revision.secret.name,
+            "uname": s.username or "—",
+            "current": False,
+            "changes": _meta_diff(s, prev) if prev else None,
+        })
+
+    rows.sort(key=lambda r: r["ts"], reverse=True)
+    return render(request, "secrets/secret_revisions.html", {
+        "secret": secret,
+        "rows": rows,
+        # for human‑readable labels
+        "AccessPolicy": AccessPolicy,
+        "SecretStatus": SecretStatus,
+    })
 
 
 @login_required
