@@ -81,5 +81,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Publish package distributions to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+      - name: Publish package distribution to PyPi with uv
+        run: |
+          uv publish --trusted-publishing always
