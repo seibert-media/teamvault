@@ -1,4 +1,4 @@
-from base64 import b64decode
+from base64 import b64decode, b64encode
 
 from django.contrib.auth.models import Group, User
 from django.db import models
@@ -65,7 +65,7 @@ def serialize_cc(secret_data):
 def serialize_file(secret_data):
     return {
         'filename': secret_data['filename'],
-        'file': b64decode(secret_data['file_content']).decode()
+        'file_content': b64encode(secret_data['file_content']).decode()
     }
 
 
