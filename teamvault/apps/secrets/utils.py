@@ -7,6 +7,12 @@ from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 from teamvault.apps.secrets.enums import ContentType
 
 
+META_FIELDS = (
+    "description", "username", "url", "filename",
+    "access_policy", "needs_changing_on_leave", "status",
+)
+
+
 def extract_url_and_params(data):
     data_as_url = urlparse(data)
     data_params = parse_qs(data_as_url.query)
@@ -15,7 +21,15 @@ def extract_url_and_params(data):
     return data_as_url, data_params
 
 
-def copy_meta_from_secret(secret) -> dict:
+def meta_changed(secret: "Secret") -> bool:
+    last = secret.current_revision.meta_snaps.first()
+    if last is None:
+        return True
+    cur = secret.current_revision.latest_meta
+    return any(getattr(secret, f) != getattr(cur, f) for f in META_FIELDS)
+
+
+def copy_meta_from_secret(secret: "Secret") -> dict:
     return {
         "description": secret.description,
         "username": secret.username,
@@ -25,6 +39,11 @@ def copy_meta_from_secret(secret) -> dict:
         "needs_changing_on_leave": secret.needs_changing_on_leave,
         "status": secret.status,
     }
+
+
+def apply_meta_to_secret(secret: "Secret", meta: "SecretMetaSnapshot") -> None:
+    for field in META_FIELDS:
+        setattr(secret, field, getattr(meta, field))
 
 
 def serialize_add_edit_data(cleaned_data, secret):
