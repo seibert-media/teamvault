@@ -22,7 +22,7 @@ from pyotp import TOTP
 import typing as t
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
-from teamvault.apps.secrets.utils import copy_meta_from_secret
+from teamvault.apps.secrets.utils import copy_meta_from_secret, meta_changed
 
 from .exceptions import PermissionError
 from ..audit.auditlog import log
@@ -382,7 +382,15 @@ class Secret(HashIDModel):
 
     def set_data(self, user, plaintext_data, skip_access_check=False):
         old_rev = self.current_revision_id or _('none')
-        # Create a revision snapshot
+        payload_changed = (
+            not self.current_revision
+            or len(plaintext_data)
+            and sha256(plaintext_data.get(
+                "password",
+                dumps(plaintext_data, sort_keys=True)
+            ).encode()).hexdigest()
+              != self.current_revision.plaintext_data_sha256
+        )
         new_rev = SecretRevision.create_from_secret(
             secret=self,
             set_by=user,
@@ -395,13 +403,18 @@ class Secret(HashIDModel):
         if self.status == SecretStatus.NEEDS_CHANGING:
             self.status = SecretStatus.OK
         self.save()
-        # Create a snapshot of the current metadata
-        meta = copy_meta_from_secret(self)
-        meta['set_by'] = user
-        SecretMetaSnapshot.objects.get_or_create(
-            revision=new_rev,
-            defaults=meta,
-        )
+        created = False
+        # Only snapshot meta when we don't have one or _only_ meta changed
+        baseline_missing = not SecretMetaSnapshot.objects.filter(revision__secret=self).exists()
+        meta_has_changed  = meta_changed(self)
+        only_meta_changed = not payload_changed
+        print(f'{baseline_missing, meta_has_changed, only_meta_changed =}')
+        if baseline_missing or (meta_has_changed and only_meta_changed):
+            _meta, created = SecretMetaSnapshot.objects.get_or_create(
+                revision=new_rev,
+                set_by=user,
+                **copy_meta_from_secret(self),
+            )
         log(
             _("{user} set a new secret for '{name}' ({oldrev}->{newrev})").format(
                 name=self.name,
@@ -552,7 +565,7 @@ class SecretRevision(HashIDModel):
 
         sha_sum = sha256(sha_src.encode('utf-8')).hexdigest()
 
-        revision, _ = cls.objects.get_or_create(
+        revision, created = cls.objects.get_or_create(
             secret=secret,
             plaintext_data_sha256=sha_sum,
             defaults={
@@ -561,11 +574,13 @@ class SecretRevision(HashIDModel):
             },
         )
 
-        revision.name = f'{secret.name} - {revision.hashid}'
-        revision.description = secret.description
-        revision.username = secret.username
-        revision.url = secret.url
-        revision.filename = secret.filename
+        if not revision.name:
+            # Hashid exists only _after_ the first save.
+            revision.name = f'{secret.name} - {revision.hashid}'
+        # revision.description = secret.description
+        # revision.username = secret.username
+        # revision.url = secret.url
+        # revision.filename = secret.filename
         # save the length before encoding so multi-byte characters don't
         # mess up the result
         revision.length = (
@@ -574,6 +589,14 @@ class SecretRevision(HashIDModel):
             else len(plaintext_data)
         )
         revision.encrypted_data = fernet.encrypt(dumps(plaintext_data).encode())
+
+        if created:
+            for f in (
+                "description", "username", "url", "filename",
+                "access_policy", "needs_changing_on_leave", "status",
+            ):
+                setattr(revision, f, getattr(secret, f))
+
         revision.save()
         revision.accessed_by.add(set_by)
 
@@ -615,6 +638,11 @@ class SecretRevision(HashIDModel):
             },
         )
 
+        # if not created:
+            # # we re‑used an old row, but this should still appear new
+            # new_rev.created = now()
+            # new_rev.save(update_fields=["created"])
+
         new_rev.name = f'{secret.name} - {new_rev.hashid}'
         new_rev.save()
 
@@ -644,17 +672,13 @@ class SecretRevision(HashIDModel):
         return new_rev
 
     def check_permissions(self, user):
-        return PermissionChecker(user, self)
+        # TODO move into metadata snapshot?
+        return PermissionChecker(user, self.latest_meta)
 
     @property
     def latest_meta(self):
         """Return the newest metadata snapshot"""
         return self.meta_snaps.first()
-
-    @property
-    def share_data(self):
-        # delegate to the parent secret’s related manager
-        return self.secret.share_data
 
     def get_data(self, user):
         readable = self.check_permissions(user).is_readable()
@@ -713,17 +737,19 @@ class SecretMetaSnapshot(models.Model):
     needs_changing_on_leave = models.BooleanField()
     status = models.PositiveSmallIntegerField(choices=SecretStatus)
 
-    # duplicate guard
+    # FIXME why would we want to guard against duplicates?
+    # duplicate guard UNUSED!
     meta_sha256 = models.CharField(max_length=64, editable=False)
 
     class Meta:
         ordering = ('-created',)
-        constraints = [
-            models.UniqueConstraint(
-                fields=('revision', 'meta_sha256'),
-                name='uniq_meta_per_revision',
-            )
-        ]
+        get_latest_by = 'created'
+        # constraints = [
+            # models.UniqueConstraint(
+                # fields=('revision', 'meta_sha256'),
+                # name='uniq_meta_per_revision',
+            # )
+        # ]
 
     def __str__(self):
         return f'MetaSnapshot {self.id} for rev {self.revision_id}'
@@ -746,6 +772,11 @@ class SecretMetaSnapshot(models.Model):
         )
         self.meta_sha256 = sha256(raw.encode()).hexdigest()
         super().save(*args, **kwargs)
+
+    @property
+    def share_data(self):
+        # delegate to the parent secret’s related manager
+        return self.secret.share_data
 
 
 class SecretShareQuerySet(models.QuerySet):
