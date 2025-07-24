@@ -1,6 +1,5 @@
 from copy import copy
 from urllib.parse import quote, urlencode
-from itertools import chain
 
 from django.conf import settings
 from django.contrib import messages
@@ -8,7 +7,7 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.db import transaction
-from django.http import Http404, HttpResponseForbidden, HttpResponse, HttpResponseRedirect, JsonResponse
+from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
 from django.urls import reverse
@@ -19,7 +18,6 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, TemplateView
 from django.views.generic.edit import CreateView, UpdateView
 from django_htmx.http import trigger_client_event
-from teamvault.apps.secrets.enums import ContentType, SecretStatus
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
@@ -750,6 +748,7 @@ def secret_revision_download(request, revision_hashid):
 
 
 @login_required
+@user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["POST"])
 def restore_secret_revision(request, secret_id, revision_id):
     """Restores a specific revision of a secret by creating a new revision
@@ -757,13 +756,6 @@ def restore_secret_revision(request, secret_id, revision_id):
     """
     secret = get_object_or_404(Secret, pk=secret_id)
     revision_to_restore = get_object_or_404(SecretRevision, pk=revision_id, secret=secret)
-
-    # Check if user has priviliges
-    access_permission = secret.check_read_access(request.user)
-    # TODO For now, only superuser can rollback, once we have it, secret owner, too
-    if access_permission != AccessPermissionTypes.SUPERUSER_ALLOWED:
-        messages.error(request, _("You are not allowed to restore secrets."))
-        return redirect(revision_to_restore.get_absolute_url())
 
     snap_id = request.GET.get("meta_snap")
     meta_snap = None
