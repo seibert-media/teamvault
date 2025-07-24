@@ -608,6 +608,7 @@ class SecretRevision(HashIDModel):
         *,
         old_revision: t.Self,
         set_by: User,
+        meta_snapshot: "SecretMetaSnapshot | None" = None,
         skip_access_check: bool = False,
     ) -> t.Self:
         """Re‑use the data of an existing revision to create a new one and
@@ -627,6 +628,28 @@ class SecretRevision(HashIDModel):
                         user=set_by.username,
                     )
                 )
+
+        if meta_snapshot is not None:
+            snap_src = meta_snapshot
+        else:
+            snap_src = old_revision.latest_meta
+
+        if snap_src is None:
+            # legacy fallback: reconstruct from the Secret itself
+            snapshot_kwargs = copy_meta_from_secret(secret)
+            snapshot_kwargs['set_by'] = set_by
+        else:
+            snapshot_kwargs = {
+                'description': snap_src.description,
+                'username': snap_src.username,
+                'url': snap_src.url,
+                'filename': snap_src.filename,
+                'access_policy': snap_src.access_policy,
+                'needs_changing_on_leave': snap_src.needs_changing_on_leave,
+                'status': snap_src.status,
+                'set_by': set_by,
+            }
+
         new_rev, created = cls.objects.get_or_create(
             secret=secret,
             plaintext_data_sha256=old_revision.plaintext_data_sha256,
@@ -638,33 +661,19 @@ class SecretRevision(HashIDModel):
             },
         )
 
-        # if not created:
-            # # we re‑used an old row, but this should still appear new
-            # new_rev.created = now()
-            # new_rev.save(update_fields=["created"])
-
         new_rev.name = f'{secret.name} - {new_rev.hashid}'
         new_rev.save()
 
-        old_meta = old_revision.latest_meta
-        if old_meta is None:
-            # legacy fallback: reconstruct from the Secret itself
-            snapshot_kwargs = copy_meta_from_secret(secret)
-            snapshot_kwargs['set_by'] = set_by
-        else:
-            snapshot_kwargs = {
-                'description': old_meta.description,
-                'username': old_meta.username,
-                'url': old_meta.url,
-                'filename': old_meta.filename,
-                'access_policy': old_meta.access_policy,
-                'needs_changing_on_leave': old_meta.needs_changing_on_leave,
-                'status': old_meta.status,
-                'set_by': set_by,
-            }
+        raw = dumps(
+            {k: snapshot_kwargs[k] for k in snapshot_kwargs if k != "set_by"},
+            sort_keys=True,
+            default=str,
+        )
+        wanted_hash = sha256(raw.encode()).hexdigest()
 
-        SecretMetaSnapshot.objects.get_or_create(
+        snap, _ = SecretMetaSnapshot.objects.get_or_create(
             revision=new_rev,
+            meta_sha256=wanted_hash,
             defaults=snapshot_kwargs,
         )
 
