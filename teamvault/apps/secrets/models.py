@@ -10,8 +10,8 @@ from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import models
-from django.db.models import BooleanField, Case, Max, Q, Value, When, QuerySet, Manager
+from django.db import models, transaction
+from django.db.models import BooleanField, Case, Max, Q, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
@@ -286,9 +286,7 @@ class Secret(HashIDModel):
             return cls.objects.all()
 
         allowed_shares = (
-            SharedSecretData.objects.with_expiry_state()
-            .filter(Q(user=user) | Q(group__user=user))
-            .exclude(is_expired=True)
+            SharedSecretData.objects.for_user(user)
             .values('secret__pk')
         )
         return (
@@ -386,54 +384,6 @@ class Secret(HashIDModel):
         else:
             return result
 
-    def set_data(self, user, plaintext_data, skip_access_check=False):
-        old_rev = self.current_revision_id or _('none')
-        payload_changed = (
-            not self.current_revision
-            or len(plaintext_data)
-            and sha256(plaintext_data.get(
-                "password",
-                dumps(plaintext_data, sort_keys=True)
-            ).encode()).hexdigest()
-              != self.current_revision.plaintext_data_sha256
-        )
-        new_rev = SecretRevision.create_from_secret(
-            secret=self,
-            set_by=user,
-            plaintext_data=plaintext_data,
-            skip_access_check=skip_access_check,
-        )
-        self.current_revision = new_rev
-        self.last_changed = now()
-        self.last_read = now()
-        if self.status == SecretStatus.NEEDS_CHANGING:
-            self.status = SecretStatus.OK
-        self.save()
-        created = False
-        # Only snapshot meta when we don't have one or _only_ meta changed
-        baseline_missing = not SecretMetaSnapshot.objects.filter(revision__secret=self).exists()
-        meta_has_changed  = meta_changed(self)
-        only_meta_changed = not payload_changed
-        if baseline_missing or (meta_has_changed and only_meta_changed):
-            _meta, _created = SecretMetaSnapshot.objects.get_or_create(
-                revision=new_rev,
-                set_by=user,
-                **copy_meta_from_secret(self),
-            )
-        log(
-            _("{user} set a new secret for '{name}' ({oldrev}->{newrev})").format(
-                name=self.name,
-                newrev=self.current_revision.id,
-                oldrev=old_rev,
-                user=user.username,
-            ),
-            actor=user,
-            category=AuditLogCategoryChoices.SECRET_CHANGED,
-            level='info',
-            secret=self,
-            secret_revision=self.current_revision,
-        )
-
     def needs_changing(self):
         return self.status == SecretStatus.NEEDS_CHANGING
 
@@ -501,11 +451,6 @@ class SecretRevision(HashIDModel):
         related_name='password_revisions_set',
     )
     last_read = models.DateTimeField(auto_now=True)
-    name = models.CharField(max_length=92)
-    description = models.TextField(blank=True, null=True)
-    username = models.CharField(blank=True, max_length=255, null=True)
-    url = models.CharField(blank=True, max_length=255, null=True, validators=[validate_url])
-    filename = models.CharField(blank=True, max_length=255, null=True)
 
     class Meta:
         ordering = ('-created',)
@@ -522,7 +467,7 @@ class SecretRevision(HashIDModel):
         unique_together = (('plaintext_data_sha256', 'secret'),)
 
     @classmethod
-    def create_from_secret(
+    def _create_from_secret(
         cls,
         *,
         secret: Secret,
@@ -579,13 +524,10 @@ class SecretRevision(HashIDModel):
             },
         )
 
-        if not revision.name:
+        if not revision.latest_meta.name:
             # Hashid exists only _after_ the first save.
-            revision.name = f'{secret.name} - {revision.hashid}'
-        # revision.description = secret.description
-        # revision.username = secret.username
-        # revision.url = secret.url
-        # revision.filename = secret.filename
+            revision.latest_meta.name = f'{secret.name} - {revision.hashid}'
+
         # save the length before encoding so multi-byte characters don't
         # mess up the result
         revision.length = (
@@ -608,7 +550,7 @@ class SecretRevision(HashIDModel):
         return revision
 
     @classmethod
-    def create_from_revision(
+    def _create_from_revision(
         cls,
         *,
         old_revision: t.Self,
@@ -677,6 +619,7 @@ class SecretRevision(HashIDModel):
         wanted_hash = sha256(raw.encode()).hexdigest()
 
         snap, _ = SecretMetaSnapshot.objects.get_or_create(
+            secret=secret,
             revision=new_rev,
             meta_sha256=wanted_hash,
             defaults=snapshot_kwargs,
@@ -691,8 +634,6 @@ class SecretRevision(HashIDModel):
         """
         meta = self.latest_meta
         shares = self.secret.share_data.for_user(user)
-        if meta:
-            shares = meta.share_data.for_user(user)
 
         return PermissionChecker(
             user=user,
@@ -739,7 +680,13 @@ class SecretMetaSnapshot(models.Model):
     """
     Immutable copy of a Secret’s metadata
     """
-
+    secret = models.ForeignKey(
+        Secret,
+        on_delete=models.CASCADE,
+        related_name='meta_snaps',
+        # null=True,
+        # blank=True,
+    )
     revision = models.ForeignKey(
         'SecretRevision',
         on_delete=models.CASCADE,
@@ -798,15 +745,6 @@ class SecretMetaSnapshot(models.Model):
         )
         self.meta_sha256 = sha256(raw.encode()).hexdigest()
         super().save(*args, **kwargs)
-
-    @property
-    def secret(self):
-        return self.revision.secret
-
-    @property
-    def share_data(self):
-        # delegate to the parent secret’s related manager
-        return self.secret.share_data
 
 
 class SecretShareQuerySet(models.QuerySet):

@@ -28,6 +28,7 @@ from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 from ...views import FilterMixin
+from .services.revision import RevisionService
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
@@ -90,7 +91,11 @@ class SecretAdd(CreateView):
                 setattr(secret, attr, form.cleaned_data[attr])
         secret.save()
         plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
-        secret.set_data(self.request.user, plaintext_data, skip_access_check=True)
+        RevisionService.save_payload(
+            secret=secret,
+            actor=self.request.user,
+            payload=plaintext_data
+        )
 
         # Create share objects
         secret.share_data.create(user=self.request.user)
@@ -164,9 +169,17 @@ class SecretEdit(UpdateView):
             # Re-use the existing encrypted data to create a new revision
             if form.changed_data and secret.current_revision:
                 current_data = secret.current_revision.get_data(self.request.user)
-                secret.set_data(self.request.user, current_data)
+                RevisionService.save_payload(
+                    secret=secret,
+                    actor=self.request.user,
+                    payload=current_data,
+                )
         else:
-            secret.set_data(self.request.user, plaintext_data)
+            RevisionService.save_payload(
+                secret=secret,
+                actor=self.request.user,
+                payload=plaintext_data,
+            )
 
         # clear saved otp key data cache after change
         if 'otp_key_data' in form.changed_data and form.cleaned_data.get('otp_key_data') and 'otp_key_data' in self.request.session:
@@ -766,17 +779,12 @@ def restore_secret_revision(request, secret_id, revision_id):
             pk=snap_id,
             revision=revision_to_restore,
         )
-
-    new_rev = SecretRevision.create_from_revision(
+    new_rev = RevisionService.restore(
+        secret=secret,
+        actor=request.user,
         old_revision=revision_to_restore,
-        meta_snapshot=meta_snap,
-        set_by=request.user,
+        meta_snap=meta_snap
     )
-    meta = new_rev.latest_meta
-    apply_meta_to_secret(secret, meta)
-    secret.current_revision = new_rev
-    secret.last_changed = now()
-    secret.save()
 
     messages.success(request, f"Successfully restored revision {revision_to_restore.id}. "
                               f"New revision {new_rev.id} is now the current version.")

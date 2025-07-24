@@ -9,6 +9,7 @@ from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     SecretMetaSnapshot,
 )
+from teamvault.apps.secrets.services.revision import RevisionService
 from .utils import COMMON_OVERRIDES, make_user, new_secret
 
 RESTORE_URL_NAME = 'restore_secret_revision'
@@ -25,14 +26,23 @@ class RestoreRevisionTests(TestCase):
         # secret with 2 payload revisions + 1 meta snapshot
         self.secret = new_secret(self.owner, access_policy=AccessPolicy.DISCOVERABLE)
         self.rev1 = self.secret.current_revision  # baseline
-        self.secret.set_data(self.owner, {'password': 'v2'})  # second payload
+
+        RevisionService.save_payload(
+            secret=self.secret,
+            actor=self.owner,
+            payload={'password': 'v2'},
+        )  # second payload
         self.rev2 = self.secret.current_revision
 
         # pure metadata change after rev2
         self.secret.description = 'after‑v2'
         self.secret.save()
         payload = copy(self.rev2.get_data(self.owner))
-        self.secret.set_data(self.owner, payload)
+        RevisionService.save_payload(
+            secret=self.secret,
+            actor=self.owner,
+            payload=payload,
+        )
         self.meta_snap = SecretMetaSnapshot.objects.filter(revision=self.rev2).latest('created')
 
         self.client = Client()

@@ -6,6 +6,7 @@ from teamvault.apps.secrets.models import (
     Secret,
     SharedSecretData,
 )
+from teamvault.apps.secrets.services.revision import RevisionService
 
 TEST_KEY = Fernet.generate_key()  # random key for the test run
 COMMON_OVERRIDES = {
@@ -36,7 +37,12 @@ def new_secret(owner: User, **kwargs) -> Secret:
         access_policy=kwargs.get('access_policy', AccessPolicy.DISCOVERABLE),
         status=SecretStatus.OK,
     )
-    secret.set_data(owner, {'password': 'initial‑pw'}, skip_access_check=True)
+    RevisionService.save_payload(
+        secret=secret,
+        actor=owner,
+        payload={'password': 'initial‑pw'},
+        skip_acl=True
+    )
     # Give the owner permanent share so they can delegate
     SharedSecretData.objects.create(secret=secret, user=owner)
     return secret
