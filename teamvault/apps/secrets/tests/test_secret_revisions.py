@@ -6,6 +6,7 @@ from teamvault.apps.secrets.models import (
     SecretMetaSnapshot,
     SecretRevision,
 )
+from teamvault.apps.secrets.services.revision import RevisionService
 from .utils import COMMON_OVERRIDES, make_user, new_secret
 
 
@@ -21,7 +22,11 @@ class RevisionHistoryTests(TestCase):
         s = self.secret
 
         # 2nd REVISION: payload update
-        s.set_data(self.owner, {'password': 'second‑pw'})
+        RevisionService.save_payload(
+            secret=s,
+            actor=self.owner,
+            payload={'password': 'second‑pw'}
+        )
         self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
         self.assertEqual(
             SecretMetaSnapshot.objects.filter(revision__secret=s).count(),
@@ -34,7 +39,12 @@ class RevisionHistoryTests(TestCase):
 
         # feed identical payload back in → no new revision but new snapshot
         current_payload = s.current_revision.get_data(self.owner)
-        s.set_data(self.owner, copy(current_payload))
+
+        RevisionService.save_payload(
+            secret=s,
+            actor=self.owner,
+            payload=copy(current_payload)
+        )
 
         self.assertEqual(
             SecretRevision.objects.filter(secret=s).count(),
