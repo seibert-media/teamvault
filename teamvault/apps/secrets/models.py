@@ -681,8 +681,11 @@ class SecretRevision(HashIDModel):
         return new_rev
 
     def check_permissions(self, user):
-        # TODO move into metadata snapshot?
-        return PermissionChecker(user, self.latest_meta)
+        """Return a PermissionChecker for either the latest metadata snapshot
+        or, if no snapshot exists yet, the parent Secret itself.
+        """
+        meta_or_secret = self.latest_meta or self.secret
+        return PermissionChecker(user, meta_or_secret)
 
     @property
     def latest_meta(self):
@@ -753,12 +756,12 @@ class SecretMetaSnapshot(models.Model):
     class Meta:
         ordering = ('-created',)
         get_latest_by = 'created'
-        # constraints = [
-            # models.UniqueConstraint(
-                # fields=('revision', 'meta_sha256'),
-                # name='uniq_meta_per_revision',
-            # )
-        # ]
+        constraints = [
+            models.UniqueConstraint(
+                fields=('revision', 'meta_sha256'),
+                name='uniq_meta_per_revision',
+            )
+        ]
 
     def __str__(self):
         return f'MetaSnapshot {self.id} for rev {self.revision_id}'
@@ -774,13 +777,17 @@ class SecretMetaSnapshot(models.Model):
                 'access_policy': self.access_policy,
                 'needs_changing_on_leave': self.needs_changing_on_leave,
                 'status': self.status,
-                # 'set_by': self.set_by,
+                'set_by': self.set_by,
             },
             sort_keys=True,
             default=str,
         )
         self.meta_sha256 = sha256(raw.encode()).hexdigest()
         super().save(*args, **kwargs)
+
+    @property
+    def secret(self):
+        return self.revision.secret
 
     @property
     def share_data(self):
