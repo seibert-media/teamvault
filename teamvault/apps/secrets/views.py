@@ -765,8 +765,18 @@ def restore_secret_revision(request, secret_id, revision_id):
         messages.error(request, _("You are not allowed to restore secrets."))
         return redirect(revision_to_restore.get_absolute_url())
 
+    snap_id = request.GET.get("meta_snap")
+    meta_snap = None
+    if snap_id:
+        meta_snap = get_object_or_404(
+            SecretMetaSnapshot,
+            pk=snap_id,
+            revision=revision_to_restore,
+        )
+
     new_rev = SecretRevision.create_from_revision(
         old_revision=revision_to_restore,
+        meta_snapshot=meta_snap,
         set_by=request.user,
     )
     meta = new_rev.latest_meta
