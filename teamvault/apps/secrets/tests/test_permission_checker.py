@@ -35,7 +35,7 @@ class PermissionCheckerTests(TestCase):
 
     def test_policy_any_for_everyone(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.ANY)
-        chk = PermissionChecker(self.bob, sec)
+        chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
             chk,
             readable=AccessPermissionTypes.ALLOWED,
@@ -45,7 +45,7 @@ class PermissionCheckerTests(TestCase):
 
     def test_discoverable_without_share(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.DISCOVERABLE)
-        chk = PermissionChecker(self.bob, sec)
+        chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
             chk,
             readable=AccessPermissionTypes.NOT_ALLOWED,
@@ -64,7 +64,7 @@ class PermissionCheckerTests(TestCase):
             grant_description='tmp',
             granted_until=now() + timedelta(days=1),
         )
-        chk_tmp = PermissionChecker(self.bob, sec)
+        chk_tmp = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
             chk_tmp,
             readable=AccessPermissionTypes.TEMPORARILY_ALLOWED,
@@ -82,7 +82,7 @@ class PermissionCheckerTests(TestCase):
             grant_description='permanent',
             granted_until=None,
         )
-        chk_perm = PermissionChecker(self.bob, sec)
+        chk_perm = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
             chk_perm,
             readable=AccessPermissionTypes.ALLOWED,
@@ -96,7 +96,7 @@ class PermissionCheckerTests(TestCase):
         sec.status = SecretStatus.DELETED
         sec.save()
 
-        chk = PermissionChecker(self.bob, sec)
+        chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
             chk,
             readable=AccessPermissionTypes.NOT_ALLOWED,
@@ -106,7 +106,7 @@ class PermissionCheckerTests(TestCase):
 
     def test_superuser_override(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
-        chk = PermissionChecker(self.alice, sec)
+        chk = PermissionChecker(self.alice, sec, sec.share_data.for_user(self.alice))
         self._assert_perm(
             chk,
             readable=AccessPermissionTypes.SUPERUSER_ALLOWED,

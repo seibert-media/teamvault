@@ -82,7 +82,7 @@ class RestoreRevisionTests(TestCase):
 
         # give bob read‑access but NOT superuser
         self.secret.share_data.create(user=self.bob)
-        perm = self.secret.check_permissions(self.bob).is_readable()
+        perm = self.secret.permission_checker(self.bob).is_readable()
         self.assertEqual(perm, AccessPermissionTypes.ALLOWED)
 
         resp = self.client.post(self._restore_url(self.secret, self.rev1))
