@@ -301,7 +301,7 @@ class SecretDetail(DetailView):
     def get_context_data(self, **kwargs):
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
-        permissions = secret.check_permissions(self.request.user)
+        permissions = secret.permission_checker(self.request.user)
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['secret_revision'] = secret.current_revision
         context['readable'] = permissions.is_readable()
@@ -323,7 +323,7 @@ class SecretDetail(DetailView):
 
     def get_object(self, queryset=None):
         object = super(SecretDetail, self).get_object()
-        if not object.check_permissions(self.request.user).is_visible():
+        if not object.permission_checker(self.request.user).is_visible():
             raise Http404
         return object
 
@@ -407,7 +407,7 @@ class SecretShareList(CreateView):
 
         context = {
             'secret': secret,
-            'shareable': secret.check_permissions(self.request.user).is_shareable(),
+            'shareable': secret.permission_checker(self.request.user).is_shareable(),
             'shares': {
                 'groups': self.group_shares,
                 'users': self.user_shares,
@@ -417,7 +417,7 @@ class SecretShareList(CreateView):
 
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
-        permission = secret.check_permissions(self.request.user).is_shareable()
+        permission = secret.permission_checker(self.request.user).is_shareable()
         if not permission:
             raise PermissionDenied()
 
@@ -471,7 +471,7 @@ secret_share_list = login_required(SecretShareList.as_view())
 @require_http_methods(['DELETE'])
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
-    permission = share_data.secret.check_permissions(request.user).is_shareable()
+    permission = share_data.secret.permission_checker(request.user).is_shareable()
     if not permission:
         raise PermissionDenied()
 
@@ -525,7 +525,7 @@ def secret_search(request):
     for secret in filtered_secrets:
         metadata = ''
         icon = "lock-open"
-        if secret.check_permissions(request.user).is_readable():
+        if secret.permission_checker(request.user).is_readable():
             if secret.content_type == ContentType.PASSWORD:
                 icon = "user"
                 metadata = getattr(secret, 'username')
@@ -623,7 +623,8 @@ def secret_revisions(request, hashid):
             "kind":  "payload",
             "user":  r.set_by.username,
             "name":  r.secret.name,
-            "uname": r.username,
+            # TODO
+            "uname": r.latest_meta.username if r.latest_meta else r.secret.username,
             "link":  reverse("secrets.revision-detail", args=[r.hashid]),
             "current": r.is_current_revision,
             "obj":   r,
@@ -640,7 +641,7 @@ def secret_revisions(request, hashid):
             "kind":  "meta",
             "user":  s.set_by,
             "name":  s.revision.secret.name,
-            "uname": s.revision.username,
+            "uname": s.username,
             "link": reverse(
                 "secrets.revision-detail",
                 args=[s.revision.hashid],
@@ -714,7 +715,7 @@ def secret_revision_detail(request, revision_hashid):
         'shown_snapshot': shown_snapshot,
         # TODO also show this to secret owner
         'restore_allowed':
-            revision.secret.check_permissions(request.user).is_readable()
+            revision.secret.permission_checker(request.user).is_readable()
             == AccessPermissionTypes.SUPERUSER_ALLOWED,
     }
 

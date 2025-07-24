@@ -3,6 +3,7 @@ from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
 from operator import itemgetter
+from dataclasses import dataclass
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -201,11 +202,16 @@ class Secret(HashIDModel):
     def __repr__(self):
         return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
 
-    def check_permissions(self, user):
-        return PermissionChecker(user, self)
+    def permission_checker(self, user):
+        shares = self.share_data.for_user(user)
+        return PermissionChecker(
+            user=user,
+            secret=self,
+            shares=shares
+        )
 
     def check_read_access(self, user):
-        permissions = self.check_permissions(user)
+        permissions = self.permission_checker(user)
         if not permissions.is_visible():
             raise Http404
 
@@ -215,7 +221,7 @@ class Secret(HashIDModel):
         return readable
 
     def check_share_access(self, user):
-        permissions = self.check_permissions(user)
+        permissions = self.permission_checker(user)
         if not permissions.is_visible():
             raise Http404
 
@@ -234,7 +240,7 @@ class Secret(HashIDModel):
         if not self.current_revision:
             raise Http404
 
-        readable = self.check_permissions(user).is_readable()
+        readable = self.permission_checker(user).is_readable()
         log_secret_read(
             readable=readable,
             secret=self,
@@ -408,9 +414,8 @@ class Secret(HashIDModel):
         baseline_missing = not SecretMetaSnapshot.objects.filter(revision__secret=self).exists()
         meta_has_changed  = meta_changed(self)
         only_meta_changed = not payload_changed
-        print(f'{baseline_missing, meta_has_changed, only_meta_changed =}')
         if baseline_missing or (meta_has_changed and only_meta_changed):
-            _meta, created = SecretMetaSnapshot.objects.get_or_create(
+            _meta, _created = SecretMetaSnapshot.objects.get_or_create(
                 revision=new_rev,
                 set_by=user,
                 **copy_meta_from_secret(self),
@@ -439,7 +444,7 @@ class Secret(HashIDModel):
         if not isinstance(granted_by, User):
             raise ValueError('granted_by has to be a User object!')
 
-        shareable = self.check_permissions(granted_by).is_shareable()
+        shareable = self.permission_checker(granted_by).is_shareable()
         if not shareable:
             raise PermissionDenied()
 
@@ -529,7 +534,7 @@ class SecretRevision(HashIDModel):
         # and makes it possible to create secrets you don't have access
         # to
         if not skip_access_check:
-            readable = secret.check_permissions(set_by).is_readable()
+            readable = secret.permission_checker(set_by).is_readable()
             if not readable:
                 raise PermissionError(
                     _("{user} not allowed access to '{name}' ({id})").format(
@@ -619,7 +624,7 @@ class SecretRevision(HashIDModel):
         secret = old_revision.secret
 
         if not skip_access_check:
-            readable = secret.check_permissions(set_by).is_readable()
+            readable = secret.permission_checker(set_by).is_readable()
             if not readable:
                 raise PermissionError(
                     _("{user} not allowed to roll back '{name}' ({id})").format(
@@ -680,12 +685,21 @@ class SecretRevision(HashIDModel):
         new_rev.accessed_by.add(set_by)
         return new_rev
 
-    def check_permissions(self, user):
+    def permission_checker(self, user):
         """Return a PermissionChecker for either the latest metadata snapshot
         or, if no snapshot exists yet, the parent Secret itself.
         """
-        meta_or_secret = self.latest_meta or self.secret
-        return PermissionChecker(user, meta_or_secret)
+        meta = self.latest_meta
+        shares = self.secret.share_data.for_user(user)
+        if meta:
+            shares = meta.share_data.for_user(user)
+
+        return PermissionChecker(
+            user=user,
+            secret=self.secret,
+            meta=meta,
+            shares=shares
+        )
 
     @property
     def latest_meta(self):
@@ -693,7 +707,7 @@ class SecretRevision(HashIDModel):
         return self.meta_snaps.first()
 
     def get_data(self, user):
-        readable = self.check_permissions(user).is_readable()
+        readable = self.permission_checker(user).is_readable()
         log_secret_read(readable=readable, secret=self.secret, secret_revision=self, user=user)
         # Record that this user has now seen this specific revision's data
         self.accessed_by.add(user)
@@ -812,6 +826,15 @@ class SecretShareQuerySet(models.QuerySet):
             )
         )
 
+    def for_user(self, user: User):
+        """Return non‑expired shares that apply to the user
+        (direct or via group)."""
+        return (
+            self.with_expiry_state()
+                .filter(Q(user=user) | Q(group__user=user))
+                .exclude(is_expired=True)
+        )
+
 
 class SharedSecretData(models.Model):
     objects = SecretShareQuerySet.as_manager()
@@ -901,6 +924,19 @@ class SharedSecretData(models.Model):
         unique_together = [('group', 'secret'), ('user', 'secret')]
 
 
+class SharedSecretDataQuerySet(models.QuerySet):
+    def for_user(self, user: User):
+        """Return non‑expired shares that apply to the user
+        (direct or via group)."""
+        return (
+            self.with_expiry_state()
+                .filter(Q(user=user) | Q(group__user=user))
+                .exclude(is_expired=True)
+        )
+
+
+
+
 @receiver(post_save, sender=Secret)
 def update_search_index(sender, **kwargs):
     Secret.objects.filter(id=kwargs['instance'].id).update(
@@ -913,50 +949,32 @@ def update_search_index(sender, **kwargs):
     )
 
 
-class SecretLike(t.Protocol):
-    status: SecretStatus
-    access_policy: AccessPolicy
-    share_data: Manager
-
-
-class PermissionChecker[T: SecretLike]:
-    def __init__(self, user: User, obj: T):
-        self.user = user
-        self.obj = obj
-        self._shares_qs: QuerySet | None = None
-
-    def _as_secret(self):
-        """Accesses the 'real' secret"""
-        return getattr(self.obj, 'secret', self.obj)
+@dataclass(frozen=True, slots=True)
+class PermissionChecker:
+    user: User
+    secret: Secret
+    shares: SecretShareQuerySet
+    meta: SecretMetaSnapshot | None = None
 
     def _secret_deleted(self) -> bool:
-        return self._as_secret().status == SecretStatus.DELETED
+        return self.secret.status == SecretStatus.DELETED
 
     def _superuser_override(self) -> bool:
         return self.user.is_superuser and settings.ALLOW_SUPERUSER_READS
 
-    def _policy_allows_any(self) -> bool:
-        return self.obj.access_policy == AccessPolicy.ANY
+    def _access_policy(self) -> AccessPolicy:
+        if self.meta:
+            return self.meta.access_policy
+        return self.secret.access_policy
 
-    def _policy_discoverable(self) -> bool:
-        return self.obj.access_policy in {
+    def is_discoverable(self) -> bool:
+        return self._access_policy() in {
             AccessPolicy.ANY,
             AccessPolicy.DISCOVERABLE,
         }
 
-    def _valid_shares(self) -> QuerySet:
-        """Return (and cache) all non-expired shares for user or their groups."""
-        if self._shares_qs is None:
-            self._shares_qs = (
-                self.obj.share_data.with_expiry_state()
-                .filter(Q(user=self.user) | Q(group__user=self.user))
-                .exclude(is_expired=True)
-            )
-        return self._shares_qs
-
-    @staticmethod
-    def _has_permanent_share(shares: models.QuerySet) -> bool:
-        return shares.filter(granted_until__isnull=True).exists()
+    def _has_permanent_share(self) -> bool:
+        return self.shares.filter(granted_until__isnull=True).exists()
 
     def is_readable(self) -> AccessPermissionTypes:
         if self._secret_deleted():
@@ -964,10 +982,9 @@ class PermissionChecker[T: SecretLike]:
         if self._superuser_override():
             return AccessPermissionTypes.SUPERUSER_ALLOWED
 
-        shares = self._valid_shares()
-        if self._policy_allows_any() or self._has_permanent_share(shares):
+        if self._access_policy() == AccessPolicy.ANY or self._has_permanent_share():
             return AccessPermissionTypes.ALLOWED
-        if shares.exists():
+        if self.shares.exists():
             return AccessPermissionTypes.TEMPORARILY_ALLOWED
         return AccessPermissionTypes.NOT_ALLOWED
 
@@ -986,10 +1003,11 @@ class PermissionChecker[T: SecretLike]:
 
     def is_visible(self) -> AccessPermissionTypes:
         """Checks if the secret is visible to the user in lists."""
-        if self.obj.status == SecretStatus.DELETED:
+        status = self.meta.status if self.meta else self.secret.status
+        if status == SecretStatus.DELETED:
             return AccessPermissionTypes.NOT_ALLOWED
 
-        if self._policy_discoverable() or self.is_readable():
+        if self.is_discoverable() or self.is_readable():
             return AccessPermissionTypes.ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
