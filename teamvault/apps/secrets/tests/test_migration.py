@@ -40,9 +40,6 @@ class Secret0038MigrationTest(MigratorTestCase):
         try:
             decrypted_data = loads(self.f.decrypt(secret.current_revision.encrypted_data))
             decrypted_data = decrypted_data['file_content'].encode()
-            if b64encode(b64decode(decrypted_data, validate=True)) == decrypted_data:
-                return True
-            return False
-
+            return b64encode(b64decode(decrypted_data, validate=True)) == decrypted_data
         except Exception:
             return False
