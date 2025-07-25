@@ -47,6 +47,7 @@ class RevisionService:
 
         # 1. Build (or fetch) the revision representing _payload_
         revision = cls._build_revision(secret=secret, actor=actor, payload=payload)
+        payload_changed = cls._payload_changed(secret=secret, payload=payload)
 
         # 2. Update Secret pointers/flags
         previous_id = secret.current_revision_id or 'none'
@@ -58,7 +59,6 @@ class RevisionService:
 
         # 3. Ensure we have an up‑to‑date metadata snapshot
         baseline_missing = not SecretMetaSnapshot.objects.filter(secret=secret).exists()
-        payload_changed = cls._payload_changed(secret=secret, payload=payload)
         if baseline_missing or (meta_changed(secret) and not payload_changed):
             cls.snapshot(secret=secret, actor=actor, revision=revision)
 
