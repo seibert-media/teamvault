@@ -697,28 +697,20 @@ def secret_revision_detail(request, revision_hashid):
 
     # Optionally apply a metadata snapshot
     snap_id = request.GET.get("meta_snap")
-    shown_snapshot = None
-    if snap_id:
-        shown_snapshot = get_object_or_404(
-            SecretMetaSnapshot, pk=snap_id, revision=revision
-        )
-        # clone the revision so we don't mutate DB‑backed instance
-        revision = copy(revision)
+    meta = get_object_or_404(
+        SecretMetaSnapshot,
+        pk=snap_id,
+        revision=revision
+    ) if snap_id else revision.latest_meta
 
-        # copy snapshot fields onto both the revision and its parent secret
-        apply_meta_to_secret(revision.secret, shown_snapshot)
-        # TODO yuck. move this into `apply_meta_to_revision` or sth?
-        for fld in (
-            "description",
-            "username",
-            "url",
-            "filename",
-            "access_policy",
-            "needs_changing_on_leave",
-            "status",
-        ):
-            setattr(revision, fld, getattr(shown_snapshot, fld))
-            setattr(revision.secret, fld, getattr(shown_snapshot, fld))
+    # Apply the snapshot to a copy of the revision/secret so DB rows stay unmodified
+    if meta:
+        revision = copy(revision)
+        apply_meta_to_secret(revision.secret, meta)
+    else:
+        meta = revision.secret
+
+    shown_snapshot = meta if snap_id else None
 
     context = {
         'revision': revision,
@@ -726,6 +718,7 @@ def secret_revision_detail(request, revision_hashid):
         'decrypted_data': decrypted_data,
         'ContentType': ContentType,
         'shown_snapshot': shown_snapshot,
+        'meta': meta,
         # TODO also show this to secret owner
         'restore_allowed':
             revision.secret.permission_checker(request.user).is_readable()
