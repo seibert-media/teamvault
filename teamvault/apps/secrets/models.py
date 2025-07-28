@@ -612,18 +612,26 @@ class SecretRevision(HashIDModel):
         new_rev.save()
 
         raw = dumps(
-            {k: snapshot_kwargs[k] for k in snapshot_kwargs if k != "set_by"},
+            {k: snapshot_kwargs[k] for k in snapshot_kwargs},
             sort_keys=True,
             default=str,
         )
         wanted_hash = sha256(raw.encode()).hexdigest()
 
-        snap, _ = SecretMetaSnapshot.objects.get_or_create(
-            secret=secret,
+        # try to reuse an identical snapshot (same revision + hash)
+        snap = SecretMetaSnapshot.objects.filter(
             revision=new_rev,
             meta_sha256=wanted_hash,
-            defaults=snapshot_kwargs,
-        )
+        ).first()
+
+        # otherwise create a fresh one for this actor
+        if snap is None:
+            snap = SecretMetaSnapshot.objects.create(
+                secret=secret,
+                revision=new_rev,
+                meta_sha256=wanted_hash,
+               **snapshot_kwargs,
+            )
 
         new_rev.accessed_by.add(set_by)
         return new_rev
