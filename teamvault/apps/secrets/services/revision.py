@@ -131,11 +131,12 @@ class RevisionService:
 
         # sync metadata from chosen snapshot (or latest)
         snapshot = meta_snap or new_rev.latest_meta
-        apply_meta_to_secret(secret, snapshot)
+
+        changed_fields = apply_meta_to_secret(secret, snapshot)
 
         secret.current_revision = new_rev
         secret.last_changed = now()
-        secret.save(update_fields=['current_revision', 'last_changed'])
+        secret.save(update_fields=['current_revision', 'last_changed', *changed_fields])
 
         return new_rev
 

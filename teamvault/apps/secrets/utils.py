@@ -41,9 +41,14 @@ def copy_meta_from_secret(secret: "Secret") -> dict:
     }
 
 
-def apply_meta_to_secret(secret: "Secret", meta: "SecretMetaSnapshot") -> None:
-    for field in META_FIELDS:
-        setattr(secret, field, getattr(meta, field))
+def apply_meta_to_secret(secret: "Secret", meta: "SecretMetaSnapshot") -> list[str]:
+    dirty = []
+    for f in META_FIELDS:
+        val = getattr(meta, f)
+        if getattr(secret, f) != val:
+            setattr(secret, f, val)
+            dirty.append(f)
+    return dirty
 
 
 def serialize_add_edit_data(cleaned_data, secret):
