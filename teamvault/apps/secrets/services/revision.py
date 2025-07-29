@@ -138,6 +138,19 @@ class RevisionService:
         secret.last_changed = now()
         secret.save(update_fields=['current_revision', 'last_changed', *changed_fields])
 
+        log(
+            _("{user} restored '{name}' to revision {rev}").format(
+                user=actor.username,
+                name=secret.name,
+                rev=old_revision.id,
+            ),
+            actor=actor,
+            category=AuditLogCategoryChoices.SECRET_RESTORED,
+            level='warning',
+            secret=secret,
+            secret_revision=new_rev,
+        )
+
         return new_rev
 
     @classmethod
