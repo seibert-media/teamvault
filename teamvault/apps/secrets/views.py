@@ -26,7 +26,7 @@ from .enums import AccessPolicy, ContentType, SecretStatus
 from .utils import apply_meta_to_secret, serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
-from ..audit.models import AuditLogCategoryChoices
+from ..audit.models import AuditLogCategoryChoices, LogEntry
 from ...views import FilterMixin
 from .services.revision import RevisionService
 
@@ -571,105 +571,16 @@ def secret_search(request):
 @require_http_methods(["GET"])
 @transaction.non_atomic_requests
 def secret_revisions(request, hashid):
-    # FIXME transistion back to empty is invisible
-    # I.e. username: 'hans' -> username: None
-    # works when in concert with other changes.
     secret = get_object_or_404(Secret, hashid=hashid)
     secret.check_read_access(request.user)
-    revisions = (
-        secret.secretrevision_set
-              .select_related("set_by")
-    )
 
-    snapshots = (
-        SecretMetaSnapshot.objects
-            .filter(revision__secret=secret)
-            .select_related("revision", "set_by")
-            .order_by("created")
-    )
-
-    def _meta_diff(new, prev):
-        fields = (
-            "description",
-            "username",
-            "url",
-            "filename",
-            "access_policy",
-            "status",
-            "needs_changing_on_leave",
-        )
-        # TODO compare against default instead of empty
-        # prev = prev or {}
-        def _render_fields(field):
-            if field == "access_policy":
-                return "AccessPolicy"
-            if field == "status":
-                return "SecretStatus"
-            if field == "needs_changing_on_leave":
-                return "NeedsChanging"
-
-            return field.capitalize()
-
-        def _render_values(val, field):
-            if val in (None, ''):
-                return val
-            if field == "access_policy":
-                return AccessPolicy(val).name
-            if field == "status":
-                return SecretStatus(val).name
-            return val
-
-        return [
-            {
-                "label": _render_fields(field),
-                "old": _render_values(getattr(prev, field, None), field),
-                "new": _render_values(getattr(new,  field, None), field),
-            }
-            for field in fields
-            if getattr(prev, field, None) != getattr(new, field, None)
-        ]
-
-    rows = []
-    for r in revisions:
-        rows.append({
-            "ts":    r.created,
-            "kind":  "payload",
-            "user":  r.set_by.username,
-            "name":  r.secret.name,
-            # TODO
-            "uname": r.latest_meta.username if r.latest_meta else r.secret.username,
-            "link":  reverse("secrets.revision-detail", args=[r.hashid]),
-            "current": r.is_current_revision,
-            "obj":   r,
-        })
-
-    prev = None
-    for s in snapshots:
-        changes = _meta_diff(s, prev)
-        if prev is None or not changes:
-            prev = s
-            continue
-        rows.append({
-            "ts":    s.created,
-            "kind":  "meta",
-            "user":  s.set_by,
-            "name":  s.revision.secret.name,
-            "uname": s.username,
-            "link": reverse(
-                "secrets.revision-detail",
-                args=[s.revision.hashid],
-                )
-                + f"?meta_snap={s.id}",
-            "current": False,
-            "changes": changes,
-        })
-        prev = s
-
-    rows.sort(key=lambda r: r["ts"], reverse=True)
+    # Get the complete history from the service
+    history_rows = RevisionService.get_revision_history(secret, request.user)
+    
     return render(request, "secrets/secret_revisions.html", {
         "secret": secret,
-        "rows": rows,
-        # for human‑readable labels
+        "rows": history_rows,
+        # For human-readable labels in the template
         "AccessPolicy": AccessPolicy,
         "SecretStatus": SecretStatus,
     })
