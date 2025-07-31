@@ -42,7 +42,7 @@ class RevisionService:
     @staticmethod
     def _fernet():
         """Return a Fernet instance built from the *current* settings key.
-        This plays nicely with Django’s `override_settings()` in tests."""
+        This plays nicely with Django's `override_settings()` in tests."""
         return Fernet(settings.TEAMVAULT_SECRET_KEY)
 
     @classmethod
@@ -63,7 +63,6 @@ class RevisionService:
 
         # 1. Build (or fetch) the revision representing _payload_
         revision = cls._build_revision(secret=secret, actor=actor, payload=payload)
-        payload_changed = cls._payload_changed(secret=secret, payload=payload)
 
         # 2. Update Secret pointers/flags
         previous_id = secret.current_revision_id or 'none'
@@ -75,7 +74,7 @@ class RevisionService:
 
         # 3. Ensure we have an up‑to‑date metadata snapshot
         baseline_missing = not SecretMetaSnapshot.objects.filter(secret=secret).exists()
-        if baseline_missing or (meta_changed(secret) and not payload_changed):
+        if baseline_missing or meta_changed(secret):
             cls.snapshot(secret=secret, actor=actor, revision=revision)
 
         # 4. Audit log
@@ -174,18 +173,6 @@ class RevisionService:
         )
 
         return new_rev
-
-    @classmethod
-    def _payload_changed(cls, *, secret: Secret, payload: dict[str, Any]) -> bool:
-        """Compare payload hash to secret.current_revision."""
-        if secret.current_revision is None:
-            return True
-        sha_src = (
-            payload['password']
-            if secret.content_type == ContentType.PASSWORD and 'password' in payload
-            else dumps(payload, sort_keys=True)
-        )
-        return sha256(sha_src.encode()).hexdigest() != secret.current_revision.plaintext_data_sha256
 
     @classmethod
     def _build_revision(
