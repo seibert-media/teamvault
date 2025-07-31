@@ -1,0 +1,86 @@
+name: Create Build and Python Package on Release
+
+on:
+  release:
+    types: [ created ]
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Set up bun
+        id: bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Restore bun cache
+        uses: actions/cache@v4
+        with:
+          path: /home/runner/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ steps.setup-bun.outputs.bun-version }}-${{ hashFiles('bun.lockb') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
+      - name: Checkout Repo
+        uses: actions/checkout@v4
+
+      - name: Frontend Install Dependencies and Build
+        run: |
+          bun install
+          bun run build
+        working-directory: ${{ github.workspace }}
+
+      - name: Zip Bundle
+        run: |
+          zip -r "$BUNDLE_ZIP" bundled
+        env:
+          BUNDLE_ZIP: ${{ github.workspace }}/teamvault/static/bundled.zip
+        working-directory: ${{ github.workspace }}/teamvault/static
+
+      - name: Upload Webpack Bundle to Release
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          files: ${{ github.workspace }}/teamvault/static/bundled.zip
+
+  pypi-publish:
+    name: Upload Release to PyPI
+    needs:
+      - build
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Build wheel
+        id: wheel
+        run: |
+          uv build --no-sources
+          WHEEL_PATH=$(realpath dist/*.whl)
+          echo "wheel=$WHEEL_PATH" >> "$GITHUB_OUTPUT"
+          echo "wheel_name=$(basename "$WHEEL_PATH")" >> "$GITHUB_OUTPUT"
+
+      - name: Upload wheel to the GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ steps.wheel.outputs.wheel }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish package distribution to PyPi with uv
+        run: |
+          uv publish --trusted-publishing always
