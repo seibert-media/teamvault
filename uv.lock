@@ -557,7 +557,7 @@ wheels = [
 
 [[package]]
 name = "teamvault"
-version = "1.0.0rc8"
+version = "1.0.0rc9"
 source = { editable = "." }
 dependencies = [
     { name = "cryptography" },
