@@ -4,8 +4,13 @@ import string
 from urllib.parse import urlparse, parse_qs
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
+from teamvault.apps.secrets.enums import ContentType
 
-from .models import Secret
+
+META_FIELDS = (
+    "description", "username", "url", "filename",
+    "access_policy", "needs_changing_on_leave", "status",
+)
 
 
 def extract_url_and_params(data):
@@ -16,9 +21,39 @@ def extract_url_and_params(data):
     return data_as_url, data_params
 
 
+def meta_changed(secret: "Secret") -> bool:
+    last = secret.current_revision.meta_snaps.first()
+    if last is None:
+        return True
+    cur = secret.current_revision.latest_meta
+    return any(getattr(secret, f) != getattr(cur, f) for f in META_FIELDS)
+
+
+def copy_meta_from_secret(secret: "Secret") -> dict:
+    return {
+        "description": secret.description,
+        "username": secret.username,
+        "url": secret.url,
+        "filename": secret.filename,
+        "access_policy": secret.access_policy,
+        "needs_changing_on_leave": secret.needs_changing_on_leave,
+        "status": secret.status,
+    }
+
+
+def apply_meta_to_secret(secret: "Secret", meta: "SecretMetaSnapshot") -> list[str]:
+    dirty = []
+    for f in META_FIELDS:
+        val = getattr(meta, f)
+        if getattr(secret, f) != val:
+            setattr(secret, f, val)
+            dirty.append(f)
+    return dirty
+
+
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
-    if secret.content_type == Secret.CONTENT_PASSWORD:
+    if secret.content_type == ContentType.PASSWORD:
         cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data["otp_key_data"])
         if cleaned_data.get("password"):
             plaintext_data['password'] = cleaned_data['password']
@@ -28,14 +63,14 @@ def serialize_add_edit_data(cleaned_data, secret):
                     plaintext_data['otp_key'] = data_params[attr]
                 else:
                     plaintext_data[attr] = data_params[attr]
-    elif secret.content_type == Secret.CONTENT_FILE:
+    elif secret.content_type == ContentType.FILE:
         try:
             plaintext_data['file_content'] = base64.b64encode(cleaned_data['file'].read()).decode()
             secret.filename = cleaned_data['file'].name
             secret.save()
         except Exception as e:
             raise ('File type not suported', e)
-    elif secret.content_type == Secret.CONTENT_CC:
+    elif secret.content_type == ContentType.CC:
         plaintext_data = {
             'holder': cleaned_data['holder'],
             'number': cleaned_data['number'],
