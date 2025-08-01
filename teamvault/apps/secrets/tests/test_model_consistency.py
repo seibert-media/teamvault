@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import Group, User
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -14,7 +14,7 @@ class SecretConsistencyTestCase(TestCase):
         user = User.objects.get(username='testuser')
         group = Group.objects.get(name='testgroup')
 
-        secret = Secret.objects.create(name="testsecret", created_by=user)
+        secret = Secret.objects.create(name='testsecret', created_by=user)
         secret.shared_users.add(user, through_defaults={})
         secret.shared_groups.add(group, through_defaults={})
 
@@ -25,7 +25,7 @@ class SecretConsistencyTestCase(TestCase):
     def test_shared_secret_data_only_one_constraint(self):
         user = User.objects.get(username='testuser')
         group = Group.objects.get(name='testgroup')
-        secret = Secret.objects.create(name="testsecret", created_by=user)
+        secret = Secret.objects.create(name='testsecret', created_by=user)
 
         with self.assertRaises(IntegrityError):
             SharedSecretData.objects.create(secret=secret, group=group, user=user)

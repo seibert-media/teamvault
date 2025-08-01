@@ -49,14 +49,14 @@ urlpatterns = (
         name='secrets.revision-detail',
     ),
     path(
-        "revisions/<str:revision_hashid>/download/",
+        'revisions/<str:revision_hashid>/download/',
         views.secret_revision_download,
-        name="secrets.revision-download",
+        name='secrets.revision-download',
     ),
     path(
         '<int:secret_id>/revisions/<int:revision_id>/restore/',
         views.restore_secret_revision,
-        name='restore_secret_revision'
+        name='restore_secret_revision',
     ),
     path(
         'secrets/<str:hashid>/metadata',

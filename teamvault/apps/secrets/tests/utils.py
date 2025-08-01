@@ -37,15 +37,7 @@ def new_secret(owner: User, **kwargs) -> Secret:
         access_policy=kwargs.get('access_policy', AccessPolicy.DISCOVERABLE),
         status=SecretStatus.OK,
     )
-    RevisionService.save_payload(
-        secret=secret,
-        actor=owner,
-        payload={'password': 'initial‑pw'},
-        skip_acl=True
-    )
+    RevisionService.save_payload(secret=secret, actor=owner, payload={'password': 'initial‑pw'}, skip_acl=True)
     # Give the owner permanent share so they can delegate
     SharedSecretData.objects.create(secret=secret, user=owner)
     return secret
-
-
-

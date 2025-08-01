@@ -4,9 +4,9 @@ from django.views.generic.base import ContextMixin
 
 def handler404(request, exception, **kwargs):
     if request.user.is_authenticated:
-        return render(request, "404_loggedin.html", status=404)
+        return render(request, '404_loggedin.html', status=404)
     else:
-        return render(request, "404_anon.html", status=404)
+        return render(request, '404_anon.html', status=404)
 
 
 class FilterMixin(ContextMixin):
@@ -62,8 +62,10 @@ class FilterMixin(ContextMixin):
 
         new_filter_form.initial = initial
         new_filter_form = self.manipulate_filter_form(bound_filter_data, new_filter_form)
-        context.update({
-            'active_filters': active_filters,
-            'filter_form': new_filter_form,
-        })
+        context.update(
+            {
+                'active_filters': active_filters,
+                'filter_form': new_filter_form,
+            }
+        )
         return context

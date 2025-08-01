@@ -6,8 +6,8 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
-from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 
+from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 from ..models import Secret, SecretRevision, SharedSecretData
 
 
@@ -18,23 +18,23 @@ class ContentType(models.TextChoices):
 
 
 ACCESS_POLICY_REPR = {
-    AccessPolicy.ANY: "any",
-    AccessPolicy.HIDDEN: "hidden",
-    AccessPolicy.DISCOVERABLE: "discoverable",
+    AccessPolicy.ANY: 'any',
+    AccessPolicy.HIDDEN: 'hidden',
+    AccessPolicy.DISCOVERABLE: 'discoverable',
 }
 REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
 
 CONTENT_TYPE_REPR = {
-    ContentTypeEnum.CC: "cc",
-    ContentTypeEnum.FILE: "file",
-    ContentTypeEnum.PASSWORD: "password",
+    ContentTypeEnum.CC: 'cc',
+    ContentTypeEnum.FILE: 'file',
+    ContentTypeEnum.PASSWORD: 'password',
 }
 REPR_CONTENT_TYPE = {v: k for k, v in CONTENT_TYPE_REPR.items()}
 
 SECRET_STATUS_REPR = {
-    SecretStatus.DELETED: "deleted",
-    SecretStatus.NEEDS_CHANGING: "needs_changing",
-    SecretStatus.OK: "ok",
+    SecretStatus.DELETED: 'deleted',
+    SecretStatus.NEEDS_CHANGING: 'needs_changing',
+    SecretStatus.OK: 'ok',
 }
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
@@ -43,10 +43,7 @@ STANDARD_FIELDS = {'access_policy', 'name', 'description', 'username', 'url'}
 
 
 def serialize_password(secret_data):
-    return {
-        'password': secret_data['password'],
-        'otp_key_data': secret_data.get('otp_key_data', '')
-    }
+    return {'password': secret_data['password'], 'otp_key_data': secret_data.get('otp_key_data', '')}
 
 
 def serialize_cc(secret_data):
@@ -57,17 +54,14 @@ def serialize_cc(secret_data):
             'expiration_year': secret_data['expiration_year'],
             'number': secret_data['number'],
             'security_code': secret_data['security_code'],
-            'password': secret_data['password']
+            'password': secret_data['password'],
         }
     except KeyError as e:
         raise serializers.ValidationError(_(f'Missing required credit card field {e}'))
 
 
 def serialize_file(secret_data):
-    return {
-        'filename': secret_data['filename'],
-        'file': b64decode(secret_data['file_content']).decode()
-    }
+    return {'filename': secret_data['filename'], 'file': b64decode(secret_data['file_content']).decode()}
 
 
 def _extract_data(secret_data, content_type: ContentType | int):
@@ -117,9 +111,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
             'data_url',
             'set_by',
         )
-        read_only_fields = (
-            'created',
-        )
+        read_only_fields = ('created',)
 
 
 class SecretSerializer(serializers.HyperlinkedModelSerializer):
@@ -127,10 +119,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         lookup_field='hashid',
         view_name='api.secret_detail',
     )
-    content_type = serializers.ChoiceField(
-        choices=ContentType.choices,
-        required=True
-    )
+    content_type = serializers.ChoiceField(choices=ContentType.choices, required=True)
     created_by = serializers.SlugRelatedField(
         default=serializers.CurrentUserDefault(),
         read_only=True,
@@ -306,14 +295,11 @@ class SharedSecretDataSerializer(serializers.ModelSerializer):
                 _(f'Secret {secret} was already shared with {entity_type} {entity_name}.').format(
                     secret=secret, entity_type=entity_type, entity_name=entity_name
                 ),
-                code='unique'
+                code='unique',
             )
         return data
 
     class Meta:
         model = SharedSecretData
         fields = ['id', 'grant_description', 'granted_on', 'granted_until', 'group', 'user', 'granted_by', 'secret']
-        read_only_fields = (
-            'id',
-            'granted_by'
-        )
+        read_only_fields = ('id', 'granted_by')

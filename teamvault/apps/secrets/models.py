@@ -1,16 +1,17 @@
 import base64
+import typing as t
+from dataclasses import dataclass
 from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
 from operator import itemgetter
-from dataclasses import dataclass
 
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import models, transaction
+from django.db import models
 from django.db.models import BooleanField, Case, Max, Q, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -20,11 +21,9 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from hashids import Hashids
 from pyotp import TOTP
-import typing as t
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
-from teamvault.apps.secrets.utils import copy_meta_from_secret, meta_changed
-
+from teamvault.apps.secrets.utils import copy_meta_from_secret
 from .exceptions import PermissionError
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
@@ -200,15 +199,11 @@ class Secret(HashIDModel):
         return self.name
 
     def __repr__(self):
-        return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
+        return f"<Secret '{self.name}' ({self.hashid})>"
 
     def permission_checker(self, user):
         shares = self.share_data.for_user(user)
-        return PermissionChecker(
-            user=user,
-            secret=self,
-            shares=shares
-        )
+        return PermissionChecker(user=user, secret=self, shares=shares)
 
     def check_read_access(self, user):
         permissions = self.permission_checker(user)
@@ -284,10 +279,7 @@ class Secret(HashIDModel):
         if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
             return cls.objects.all()
 
-        allowed_shares = (
-            SharedSecretData.objects.for_user(user)
-            .values('secret__pk')
-        )
+        allowed_shares = SharedSecretData.objects.for_user(user).values('secret__pk')
         return (
             cls.objects.filter(Q(access_policy=AccessPolicy.ANY) | Q(pk__in=allowed_shares))
             .exclude(status=SecretStatus.DELETED)
@@ -538,8 +530,13 @@ class SecretRevision(HashIDModel):
 
         if created:
             for f in (
-                "description", "username", "url", "filename",
-                "access_policy", "needs_changing_on_leave", "status",
+                'description',
+                'username',
+                'url',
+                'filename',
+                'access_policy',
+                'needs_changing_on_leave',
+                'status',
             ):
                 setattr(revision, f, getattr(secret, f))
 
@@ -554,7 +551,7 @@ class SecretRevision(HashIDModel):
         *,
         old_revision: t.Self,
         set_by: User,
-        meta_snapshot: "SecretMetaSnapshot | None" = None,
+        meta_snapshot: 'SecretMetaSnapshot | None' = None,
         skip_access_check: bool = False,
     ) -> t.Self:
         """Re‑use the data of an existing revision to create a new one and
@@ -629,7 +626,7 @@ class SecretRevision(HashIDModel):
                 secret=secret,
                 revision=new_rev,
                 meta_sha256=wanted_hash,
-               **snapshot_kwargs,
+                **snapshot_kwargs,
             )
 
         new_rev.accessed_by.add(set_by)
@@ -642,12 +639,7 @@ class SecretRevision(HashIDModel):
         meta = self.latest_meta
         shares = self.secret.share_data.for_user(user)
 
-        return PermissionChecker(
-            user=user,
-            secret=self.secret,
-            meta=meta,
-            shares=shares
-        )
+        return PermissionChecker(user=user, secret=self.secret, meta=meta, shares=shares)
 
     @property
     def latest_meta(self):
@@ -676,7 +668,7 @@ class SecretRevision(HashIDModel):
         return plaintext_data
 
     def __repr__(self):
-        return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
+        return f"<SecretRevision '{self.secret.name}' ({self.hashid})>"
 
     @property
     def is_current_revision(self):
@@ -687,6 +679,7 @@ class SecretMetaSnapshot(models.Model):
     """
     Immutable copy of a Secret’s metadata
     """
+
     secret = models.ForeignKey(
         Secret,
         on_delete=models.CASCADE,
@@ -700,11 +693,7 @@ class SecretMetaSnapshot(models.Model):
         related_name='meta_snaps',
     )
     created = models.DateTimeField(auto_now_add=True)
-    set_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name='secret_meta_snaps'
-    )
+    set_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secret_meta_snaps')
 
     # metadata
     description = models.TextField(blank=True, null=True)
@@ -774,11 +763,7 @@ class SecretShareQuerySet(models.QuerySet):
     def for_user(self, user: User):
         """Return non‑expired shares that apply to the user
         (direct or via group)."""
-        return (
-            self.with_expiry_state()
-                .filter(Q(user=user) | Q(group__user=user))
-                .exclude(is_expired=True)
-        )
+        return self.with_expiry_state().filter(Q(user=user) | Q(group__user=user)).exclude(is_expired=True)
 
 
 class SharedSecretData(models.Model):
@@ -874,13 +859,7 @@ class SharedSecretDataQuerySet(models.QuerySet):
     def for_user(self, user: User):
         """Return non‑expired shares that apply to the user
         (direct or via group)."""
-        return (
-            self.with_expiry_state()
-                .filter(Q(user=user) | Q(group__user=user))
-                .exclude(is_expired=True)
-        )
-
-
+        return self.with_expiry_state().filter(Q(user=user) | Q(group__user=user)).exclude(is_expired=True)
 
 
 @receiver(post_save, sender=Secret)

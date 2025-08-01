@@ -9,7 +9,6 @@ from teamvault.apps.secrets.models import (
     PermissionChecker,
     SharedSecretData,
 )
-
 from .utils import COMMON_OVERRIDES, make_user, new_secret
 
 

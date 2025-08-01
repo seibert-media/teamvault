@@ -12,7 +12,7 @@ def htmx_message_middleware(get_response):
         response = get_response(request)
 
         # Ignore non-HTMX requests
-        if "HX-Request" not in request.headers:
+        if 'HX-Request' not in request.headers:
             return response
 
         # HTMX will not read HX headers in redirects but the subsequent GET response.
@@ -23,11 +23,13 @@ def htmx_message_middleware(get_response):
         msg_list = []
         for msg in storage:
             msg: Message
-            msg_list.append({
-                'message': msg.message,
-                # debug|info|success|warning|error
-                'level': msg.level_tag,
-            })
+            msg_list.append(
+                {
+                    'message': msg.message,
+                    # debug|info|success|warning|error
+                    'level': msg.level_tag,
+                }
+            )
 
         trigger_client_event(response, 'django.contrib.messages', {'message_list': msg_list})
         return response

@@ -5,10 +5,10 @@ from hashlib import sha256
 
 from cryptography.fernet import Fernet
 from django.conf import settings
+from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from django.contrib.auth.models import User, Group
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 
@@ -80,13 +80,11 @@ class Command(BaseCommand):
                             secret=secret,
                             grant_description='Shared via fake data script',
                             granted_by=user,
-                            granted_until=timezone.now() + timedelta(days=30)
+                            granted_until=timezone.now() + timedelta(days=30),
                         )
                     # Create a SecretRevision
                     plaintext_password = fake.password(length=12)
-                    plaintext_data = {
-                        'password': plaintext_password
-                    }
+                    plaintext_data = {'password': plaintext_password}
                     plaintext_data_json = json.dumps(plaintext_data)
                     plaintext_data_sha256 = sha256(plaintext_data_json.encode('utf-8')).hexdigest()
                     encrypted_data = fernet.encrypt(plaintext_data_json.encode('utf-8'))

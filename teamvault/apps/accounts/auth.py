@@ -4,7 +4,6 @@ from django.conf import settings
 from django_auth_ldap.backend import LDAPBackend, _LDAPUser
 from django_auth_ldap.config import LDAPSearch
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -20,7 +19,7 @@ def find_ldap_username_for_social_auth(details, *_args, **kwargs):
         settings.AUTH_LDAP_USER_SEARCH.base_dn,
         settings.AUTH_LDAP_USER_SEARCH.scope,
         f'({ldap_mail_attribute}={social_auth_mail_value})',
-        ['uid']
+        ['uid'],
     )
     results = search.execute(connection)
     if results is not None and len(results) > 0:

@@ -1,15 +1,20 @@
 import base64
 import secrets
 import string
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
+
 from teamvault.apps.secrets.enums import ContentType
 
-
 META_FIELDS = (
-    "description", "username", "url", "filename",
-    "access_policy", "needs_changing_on_leave", "status",
+    'description',
+    'username',
+    'url',
+    'filename',
+    'access_policy',
+    'needs_changing_on_leave',
+    'status',
 )
 
 
@@ -21,7 +26,7 @@ def extract_url_and_params(data):
     return data_as_url, data_params
 
 
-def meta_changed(secret: "Secret") -> bool:
+def meta_changed(secret: 'Secret') -> bool:
     last = secret.current_revision.meta_snaps.first()
     if last is None:
         return True
@@ -29,19 +34,19 @@ def meta_changed(secret: "Secret") -> bool:
     return any(getattr(secret, f) != getattr(cur, f) for f in META_FIELDS)
 
 
-def copy_meta_from_secret(secret: "Secret") -> dict:
+def copy_meta_from_secret(secret: 'Secret') -> dict:
     return {
-        "description": secret.description,
-        "username": secret.username,
-        "url": secret.url,
-        "filename": secret.filename,
-        "access_policy": secret.access_policy,
-        "needs_changing_on_leave": secret.needs_changing_on_leave,
-        "status": secret.status,
+        'description': secret.description,
+        'username': secret.username,
+        'url': secret.url,
+        'filename': secret.filename,
+        'access_policy': secret.access_policy,
+        'needs_changing_on_leave': secret.needs_changing_on_leave,
+        'status': secret.status,
     }
 
 
-def apply_meta_to_secret(secret: "Secret", meta: "SecretMetaSnapshot") -> list[str]:
+def apply_meta_to_secret(secret: 'Secret', meta: 'SecretMetaSnapshot') -> list[str]:
     dirty = []
     for f in META_FIELDS:
         val = getattr(meta, f)
@@ -54,8 +59,8 @@ def apply_meta_to_secret(secret: "Secret", meta: "SecretMetaSnapshot") -> list[s
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
     if secret.content_type == ContentType.PASSWORD:
-        cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data["otp_key_data"])
-        if cleaned_data.get("password"):
+        cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data['otp_key_data'])
+        if cleaned_data.get('password'):
             plaintext_data['password'] = cleaned_data['password']
         for attr in ['secret', 'digits', 'algorithm']:
             if data_params.get(attr):

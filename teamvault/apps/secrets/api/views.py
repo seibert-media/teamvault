@@ -3,8 +3,7 @@ from base64 import b64encode
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
-from rest_framework import generics
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
@@ -99,7 +98,7 @@ class SecretShare(generics.ListCreateAPIView):
                 shared_entity_type=obj.shared_entity_type,
                 name=obj.shared_entity_name,
                 user=self.request.user.username,
-                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
+                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently'),
             ),
             actor=self.request.user,
             category=(
@@ -153,7 +152,7 @@ def data_get(request, hashid):
     secret_revision.secret.check_read_access(request.user)
     data = secret_revision.secret.get_data(request.user)
     if secret_revision.secret.content_type == ContentType.PASSWORD:
-        return Response({'password': data["password"]})
+        return Response({'password': data['password']})
     elif secret_revision.secret.content_type == ContentType.FILE:
         return Response({'file': b64encode(data).decode('ascii')})
     elif secret_revision.secret.content_type == ContentType.CC:
@@ -162,13 +161,15 @@ def data_get(request, hashid):
 
 @api_view(['GET'])
 def generate_password_view(*_args, **_kwargs):
-    return Response(generate_password(
-        settings.PASSWORD_LENGTH,
-        settings.PASSWORD_DIGITS,
-        settings.PASSWORD_UPPER,
-        settings.PASSWORD_LOWER,
-        settings.PASSWORD_SPECIAL
-    ))
+    return Response(
+        generate_password(
+            settings.PASSWORD_LENGTH,
+            settings.PASSWORD_DIGITS,
+            settings.PASSWORD_UPPER,
+            settings.PASSWORD_LOWER,
+            settings.PASSWORD_SPECIAL,
+        )
+    )
 
 
 @api_view(['GET'])

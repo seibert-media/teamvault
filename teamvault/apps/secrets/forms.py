@@ -5,8 +5,8 @@ from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 from django.forms.widgets import RadioSelect
 from django.utils.translation import gettext_lazy as _
-from teamvault.apps.secrets.enums import AccessPolicy
 
+from teamvault.apps.secrets.enums import AccessPolicy
 from .models import Secret, SharedSecretData
 from .utils import extract_url_and_params
 from .validators import is_valid_b32_string
@@ -27,16 +27,13 @@ class SecretForm(forms.ModelForm):
         initial=AccessPolicy.DISCOVERABLE,
         widget=RadioSelect(),
     )
-    description = forms.CharField(
-        required=False,
-        widget=forms.Textarea(attrs={'cols': '15', 'rows': '4'})
-    )
+    description = forms.CharField(required=False, widget=forms.Textarea(attrs={'cols': '15', 'rows': '4'}))
     needs_changing_on_leave = forms.BooleanField(
         help_text=_("This secret will be marked as 'needs changing' when a user who accessed it is deactivated."),
         initial=True,
         label=_('Needs changing'),
         required=False,
-        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
+        widget=forms.CheckboxInput(attrs={'class': 'form-check-input'}),
     )
     shared_groups_on_create = forms.ModelMultipleChoiceField(
         help_text=_('Default groups you configured in your settings will be selected automatically.'),
@@ -55,7 +52,7 @@ class SecretForm(forms.ModelForm):
         if cleaned_data['shared_groups_on_create'] and not cleaned_data['grant_description']:
             self.add_error(
                 'grant_description',
-                _('Please provide a valid reason to share this secret with the groups selected above.')
+                _('Please provide a valid reason to share this secret with the groups selected above.'),
             )
 
 
@@ -85,16 +82,16 @@ class CCForm(SecretForm):
     class Meta:
         model = Secret
         fields = (
-            GENERIC_FIELDS_HEADER +
-            [
+            GENERIC_FIELDS_HEADER
+            + [
                 'expiration_month',
                 'expiration_year',
                 'holder',
                 'number',
                 'password',
                 'security_code',
-            ] +
-            GENERIC_FIELDS_FOOTER
+            ]
+            + GENERIC_FIELDS_FOOTER
         )
 
 
@@ -108,17 +105,11 @@ class FileForm(SecretForm):
 
     class Meta:
         model = Secret
-        fields = (
-            GENERIC_FIELDS_HEADER +
-            ['file'] +
-            GENERIC_FIELDS_FOOTER
-        )
+        fields = GENERIC_FIELDS_HEADER + ['file'] + GENERIC_FIELDS_FOOTER
 
 
 class PasswordForm(SecretForm):
-    otp_key = forms.CharField(
-        required=False
-    )
+    otp_key = forms.CharField(required=False)
     otp_key_data = forms.CharField(
         required=False,
     )
@@ -138,7 +129,7 @@ class PasswordForm(SecretForm):
     def clean_password(self):
         if self.instance.pk is None and not self.cleaned_data['password']:
             # password is only required when adding a new secret
-            raise forms.ValidationError(_("Please enter a password."))
+            raise forms.ValidationError(_('Please enter a password.'))
         return self.cleaned_data['password']
 
     def clean_otp_key_data(self):
@@ -156,11 +147,7 @@ class PasswordForm(SecretForm):
 
     class Meta:
         model = Secret
-        fields = (
-            GENERIC_FIELDS_HEADER +
-            ['password', 'username', 'url'] +
-            GENERIC_FIELDS_FOOTER
-        )
+        fields = GENERIC_FIELDS_HEADER + ['password', 'username', 'url'] + GENERIC_FIELDS_FOOTER
 
 
 class SecretShareForm(forms.ModelForm):
@@ -175,9 +162,7 @@ class SecretShareForm(forms.ModelForm):
     )
 
     grant_description = forms.CharField(
-        label=_('Reason'),
-        required=True,
-        widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'})
+        label=_('Reason'), required=True, widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'})
     )
 
     granted_until = forms.DateTimeField(

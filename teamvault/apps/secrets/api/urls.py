@@ -1,7 +1,15 @@
 from django.urls import path
 
-from .views import SecretDetail, SecretList, SecretRevisionDetail, SecretShare, SecretShareDetail, data_get, \
-    generate_password_view, otp_get
+from .views import (
+    SecretDetail,
+    SecretList,
+    SecretRevisionDetail,
+    SecretShare,
+    SecretShareDetail,
+    data_get,
+    generate_password_view,
+    otp_get,
+)
 
 urlpatterns = (
     path(
@@ -43,5 +51,5 @@ urlpatterns = (
         'generate_password/',
         generate_password_view,
         name='api.generate-password',
-    )
+    ),
 )

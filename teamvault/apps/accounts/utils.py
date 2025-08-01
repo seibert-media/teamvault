@@ -4,15 +4,15 @@ from hashlib import md5
 
 import requests
 
-from teamvault.apps.accounts.models import UserProfile as UserProfileModel, UserProfile
+from teamvault.apps.accounts.models import UserProfile, UserProfile as UserProfileModel
 from teamvault.apps.audit.models import LogEntry
-from teamvault.apps.secrets.models import SharedSecretData, Secret, SecretRevision
+from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 logger = logging.getLogger(__name__)
 
 
 def save_gravatar(user, *_args, **_kwargs):
-    email_hash = md5(user.email.strip().lower().encode("utf-8")).hexdigest()
+    email_hash = md5(user.email.strip().lower().encode('utf-8')).hexdigest()
     resp = requests.get(f'https://gravatar.com/avatar/{email_hash}?s=200&r=g&d=mp')
     if resp.ok:
         user_settings = UserProfileModel.objects.get_or_create(user=user)[0]
