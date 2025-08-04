@@ -3,7 +3,7 @@ from configparser import ConfigParser
 from gettext import gettext as _
 from hashlib import sha1
 from os import environ, umask
-from os.path import exists, isfile
+from pathlib import Path
 from random import choice
 from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
@@ -190,12 +190,10 @@ def configure_huey(config):
     if revoke is not None:
         try:
             revoke = int(revoke)
-        except ValueError:
+        except ValueError as e:
             raise RuntimeError(
-                _('task.revoke_unused_shares_after_days must be an integer in {path}').format(
-                    path=environ['TEAMVAULT_CONFIG_FILE'],
-                )
-            )
+                _('task.revoke_unused_shares_after_days must be an integer in %s') % environ['TEAMVAULT_CONFIG_FILE']
+            ) from e
 
     return {
         'revoke_unused_shares_after_days': revoke,
@@ -394,7 +392,7 @@ def configure_whitenoise(settings):
 
 
 def create_default_config(filename):
-    if exists(filename):
+    if Path(filename).exists:
         raise RuntimeError(f'not overwriting existing path {filename}')
     SECRET_KEY = ''.join(choice(ascii_letters + digits + punctuation) for i in range(50))
     HASHID_SALT = ''.join(choice(ascii_letters + digits + punctuation) for i in range(50))
@@ -470,23 +468,24 @@ salt = {hashid_salt}
     )
     old_umask = umask(7)
     try:
-        with open(filename, 'wt') as f:
+        with Path(filename).open('wt') as f:
             f.write(config.strip())
     finally:
         umask(old_umask)
 
 
 def get_config():
-    if not isfile(environ['TEAMVAULT_CONFIG_FILE']):
+    config_file = Path(environ['TEAMVAULT_CONFIG_FILE'])
+    if not config_file.is_file():
         raise UnconfiguredSettingsError()
 
-    with open(environ['TEAMVAULT_CONFIG_FILE']) as f:
+    with config_file.open() as f:
         # ConfigParser.read() will not complain if it can't read the
         # file, so we need to read it once ourselves to get a proper IOError
         f.read()
 
     config = ConfigParser()
-    config.read(environ['TEAMVAULT_CONFIG_FILE'])
+    config.read(config_file)
     return config
 
 

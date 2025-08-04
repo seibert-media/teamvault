@@ -2,7 +2,7 @@ from django.shortcuts import render
 from django.views.generic.base import ContextMixin
 
 
-def handler404(request, exception, **kwargs):
+def handler404(request, exception, **kwargs):  # noqa: ARG001
     if request.user.is_authenticated:
         return render(request, '404_loggedin.html', status=404)
     else:
@@ -25,7 +25,7 @@ class FilterMixin(ContextMixin):
         return self.get_filter(queryset=queryset).qs
 
     @staticmethod
-    def manipulate_filter_form(bound_data, filter_form):
+    def manipulate_filter_form(_bound_data, filter_form):
         """
         Can be overwritten in subclasses to add custom behaviour for a single view
         Has to return a filter_form
@@ -45,7 +45,7 @@ class FilterMixin(ContextMixin):
                 field_label = new_filter_form.fields[field].label
                 initial[field] = field_data
 
-                values = field_data if isinstance(field_data, (list, tuple)) else [field_data]
+                values = field_data if isinstance(field_data, list | tuple) else [field_data]
 
                 if hasattr(new_filter_form.fields[field], 'choices'):
                     mapping = dict(new_filter_form.fields[field].choices)

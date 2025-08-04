@@ -1,3 +1,4 @@
+import contextlib
 from base64 import b64decode
 
 from django.contrib.auth.models import Group, User
@@ -57,7 +58,7 @@ def serialize_cc(secret_data):
             'password': secret_data['password'],
         }
     except KeyError as e:
-        raise serializers.ValidationError(_(f'Missing required credit card field {e}'))
+        raise serializers.ValidationError(_('Missing required credit card field %s') % e) from e
 
 
 def serialize_file(secret_data):
@@ -95,7 +96,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     )
 
     def to_representation(self, instance):
-        rep = super(SecretRevisionSerializer, self).to_representation(instance)
+        rep = super().to_representation(instance)
         rep['data_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'hashid': instance.hashid},
@@ -147,13 +148,13 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         try:
             content_type = validated_data.pop('content_type')
-        except KeyError:
-            raise serializers.ValidationError(_('Missing required field content type'))
+        except KeyError as e:
+            raise serializers.ValidationError(_('Missing required field content type')) from e
 
         try:
             secret_data = validated_data.pop('secret_data')
-        except KeyError:
-            raise serializers.ValidationError(_('Missing required field secret_data'))
+        except KeyError as e:
+            raise serializers.ValidationError(_('Missing required field secret_data')) from e
 
         data = _extract_data(secret_data, content_type)
         if not data:
@@ -167,23 +168,15 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         instance.shared_users.add(instance.created_by)
         return instance
 
+    # Validation will catch it
     def to_internal_value(self, data):
-        try:
+        with contextlib.suppress(KeyError):
             data['access_policy'] = REPR_ACCESS_POLICY[data.get('access_policy', None)]
-        except KeyError:
-            # Validation will catch it
-            pass
-
-        try:
             data['status'] = SECRET_REPR_STATUS[data.get('status', None)]
-        except KeyError:
-            # Validation will catch it
-            pass
-
-        return super(SecretSerializer, self).to_internal_value(data)
+        return super().to_internal_value(data)
 
     def to_representation(self, instance: Secret):
-        rep = super(SecretSerializer, self).to_representation(instance)
+        rep = super().to_representation(instance)
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
         rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
@@ -193,9 +186,8 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         return rep
 
     def validate(self, data):
-        if 'file' in data or 'filename' in data:
-            if not ('file' in data and 'filename' in data):
-                raise serializers.ValidationError(_('Must include both file and filename'))
+        if 'file' in data or 'filename' in data and not ('file' in data and 'filename' in data):
+            raise serializers.ValidationError(_('Must include both file and filename'))
         return data
 
     class Meta:
@@ -292,9 +284,7 @@ class SharedSecretDataSerializer(serializers.ModelSerializer):
 
         if SharedSecretData.objects.filter(secret=secret, **{entity_type: entity_name}).exists():
             raise ValidationError(
-                _(f'Secret {secret} was already shared with {entity_type} {entity_name}.').format(
-                    secret=secret, entity_type=entity_type, entity_name=entity_name
-                ),
+                _('Secret %s was already shared with %s %s.') % secret % entity_type % entity_name,
                 code='unique',
             )
         return data

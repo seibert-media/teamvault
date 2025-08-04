@@ -7,7 +7,7 @@ from ...models import Secret
 class Command(BaseCommand):
     help = 'Update search index'
 
-    def handle(self, *args, **options):
+    def handle(self, *args, **options):  # noqa: ARG002
         secrets_total = Secret.objects.count()
         Secret.objects.all().update(
             search_index=(

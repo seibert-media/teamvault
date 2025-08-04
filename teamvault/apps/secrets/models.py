@@ -102,7 +102,7 @@ class HashIDModel(models.Model):
         if not self.pk:
             # need to save once to get a primary key, then once again to
             # save the hashid
-            super(HashIDModel, self).save(*args, **kwargs)
+            super().save(*args, **kwargs)
         if not self.hashid:
             hasher = Hashids(
                 min_length=settings.HASHID_MIN_LENGTH,
@@ -112,7 +112,7 @@ class HashIDModel(models.Model):
         # we cannot force insert anymore because we might already have
         # created the object
         kwargs['force_insert'] = False
-        return super(HashIDModel, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class Secret(HashIDModel):
@@ -201,6 +201,9 @@ class Secret(HashIDModel):
     def __repr__(self):
         return f"<Secret '{self.name}' ({self.hashid})>"
 
+    def get_absolute_url(self):
+        return reverse('secrets.secret-detail', args=[str(self.hashid)])
+
     def permission_checker(self, user):
         shares = self.share_data.for_user(user)
         return PermissionChecker(user=user, secret=self, shares=shares)
@@ -228,9 +231,6 @@ class Secret(HashIDModel):
     def full_url(self):
         return settings.BASE_URL.rstrip('/') + self.get_absolute_url()
 
-    def get_absolute_url(self):
-        return reverse('secrets.secret-detail', args=[str(self.hashid)])
-
     def get_data(self, user):
         if not self.current_revision:
             raise Http404
@@ -256,7 +256,7 @@ class Secret(HashIDModel):
                 plaintext_data = base64.b64decode(plaintext_data['file_content'])
         except JSONDecodeError:
             if self.content_type == ContentType.PASSWORD:
-                plaintext_data = dict(password=plaintext_data)
+                plaintext_data = {'password': plaintext_data}
 
         return plaintext_data
 
@@ -457,6 +457,9 @@ class SecretRevision(HashIDModel):
         # the employee.
         unique_together = (('plaintext_data_sha256', 'secret'),)
 
+    def __repr__(self):
+        return f"<SecretRevision '{self.secret.name}' ({self.hashid})>"
+
     @classmethod
     def _create_from_secret(
         cls,
@@ -572,10 +575,7 @@ class SecretRevision(HashIDModel):
                     )
                 )
 
-        if meta_snapshot is not None:
-            snap_src = meta_snapshot
-        else:
-            snap_src = old_revision.latest_meta
+        snap_src = old_revision.latest_meta if meta_snapshot is None else meta_snapshot
 
         if snap_src is None:
             # legacy fallback: reconstruct from the Secret itself
@@ -663,12 +663,9 @@ class SecretRevision(HashIDModel):
                 plaintext_data = base64.b64decode(plaintext_data['file_content'])
         except JSONDecodeError:
             if self.secret.content_type == ContentType.PASSWORD:
-                plaintext_data = dict(password=plaintext_data)
+                plaintext_data = {'password': plaintext_data}
 
         return plaintext_data
-
-    def __repr__(self):
-        return f"<SecretRevision '{self.secret.name}' ({self.hashid})>"
 
     @property
     def is_current_revision(self):
@@ -767,8 +764,6 @@ class SecretShareQuerySet(models.QuerySet):
 
 
 class SharedSecretData(models.Model):
-    objects = SecretShareQuerySet.as_manager()
-
     group = models.ForeignKey(
         Group,
         on_delete=models.CASCADE,
@@ -809,6 +804,22 @@ class SharedSecretData(models.Model):
         null=True,
     )
 
+    objects = SecretShareQuerySet.as_manager()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (Q(group__isnull=False) & Q(user__isnull=True)) | (Q(group__isnull=True) & Q(user__isnull=False))
+                ),
+                name='only_one_set',
+            ),
+        ]
+        unique_together = [('group', 'secret'), ('user', 'secret')]
+
+    def __str__(self):
+        return f'SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})'
+
     @property
     def shared_entity(self):
         return self.group if self.group else self.user
@@ -840,20 +851,6 @@ class SharedSecretData(models.Model):
                 return 'danger'
         return 'warning'
 
-    def __str__(self):
-        return f'SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})'
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=(
-                    (Q(group__isnull=False) & Q(user__isnull=True)) | (Q(group__isnull=True) & Q(user__isnull=False))
-                ),
-                name='only_one_set',
-            ),
-        ]
-        unique_together = [('group', 'secret'), ('user', 'secret')]
-
 
 class SharedSecretDataQuerySet(models.QuerySet):
     def for_user(self, user: User):
@@ -863,7 +860,7 @@ class SharedSecretDataQuerySet(models.QuerySet):
 
 
 @receiver(post_save, sender=Secret)
-def update_search_index(sender, **kwargs):
+def update_search_index(sender, **kwargs):  # noqa: ARG001
     Secret.objects.filter(id=kwargs['instance'].id).update(
         search_index=(
             SearchVector('name', weight='A')

@@ -1,3 +1,4 @@
+from contextlib import suppress
 from copy import copy
 from urllib.parse import quote, urlencode
 
@@ -52,7 +53,7 @@ class Dashboard(TemplateView):
     template_name = 'secrets/dashboard.html'
 
     def get_context_data(self, **kwargs):
-        context = super(Dashboard, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context['search_term'] = ''
         context['most_used_secrets'] = Secret.get_most_used_for_user(self.request.user, 10)
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
@@ -68,7 +69,7 @@ class OpenSearch(TemplateView):
     template_name = 'opensearch.xml'
 
     def get_context_data(self, **kwargs):
-        context = super(OpenSearch, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context['base_url'] = settings.BASE_URL
         return context
 
@@ -95,7 +96,7 @@ class SecretAdd(CreateView):
         # Create share objects
         secret.share_data.create(user=self.request.user)
         if form.cleaned_data['access_policy'] != AccessPolicy.ANY:
-            try:
+            with suppress(UserProfile.DoesNotExist):
                 secret.share_data.bulk_create(
                     [
                         SharedSecretData(
@@ -107,16 +108,14 @@ class SecretAdd(CreateView):
                         for group in form.cleaned_data['shared_groups_on_create']
                     ]
                 )
-            except UserProfile.DoesNotExist:
-                pass
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
-        context = super(SecretAdd, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         try:
             context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError:
-            raise Http404
+            raise Http404  # noqa: B904
         return context
 
     def get_initial(self):
@@ -186,7 +185,7 @@ class SecretEdit(UpdateView):
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
-        context = super(SecretEdit, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         context['current_revision'] = self.object.current_revision
         context['pretty_content_type'] = self.object.get_content_type_display()
         return context
@@ -221,7 +220,7 @@ class SecretEdit(UpdateView):
         else:
             return {}
 
-    def get_object(self, queryset=None):
+    def get_object(self, queryset=None):  # noqa: ARG002
         secret = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
         secret.check_read_access(self.request.user)
         return secret
@@ -309,7 +308,7 @@ class SecretDetail(DetailView):
     slug_url_kwarg = 'hashid'
 
     def get_context_data(self, **kwargs):
-        context = super(SecretDetail, self).get_context_data(**kwargs)
+        context = super().get_context_data(**kwargs)
         secret = self.get_object()
         permissions = secret.permission_checker(self.request.user)
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
@@ -331,8 +330,8 @@ class SecretDetail(DetailView):
                 context['show_password_update_alert'] = True
         return context
 
-    def get_object(self, queryset=None):
-        object = super(SecretDetail, self).get_object()
+    def get_object(self, queryset=None):  # noqa: ARG002
+        object = super().get_object()
         if not object.permission_checker(self.request.user).is_visible():
             raise Http404
         return object
@@ -412,7 +411,7 @@ class SecretShareList(CreateView):
             'secret', 'user', 'group'
         )
 
-    def get_context_data(self, *, object_list=None, **kwargs):
+    def get_context_data(self, *, object_list=None, **kwargs):  # noqa: ARG002
         secret = get_object_or_404(Secret, hashid=self.kwargs[self.slug_url_kwarg])
 
         context = {
@@ -440,7 +439,7 @@ class SecretShareList(CreateView):
             user=form_obj.user,
         )
 
-        messages.success(self.request, _('Shared secret with {}'.format(obj.shared_entity_name)))
+        messages.success(self.request, _('Shared secret with %s') % obj.shared_entity_name)
 
         # Clear cache
         delattr(self, 'group_shares')
@@ -461,7 +460,7 @@ class SecretShareList(CreateView):
         return response
 
     def get_form_class(self):
-        form_class = super(SecretShareList, self).get_form_class()
+        form_class = super().get_form_class()
 
         # Exclude groups and users which the secret was already shared with
         form_class.base_fields['group'].queryset = (
@@ -496,11 +495,9 @@ def secret_share_delete(request, hashid, share_id):
 
     messages.success(
         request,
-        _(
-            'Successfully removed {} from allowed {}'.format(
-                share_data.shared_entity_name, pluralize(share_data.shared_entity_type)
-            )
-        ),
+        _('Successfully removed %s from allowed %s')
+        % share_data.shared_entity_name
+        % pluralize(share_data.shared_entity_type),
     )
     log(
         _("{user} removed access of {shared_entity_type} '{name}'").format(
@@ -561,7 +558,7 @@ def secret_search(request):
                 'icon': icon,
                 'meta': metadata,
                 'name': secret.name,
-                'locked': True if icon == 'lock' else False,
+                'locked': icon == 'lock',
                 'hashid': secret.hashid,
                 'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
             }
@@ -601,7 +598,7 @@ def secret_revision_detail(request, revision_hashid):
     try:
         revision = SecretRevision.objects.select_related('secret').get(hashid=revision_hashid)
     except SecretRevision.DoesNotExist:
-        raise Http404
+        raise Http404  # noqa: B904
 
     if revision.is_current_revision:
         return redirect(revision.secret.get_absolute_url())
@@ -647,7 +644,7 @@ def secret_revision_download(request, revision_hashid):
     try:
         revision = get_object_or_404(SecretRevision.objects.select_related('secret'), hashid=revision_hashid)
     except SecretRevision.DoesNotExist:
-        raise Http404
+        raise Http404  # noqa: B904
 
     # permission check against the parent secret
     revision.secret.check_read_access(request.user)

@@ -30,36 +30,43 @@ def save_google_avatar(response, user, *_args, **_kwargs):
 
 def merge_users(user1, user2, dry_run=True):
     logger.info(
-        f'Merging user {user1.username} into {user2.username}\n'
-        f'Secrets & Audit Logs will be merged. User Profiles, Social Auth data and User itself will be deleted.\n'
-        f'Dry run: {dry_run}'
+        'Merging user %s into %s\n'
+        'Secrets & Audit Logs will be merged. User Profiles, Social Auth data and User itself will be deleted.\n'
+        'Dry run: %s',
+        user1.username,
+        user2.username,
+        dry_run,
     )
 
     # Secrets / SharedSecretData / SecretRevisions
     user1_secrets = SharedSecretData.objects.filter(user=user1)
     user2_secrets = SharedSecretData.objects.filter(user=user2)
     secrets_to_merge = user1_secrets.exclude(pk__in=user2_secrets.values_list('pk', flat=True))
-    logger.info(f'{secrets_to_merge.count()} Secrets found: {secrets_to_merge.values_list("pk", flat=True)}')
+    logger.info('%s Secrets found: %s', secrets_to_merge.count(), secrets_to_merge.values_list('pk', flat=True))
 
     user1_created = Secret.objects.filter(created_by=user1)
-    logger.info(f'{user1_created.count()} Secrets w/ created_by found: {user1_created.values_list("pk", flat=True)}')
+    logger.info(
+        '%s, Secrets w/ created_by found: %s', user1_created.count(), user1_created.values_list('pk', flat=True)
+    )
 
     user1_revisions = SecretRevision.objects.filter(set_by=user1)
-    logger.info(f'{user1_revisions.count()} SecretRevisions found: {user1_revisions.values_list("pk", flat=True)}')
+    logger.info('%s SecretRevisions found: %s', user1_revisions.count(), user1_revisions.values_list('pk', flat=True))
 
     # Audit Logs
     user1_actor_logs = LogEntry.objects.filter(actor=user1)
     user1_user_logs = LogEntry.objects.filter(user=user1)
-    logger.info(f'{user1_actor_logs.count()} Actor Logs found: {user1_actor_logs.values_list("pk", flat=True)}')
-    logger.info(f'{user1_user_logs.count()} User Logs found: {user1_user_logs.values_list("pk", flat=True)}')
+    logger.info('%s Actor Logs found: %s', user1_actor_logs.count(), user1_actor_logs.values_list('pk', flat=True))
+    logger.info('%s User Logs found: %s', user1_user_logs.count(), user1_user_logs.values_list('pk', flat=True))
 
     # User Profiles
     user1_profiles = UserProfile.objects.filter(user=user1)
-    logger.info(f'{user1_profiles.count()} User Profiles found: {user1_profiles.values_list("pk", flat=True)}')
+    logger.info('%s User Profiles found: %s', user1_profiles.count(), user1_profiles.values_list('pk', flat=True))
 
     # User Social Auth data
     user1_social_data = user1.social_auth.all().exclude(pk__in=user2.social_auth.all().values_list('pk', flat=True))
-    logger.info(f'{user1_social_data.count()} Social Auth data found: {user1_social_data.values_list("pk", flat=True)}')
+    logger.info(
+        '%s Social Auth data found: %s', user1_social_data.count(), user1_social_data.values_list('pk', flat=True)
+    )
 
     if not dry_run:
         secrets_to_merge.update(user=user2)

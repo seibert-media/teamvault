@@ -1,4 +1,4 @@
-from os.path import dirname, join, realpath
+from pathlib import Path
 
 from huey import SqliteHuey
 
@@ -14,7 +14,7 @@ from teamvault.apps.settings.config import (
 )
 
 CONFIG = get_config()
-PROJECT_ROOT = realpath(dirname(__file__))
+PROJECT_ROOT = Path(__file__).resolve().parent
 
 # Django
 
@@ -28,7 +28,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
 FILE_UPLOAD_HANDLERS = ('teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler',)
 
-FIXTURE_DIRS = (join(PROJECT_ROOT, 'fixtures'),)
+FIXTURE_DIRS = (PROJECT_ROOT / 'fixtures',)
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -50,7 +50,7 @@ INSTALLED_APPS = [
 
 LANGUAGE_CODE = 'en-us'
 
-LOCALE_PATHS = (PROJECT_ROOT + '/locale',)
+LOCALE_PATHS = (PROJECT_ROOT / 'locale',)
 
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = 'accounts.login'
@@ -80,18 +80,18 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 SESSION_COOKIE_AGE, SESSION_EXPIRE_AT_BROWSER_CLOSE, SESSION_COOKIE_SECURE = configure_session(CONFIG)
 
-STATIC_ROOT = join(PROJECT_ROOT, 'static_collected')
+STATIC_ROOT = PROJECT_ROOT / 'static_collected'
 
 # remember this is hardcoded in the error page templates (e.g. 500.html)
 STATIC_URL = '/static/'
 
-STATICFILES_DIRS = (join(PROJECT_ROOT, 'static'),)
+STATICFILES_DIRS = (PROJECT_ROOT / 'static',)
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            join(PROJECT_ROOT, 'templates'),
+            PROJECT_ROOT / 'templates',
         ],
         'APP_DIRS': True,
         'OPTIONS': {

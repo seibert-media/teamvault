@@ -15,7 +15,7 @@ from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretDa
 class Command(BaseCommand):
     help = 'Create fake users and secrets'
 
-    def handle(self, *args, **kwargs):
+    def handle(self, *args, **kwargs):  # noqa: ARG002
         from faker import Faker
 
         fake = Faker()

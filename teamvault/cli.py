@@ -1,7 +1,8 @@
 from argparse import REMAINDER, ArgumentParser
+from contextlib import suppress
 from gettext import gettext as _
 from hashlib import sha1
-from os import environ, mkdir
+from os import environ
 from shutil import rmtree
 from subprocess import Popen
 from sys import argv
@@ -35,7 +36,7 @@ def build_parser():
     except UnconfiguredSettingsError:
         unconfigured_settings = True
 
-    commands = [k for k in get_commands()]
+    commands = list(get_commands())
     plumbing_help = f'One of: {",".join(commands)}'
     if unconfigured_settings:
         plumbing_help += ' - To see all available commands, configure teamvault settings with "teamvault setup"'
@@ -97,16 +98,16 @@ def run(pargs):
     gunicorn.communicate()
 
 
-def run_huey(pargs):
+def run_huey(pargs):  # noqa: ARG001
     execute_from_command_line(['', 'run_huey'])
 
 
-def setup(pargs):
+def setup(pargs):  # noqa: ARG001
     environ.setdefault('TEAMVAULT_CONFIG_FILE', '/etc/teamvault.cfg')
     create_default_config(environ['TEAMVAULT_CONFIG_FILE'])
 
 
-def upgrade(pargs):
+def upgrade(pargs):  # noqa: ARG001
     environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
     environ.setdefault('TEAMVAULT_CONFIG_FILE', '/etc/teamvault.cfg')
 
@@ -123,11 +124,9 @@ def upgrade(pargs):
         Setting.set('fernet_key_hash', key_hash)
 
     print('\n### Gathering static files...\n')
-    try:
+    with suppress(FileNotFoundError):
         rmtree(settings.STATIC_ROOT)
-    except FileNotFoundError:
-        pass
-    mkdir(settings.STATIC_ROOT)
+    settings.STATIC_ROOT.mkdir()
     execute_from_command_line(['', 'collectstatic', '--noinput'])
 
     print('\n### Updating search index...\n')

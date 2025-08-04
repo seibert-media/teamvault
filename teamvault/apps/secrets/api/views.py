@@ -20,7 +20,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
     model = Secret
     serializer_class = SecretDetailSerializer
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request, *args, **kwargs):  # noqa: ARG002
         obj = self.get_object()
         obj.status = SecretStatus.DELETED
         obj.save()

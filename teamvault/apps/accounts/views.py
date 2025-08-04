@@ -23,7 +23,7 @@ class UserProfile(UpdateView):
     template_name = 'accounts/user_settings.html'
     success_url = reverse_lazy('accounts.user-settings')
 
-    def get_object(self, *args, **kwargs):
+    def get_object(self, *args, **kwargs):  # noqa: ARG002
         return UserProfileModel.objects.get_or_create(user=self.request.user)[0]
 
     def form_valid(self, form):

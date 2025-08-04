@@ -1,6 +1,10 @@
+from typing import TYPE_CHECKING
+
 from django.contrib import messages
-from django.contrib.messages.storage.base import BaseStorage, Message
 from django_htmx.http import trigger_client_event
+
+if TYPE_CHECKING:
+    from django.contrib.messages.storage.base import BaseStorage, Message
 
 
 def htmx_message_middleware(get_response):

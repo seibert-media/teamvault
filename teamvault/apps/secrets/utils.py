@@ -1,11 +1,15 @@
 import base64
 import secrets
 import string
+from typing import TYPE_CHECKING
 from urllib.parse import parse_qs, urlparse
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 
 from teamvault.apps.secrets.enums import ContentType
+
+if TYPE_CHECKING:
+    from teamvault.apps.secrets.models import Secret, SecretMetaSnapshot
 
 META_FIELDS = (
     'description',
@@ -74,7 +78,7 @@ def serialize_add_edit_data(cleaned_data, secret):
             secret.filename = cleaned_data['file'].name
             secret.save()
         except Exception as e:
-            raise ('File type not suported', e)
+            raise ValueError('File type not suported') from e
     elif secret.content_type == ContentType.CC:
         plaintext_data = {
             'holder': cleaned_data['holder'],
@@ -111,4 +115,4 @@ class CappedMemoryFileUploadHandler(MemoryFileUploadHandler):
             # which leads to more form errors than we prefer
             # raise StopUpload(connection_reset=True)
             raise SkipFile()
-        super(CappedMemoryFileUploadHandler, self).receive_data_chunk(raw_data, start)
+        super().receive_data_chunk(raw_data, start)
