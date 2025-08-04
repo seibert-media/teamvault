@@ -3,13 +3,14 @@ from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
 from operator import itemgetter
+from dataclasses import dataclass
 
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import models
+from django.db import models, transaction
 from django.db.models import BooleanField, Case, Max, Q, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -19,6 +20,10 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from hashids import Hashids
 from pyotp import TOTP
+import typing as t
+
+from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
+from teamvault.apps.secrets.utils import copy_meta_from_secret, meta_changed
 
 from .exceptions import PermissionError
 from ..audit.auditlog import log
@@ -33,10 +38,55 @@ class AccessPermissionTypes(models.IntegerChoices):
 
 
 def validate_url(value):
-    if "://" not in value or \
-            value.startswith("javascript:") or \
-            value.startswith("data:"):
-        raise ValidationError(_("invalid URL"))
+    if '://' not in value or value.startswith('javascript:') or value.startswith('data:'):
+        raise ValidationError(_('invalid URL'))
+
+
+def log_secret_read(
+    *,
+    readable: AccessPermissionTypes,
+    secret,
+    secret_revision,
+    user,
+):
+    """
+    Centralised audit-logging + permission handling for `get_data`.
+
+    Raises PermissionError on denied access
+    """
+    if not readable:
+        log(
+            _("{user} tried to access '{name}' without permission").format(name=secret.name, user=user.username),
+            actor=user,
+            category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
+            level='warning',
+            secret=secret,
+        )
+        raise PermissionError(
+            _("{user} not allowed access to '{name}' ({id})").format(
+                id=secret.id,
+                name=secret.name,
+                user=user.username,
+            )
+        )
+
+    # Decide which success category applies
+    if readable == AccessPermissionTypes.SUPERUSER_ALLOWED:
+        category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
+        msg_tpl = _("{user} used superuser privileges to read '{name}'")
+    else:
+        category = AuditLogCategoryChoices.SECRET_READ
+        msg_tpl = _("{user} read '{name}'")
+
+    # Write the success log entry
+    log(
+        msg_tpl.format(name=secret.name, user=user.username),
+        actor=user,
+        category=category,
+        level='info',
+        secret=secret,
+        secret_revision=secret_revision,
+    )
 
 
 class HashIDModel(models.Model):
@@ -67,40 +117,15 @@ class HashIDModel(models.Model):
 
 
 class Secret(HashIDModel):
-    HASHID_NAMESPACE = "Secret"
-
-    ACCESS_POLICY_DISCOVERABLE = 1
-    ACCESS_POLICY_ANY = 2
-    ACCESS_POLICY_HIDDEN = 3
-    ACCESS_POLICY_CHOICES = (
-        (ACCESS_POLICY_DISCOVERABLE, _("discoverable")),
-        (ACCESS_POLICY_ANY, _("everyone")),
-        (ACCESS_POLICY_HIDDEN, _("hidden")),
-    )
-    CONTENT_PASSWORD = 1
-    CONTENT_CC = 2
-    CONTENT_FILE = 3
-    CONTENT_CHOICES = (
-        (CONTENT_PASSWORD, _("Password")),
-        (CONTENT_CC, _("Credit Card")),
-        (CONTENT_FILE, _("File")),
-    )
-    STATUS_OK = 1
-    STATUS_NEEDS_CHANGING = 2
-    STATUS_DELETED = 3
-    STATUS_CHOICES = (
-        (STATUS_OK, _("OK")),
-        (STATUS_NEEDS_CHANGING, _("needs changing")),
-        (STATUS_DELETED, _("deleted")),
-    )
+    HASHID_NAMESPACE = 'Secret'
 
     access_policy = models.PositiveSmallIntegerField(
-        choices=ACCESS_POLICY_CHOICES,
-        default=ACCESS_POLICY_DISCOVERABLE,
+        choices=AccessPolicy,
+        default=AccessPolicy.DISCOVERABLE,
     )
     content_type = models.PositiveSmallIntegerField(
-        choices=CONTENT_CHOICES,
-        default=CONTENT_PASSWORD,
+        choices=ContentType,
+        default=ContentType.PASSWORD,
     )
     created = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(
@@ -148,8 +173,8 @@ class Secret(HashIDModel):
         through_fields=('secret', 'user'),
     )
     status = models.PositiveSmallIntegerField(
-        choices=STATUS_CHOICES,
-        default=STATUS_OK,
+        choices=SecretStatus,
+        default=SecretStatus.OK,
     )
     url = models.CharField(
         blank=True,
@@ -177,27 +202,36 @@ class Secret(HashIDModel):
     def __repr__(self):
         return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
 
+    def permission_checker(self, user):
+        shares = self.share_data.for_user(user)
+        return PermissionChecker(
+            user=user,
+            secret=self,
+            shares=shares
+        )
+
     def check_read_access(self, user):
-        if not self.is_visible_to_user(user):
+        permissions = self.permission_checker(user)
+        if not permissions.is_visible():
             raise Http404
 
-        readable = self.is_readable_by_user(user)
+        readable = permissions.is_readable()
         if not readable:
             raise PermissionDenied()
         return readable
 
     def check_share_access(self, user):
-        if not self.is_visible_to_user(user):
+        permissions = self.permission_checker(user)
+        if not permissions.is_visible():
             raise Http404
 
-        shareable = self.is_shareable_by_user(user)
-        if not shareable:
+        if not permissions.is_shareable():
             raise PermissionDenied()
-        return shareable
+        return permissions.is_shareable()
 
     @property
     def full_url(self):
-        return settings.BASE_URL.rstrip("/") + self.get_absolute_url()
+        return settings.BASE_URL.rstrip('/') + self.get_absolute_url()
 
     def get_absolute_url(self):
         return reverse('secrets.secret-detail', args=[str(self.hashid)])
@@ -206,38 +240,12 @@ class Secret(HashIDModel):
         if not self.current_revision:
             raise Http404
 
-        read_allowed = self.is_readable_by_user(user)
-        if not read_allowed:
-            log(
-                _("{user} tried to access '{name}' without permission").format(name=self.name, user=user.username),
-                actor=user,
-                category=AuditLogCategoryChoices.SECRET_PERMISSION_VIOLATION,
-                level='warning',
-                secret=self,
-            )
-            raise PermissionError(_(
-                "{user} not allowed access to '{name}' ({id})"
-            ).format(
-                id=self.id,
-                name=self.name,
-                user=user.username,
-            ))
-        if read_allowed == AccessPermissionTypes.SUPERUSER_ALLOWED:
-            category = AuditLogCategoryChoices.SECRET_ELEVATED_SUPERUSER_READ
-            log_message = _("{user} used superuser privileges to read '{name}'")
-        else:
-            category = AuditLogCategoryChoices.SECRET_READ
-            log_message = _("{user} read '{name}'")
-        log(
-            log_message.format(
-                name=self.name,
-                user=user.username,
-            ),
-            actor=user,
-            category=category,
-            level='info',
+        readable = self.permission_checker(user).is_readable()
+        log_secret_read(
+            readable=readable,
             secret=self,
             secret_revision=self.current_revision,
+            user=user,
         )
         self.current_revision.accessed_by.add(user)
         self.current_revision.save()
@@ -249,20 +257,23 @@ class Secret(HashIDModel):
         plaintext_data = f.decrypt(plaintext_data).decode('utf-8')
         try:
             plaintext_data = loads(plaintext_data)
-            if self.content_type == Secret.CONTENT_FILE:
-                plaintext_data = base64.b64decode(plaintext_data["file_content"])
+            if self.content_type == ContentType.FILE:
+                plaintext_data = base64.b64decode(plaintext_data['file_content'])
         except JSONDecodeError:
-            if self.content_type == self.CONTENT_PASSWORD:
+            if self.content_type == ContentType.PASSWORD:
                 plaintext_data = dict(password=plaintext_data)
 
         return plaintext_data
 
     def get_otp(self, request):
-        if request.session.get("otp_key_data"):
-            data = request.session["otp_key_data"]
+        if request.session.get('otp_key_data'):
+            data = request.session['otp_key_data']
         else:
             data = self.get_data(request.user)
-            request.session["otp_key_data"] = {'otp_key': data['otp_key'], 'digits': int(data.get('digits', 6))}
+            request.session['otp_key_data'] = {
+                'otp_key': data['otp_key'],
+                'digits': int(data.get('digits', 6)),
+            }
         otp_key = data['otp_key']
         digits = int(data.get('digits', 6))
         totp = TOTP(otp_key, digits=digits)
@@ -273,12 +284,15 @@ class Secret(HashIDModel):
         if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
             return cls.objects.all()
 
-        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
-            Q(user=user) | Q(group__user=user)
-        ).exclude(is_expired=True).values('secret__pk')
-        return cls.objects.filter(
-            Q(access_policy=cls.ACCESS_POLICY_ANY) | Q(pk__in=allowed_shares)
-        ).exclude(status=cls.STATUS_DELETED).distinct()
+        allowed_shares = (
+            SharedSecretData.objects.for_user(user)
+            .values('secret__pk')
+        )
+        return (
+            cls.objects.filter(Q(access_policy=AccessPolicy.ANY) | Q(pk__in=allowed_shares))
+            .exclude(status=SecretStatus.DELETED)
+            .distinct()
+        )
 
     @classmethod
     def get_all_visible_to_user(cls, user, queryset=None):
@@ -288,41 +302,52 @@ class Secret(HashIDModel):
         if user.is_superuser:
             return queryset
 
-        allowed_shares = SharedSecretData.objects.with_expiry_state().filter(
-            Q(user=user) | Q(group__user=user)
-        ).exclude(is_expired=True).values('secret__pk')
-        return queryset.filter(
-            Q(access_policy__in=(cls.ACCESS_POLICY_ANY, cls.ACCESS_POLICY_DISCOVERABLE)) | Q(pk__in=allowed_shares)
-        ).exclude(status=cls.STATUS_DELETED).distinct()
+        allowed_shares = (
+            SharedSecretData.objects.with_expiry_state()
+            .filter(Q(user=user) | Q(group__user=user))
+            .exclude(is_expired=True)
+            .values('secret__pk')
+        )
+        return (
+            queryset.filter(
+                Q(
+                    access_policy__in=(
+                        AccessPolicy.ANY,
+                        AccessPolicy.DISCOVERABLE,
+                    )
+                )
+                | Q(pk__in=allowed_shares)
+            )
+            .exclude(status=SecretStatus.DELETED)
+            .distinct()
+        )
 
     @classmethod
     def get_most_used_for_user(cls, user, limit=5):
         since = now() - timedelta(days=90)
-        accessed_secrets = LogEntry.objects.filter(
-            actor=user,
-            secret__isnull=False,
-            time__gte=since,
-        ).order_by(
-            'secret'
-        ).values(
-            'secret'
-        ).annotate(
-            access_count=models.Count('secret'),
+        accessed_secrets = (
+            LogEntry.objects.filter(
+                actor=user,
+                secret__isnull=False,
+                time__gte=since,
+            )
+            .order_by('secret')
+            .values('secret')
+            .annotate(
+                access_count=models.Count('secret'),
+            )
         )
         ordered_secrets = sorted(accessed_secrets, key=itemgetter('access_count'), reverse=True)
         return [cls.objects.get(id=item['secret']) for item in ordered_secrets[:limit]]
 
     @classmethod
     def get_most_recently_used_for_user(cls, user, limit=5):
-        log_entries = LogEntry.objects.filter(
-            actor=user
-        ).values(
-            'secret'
-        ).annotate(
-            latest_time=Max('time')
-        ).order_by(
-            '-latest_time'
-        )[:limit]
+        log_entries = (
+            LogEntry.objects.filter(actor=user)
+            .values('secret')
+            .annotate(latest_time=Max('time'))
+            .order_by('-latest_time')[:limit]
+        )
 
         ordered_secret_ids = [access['secret'] for access in log_entries]
         unordered_secrets = Secret.objects.filter(id__in=ordered_secret_ids)
@@ -342,10 +367,10 @@ class Secret(HashIDModel):
         substr_hits = Secret.objects.none()
         if substr_search:
             substr_hits = base_queryset.filter(
-                models.Q(filename__icontains=term) |
-                models.Q(url__icontains=term) |
-                models.Q(username__icontains=term) |
-                models.Q(hashid__exact=term)
+                models.Q(filename__icontains=term)
+                | models.Q(url__icontains=term)
+                | models.Q(username__icontains=term)
+                | models.Q(hashid__exact=term)
             )
         if limit:
             name_hits = name_hits[:limit]
@@ -358,130 +383,8 @@ class Secret(HashIDModel):
         else:
             return result
 
-    def is_readable_by_user(self, user):
-        if self.status != self.STATUS_DELETED:
-            shares = self.share_data.with_expiry_state().filter(
-                Q(user=user) | Q(group__user=user)
-            ).exclude(is_expired=True)
-
-            if self.access_policy == self.ACCESS_POLICY_ANY or shares.filter(granted_until__isnull=True).exists():
-                return AccessPermissionTypes.ALLOWED
-
-            if shares.exists():
-                return AccessPermissionTypes.TEMPORARILY_ALLOWED
-
-        if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
-            return AccessPermissionTypes.SUPERUSER_ALLOWED
-
-        return AccessPermissionTypes.NOT_ALLOWED
-
-    def is_shareable_by_user(self, user):
-        read_permission = self.is_readable_by_user(user)
-        if read_permission == AccessPermissionTypes.ALLOWED:
-            return AccessPermissionTypes.ALLOWED
-
-        if user.is_superuser:
-            return AccessPermissionTypes.SUPERUSER_ALLOWED
-        return AccessPermissionTypes.NOT_ALLOWED
-
-    def is_visible_to_user(self, user):
-        if self.status != self.STATUS_DELETED:
-            if (
-                    self.access_policy in (self.ACCESS_POLICY_ANY, self.ACCESS_POLICY_DISCOVERABLE) or
-                    self.is_readable_by_user(user)
-            ):
-                return AccessPermissionTypes.ALLOWED
-
-        if user.is_superuser:
-            return AccessPermissionTypes.SUPERUSER_ALLOWED
-        return AccessPermissionTypes.NOT_ALLOWED
-
-    def set_data(self, user, plaintext_data, skip_access_check=False):
-        # skip_access_check is used when initially creating a secret
-        # and makes it possible to create secrets you don't have access
-        # to
-        if not skip_access_check and not self.is_readable_by_user(user):
-            raise PermissionError(_(
-                "{user} not allowed access to '{name}' ({id})"
-            ).format(
-                id=self.id,
-                name=self.name,
-                user=user.username,
-            ))
-        # save the length before encoding so multi-byte characters don't
-        # mess up the result
-        set_password = self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data
-        set_otp = self.content_type == Secret.CONTENT_PASSWORD and "otp_key" in plaintext_data
-        plaintext_length = len(plaintext_data)
-        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        if set_password:
-            plaintext_data_sha256 = sha256(plaintext_data["password"].encode('utf-8')).hexdigest()
-        else:
-            plaintext_data_sha256 = sha256(dumps(plaintext_data).encode('utf-8')).hexdigest()
-        try:
-            # see the comment on unique_together for SecretRevision
-            p = SecretRevision.objects.get(
-                plaintext_data_sha256=plaintext_data_sha256,
-                secret=self,
-            )
-        except SecretRevision.DoesNotExist:
-            p = SecretRevision()
-        if self.current_revision and self.content_type == Secret.CONTENT_PASSWORD:
-            old_data = f.decrypt(self.current_revision.encrypted_data).decode('utf-8')
-            # If not already dict convert to dict since password and otp key are now stored together in dict format.
-            # To keep everything uniform CC and file secrets stored as a dict as well
-            try:
-                old_data = loads(old_data)
-            except JSONDecodeError:
-                old_data = dict(password=old_data)
-            if not set_password:
-                plaintext_data["password"] = old_data["password"]
-            if not set_otp and "otp_key" in old_data:
-                for key in ["otp_key", "digits", "algorithm"]:
-                    if key in old_data:
-                        plaintext_data[key] = old_data[key]
-                        set_otp = True
-
-        if self.content_type == Secret.CONTENT_PASSWORD and "password" in plaintext_data.keys():
-            plaintext_length = len(plaintext_data["password"])
-        if set_otp:
-            p.otp_key_set = True
-        plaintext_data = dumps(plaintext_data).encode("utf-8")
-
-        p.encrypted_data = f.encrypt(plaintext_data)
-        p.length = plaintext_length
-        p.plaintext_data_sha256 = plaintext_data_sha256
-        p.set_by = user
-        p.secret = self
-        p.save()
-        p.accessed_by.add(user)
-
-        if self.current_revision:
-            previous_revision_id = self.current_revision.id
-        else:
-            previous_revision_id = _("none")
-        self.current_revision = p
-        self.last_changed = now()
-        self.last_read = now()
-        if self.status == self.STATUS_NEEDS_CHANGING:
-            self.status = self.STATUS_OK
-        self.save()
-        log(
-            _("{user} set a new secret for '{name}' ({oldrev}->{newrev})").format(
-                name=self.name,
-                newrev=self.current_revision.id,
-                oldrev=previous_revision_id,
-                user=user.username,
-            ),
-            actor=user,
-            category=AuditLogCategoryChoices.SECRET_CHANGED,
-            level='info',
-            secret=self,
-            secret_revision=self.current_revision,
-        )
-
     def needs_changing(self):
-        return self.status == self.STATUS_NEEDS_CHANGING
+        return self.status == SecretStatus.NEEDS_CHANGING
 
     def share(self, grant_description, granted_by, user=None, group=None, granted_until=None):
         if (user and group) or (not user and not group):
@@ -490,8 +393,8 @@ class Secret(HashIDModel):
         if not isinstance(granted_by, User):
             raise ValueError('granted_by has to be a User object!')
 
-        permission = self.is_shareable_by_user(granted_by)
-        if not permission:
+        shareable = self.permission_checker(granted_by).is_shareable()
+        if not shareable:
             raise PermissionDenied()
 
         share_obj = self.share_data.create(
@@ -506,12 +409,12 @@ class Secret(HashIDModel):
                 shared_entity_type=share_obj.shared_entity_type,
                 name=share_obj.shared_entity_name,
                 user=granted_by.username,
-                time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently')
+                time=_('until ') + share_obj.granted_until.isoformat() if share_obj.granted_until else _('permanently'),
             ),
             actor=granted_by,
             category=(
                 AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
-                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
+                if shareable == AccessPermissionTypes.SUPERUSER_ALLOWED
                 else AuditLogCategoryChoices.SECRET_SHARED
             ),
             level='warning',
@@ -523,7 +426,7 @@ class Secret(HashIDModel):
 
 
 class SecretRevision(HashIDModel):
-    HASHID_NAMESPACE = "SecretRevision"
+    HASHID_NAMESPACE = 'SecretRevision'
 
     accessed_by = models.ManyToManyField(
         settings.AUTH_USER_MODEL,
@@ -546,6 +449,7 @@ class SecretRevision(HashIDModel):
         models.PROTECT,
         related_name='password_revisions_set',
     )
+    last_read = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ('-created',)
@@ -561,12 +465,293 @@ class SecretRevision(HashIDModel):
         # the employee.
         unique_together = (('plaintext_data_sha256', 'secret'),)
 
+    @classmethod
+    def _create_from_secret(
+        cls,
+        *,
+        secret: Secret,
+        set_by: User,
+        plaintext_data,
+        skip_access_check: bool = False,
+    ) -> t.Self:
+        # skip_access_check is used when initially creating a secret
+        # and makes it possible to create secrets you don't have access
+        # to
+        if not skip_access_check:
+            readable = secret.permission_checker(set_by).is_readable()
+            if not readable:
+                raise PermissionError(
+                    _("{user} not allowed access to '{name}' ({id})").format(
+                        id=secret.id, name=secret.name, user=set_by.username
+                    )
+                )
+
+        content_type = secret.content_type
+        set_password = content_type == ContentType.PASSWORD and 'password' in plaintext_data
+        set_otp = content_type == ContentType.PASSWORD and 'otp_key' in plaintext_data
+
+        fernet = Fernet(settings.TEAMVAULT_SECRET_KEY)
+
+        if secret.current_revision and content_type == ContentType.PASSWORD:
+            old_dec = fernet.decrypt(secret.current_revision.encrypted_data).decode()
+            try:
+                old_data = loads(old_dec)
+            except JSONDecodeError:
+                old_data = {'password': old_dec}
+
+            if not set_password:
+                plaintext_data['password'] = old_data['password']
+            if not set_otp and 'otp_key' in old_data:
+                for k in ('otp_key', 'digits', 'algorithm'):
+                    if k in old_data:
+                        plaintext_data[k] = old_data[k]
+                        set_otp = True
+
+        if content_type == ContentType.PASSWORD and 'password' in plaintext_data:
+            sha_src = plaintext_data['password']
+        else:
+            sha_src = dumps(plaintext_data)
+
+        sha_sum = sha256(sha_src.encode('utf-8')).hexdigest()
+
+        revision, created = cls.objects.get_or_create(
+            secret=secret,
+            plaintext_data_sha256=sha_sum,
+            defaults={
+                'otp_key_set': set_otp,
+                'set_by': set_by,
+            },
+        )
+
+        if not revision.latest_meta.name:
+            # Hashid exists only _after_ the first save.
+            revision.latest_meta.name = f'{secret.name} - {revision.hashid}'
+
+        # save the length before encoding so multi-byte characters don't
+        # mess up the result
+        revision.length = (
+            len(plaintext_data['password'])
+            if content_type == ContentType.PASSWORD and 'password' in plaintext_data
+            else len(plaintext_data)
+        )
+        revision.encrypted_data = fernet.encrypt(dumps(plaintext_data).encode())
+
+        if created:
+            for f in (
+                "description", "username", "url", "filename",
+                "access_policy", "needs_changing_on_leave", "status",
+            ):
+                setattr(revision, f, getattr(secret, f))
+
+        revision.save()
+        revision.accessed_by.add(set_by)
+
+        return revision
+
+    @classmethod
+    def _create_from_revision(
+        cls,
+        *,
+        old_revision: t.Self,
+        set_by: User,
+        meta_snapshot: "SecretMetaSnapshot | None" = None,
+        skip_access_check: bool = False,
+    ) -> t.Self:
+        """Re‑use the data of an existing revision to create a new one and
+        make it the secret’s current revision.
+
+        Returns the (new or reused) revision object that is now current.
+        """
+        secret = old_revision.secret
+
+        if not skip_access_check:
+            readable = secret.permission_checker(set_by).is_readable()
+            if not readable:
+                raise PermissionError(
+                    _("{user} not allowed to roll back '{name}' ({id})").format(
+                        id=secret.id,
+                        name=secret.name,
+                        user=set_by.username,
+                    )
+                )
+
+        if meta_snapshot is not None:
+            snap_src = meta_snapshot
+        else:
+            snap_src = old_revision.latest_meta
+
+        if snap_src is None:
+            # legacy fallback: reconstruct from the Secret itself
+            snapshot_kwargs = copy_meta_from_secret(secret)
+            snapshot_kwargs['set_by'] = set_by
+        else:
+            snapshot_kwargs = {
+                'description': snap_src.description,
+                'username': snap_src.username,
+                'url': snap_src.url,
+                'filename': snap_src.filename,
+                'access_policy': snap_src.access_policy,
+                'needs_changing_on_leave': snap_src.needs_changing_on_leave,
+                'status': snap_src.status,
+                'set_by': set_by,
+            }
+
+        new_rev, created = cls.objects.get_or_create(
+            secret=secret,
+            plaintext_data_sha256=old_revision.plaintext_data_sha256,
+            defaults={
+                'encrypted_data': old_revision.encrypted_data,
+                'otp_key_set': old_revision.otp_key_set,
+                'length': old_revision.length,
+                'set_by': set_by,
+            },
+        )
+
+        new_rev.name = f'{secret.name} - {new_rev.hashid}'
+        new_rev.save()
+
+        raw = dumps(
+            {k: snapshot_kwargs[k] for k in snapshot_kwargs},
+            sort_keys=True,
+            default=str,
+        )
+        wanted_hash = sha256(raw.encode()).hexdigest()
+
+        # try to reuse an identical snapshot (same revision + hash)
+        snap = SecretMetaSnapshot.objects.filter(
+            revision=new_rev,
+            meta_sha256=wanted_hash,
+        ).first()
+
+        # otherwise create a fresh one for this actor
+        if snap is None:
+            snap = SecretMetaSnapshot.objects.create(
+                secret=secret,
+                revision=new_rev,
+                meta_sha256=wanted_hash,
+               **snapshot_kwargs,
+            )
+
+        new_rev.accessed_by.add(set_by)
+        return new_rev
+
+    def permission_checker(self, user):
+        """Return a PermissionChecker for either the latest metadata snapshot
+        or, if no snapshot exists yet, the parent Secret itself.
+        """
+        meta = self.latest_meta
+        shares = self.secret.share_data.for_user(user)
+
+        return PermissionChecker(
+            user=user,
+            secret=self.secret,
+            meta=meta,
+            shares=shares
+        )
+
+    @property
+    def latest_meta(self):
+        """Return the newest metadata snapshot"""
+        return self.meta_snaps.first()
+
+    def get_data(self, user):
+        readable = self.permission_checker(user).is_readable()
+        log_secret_read(readable=readable, secret=self.secret, secret_revision=self, user=user)
+        # Record that this user has now seen this specific revision's data
+        self.accessed_by.add(user)
+        self.last_read = now()
+        self.save()
+
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+
+        plaintext_data = f.decrypt(self.encrypted_data).decode('utf-8')
+        try:
+            plaintext_data = loads(plaintext_data)
+            if self.secret.content_type == ContentType.FILE:
+                plaintext_data = base64.b64decode(plaintext_data['file_content'])
+        except JSONDecodeError:
+            if self.secret.content_type == ContentType.PASSWORD:
+                plaintext_data = dict(password=plaintext_data)
+
+        return plaintext_data
+
     def __repr__(self):
         return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
 
     @property
     def is_current_revision(self):
         return self.secret.current_revision == self
+
+
+class SecretMetaSnapshot(models.Model):
+    """
+    Immutable copy of a Secret’s metadata
+    """
+    secret = models.ForeignKey(
+        Secret,
+        on_delete=models.CASCADE,
+        related_name='meta_snaps',
+        # null=True,
+        # blank=True,
+    )
+    revision = models.ForeignKey(
+        'SecretRevision',
+        on_delete=models.CASCADE,
+        related_name='meta_snaps',
+    )
+    created = models.DateTimeField(auto_now_add=True)
+    set_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='secret_meta_snaps'
+    )
+
+    # metadata
+    description = models.TextField(blank=True, null=True)
+    username = models.CharField(max_length=255, blank=True, null=True)
+    url = models.CharField(max_length=255, blank=True, null=True, validators=[validate_url])
+    filename = models.CharField(max_length=255, blank=True, null=True)
+
+    # governance
+    access_policy = models.PositiveSmallIntegerField(choices=AccessPolicy)
+    needs_changing_on_leave = models.BooleanField()
+    status = models.PositiveSmallIntegerField(choices=SecretStatus)
+
+    # FIXME why would we want to guard against duplicates?
+    # duplicate guard UNUSED!
+    meta_sha256 = models.CharField(max_length=64, editable=False)
+
+    class Meta:
+        ordering = ('-created',)
+        get_latest_by = 'created'
+        constraints = [
+            models.UniqueConstraint(
+                fields=('revision', 'meta_sha256'),
+                name='uniq_meta_per_revision',
+            )
+        ]
+
+    def __str__(self):
+        return f'MetaSnapshot {self.id} for rev {self.revision_id}'
+
+    def save(self, *args, **kwargs):
+        # Compute hash over the _meaningful_ payload (excluding PK/timestamps)
+        raw = dumps(
+            {
+                'description': self.description,
+                'username': self.username,
+                'url': self.url,
+                'filename': self.filename,
+                'access_policy': self.access_policy,
+                'needs_changing_on_leave': self.needs_changing_on_leave,
+                'status': self.status,
+                'set_by': self.set_by,
+            },
+            sort_keys=True,
+            default=str,
+        )
+        self.meta_sha256 = sha256(raw.encode()).hexdigest()
+        super().save(*args, **kwargs)
 
 
 class SecretShareQuerySet(models.QuerySet):
@@ -580,13 +765,19 @@ class SecretShareQuerySet(models.QuerySet):
     def with_expiry_state(self):
         return self.annotate(
             is_expired=Case(
-                When(
-                    granted_until__lte=now(),
-                    then=Value(True)
-                ),
+                When(granted_until__lte=now(), then=Value(True)),
                 default=Value(False),
-                output_field=BooleanField()
+                output_field=BooleanField(),
             )
+        )
+
+    def for_user(self, user: User):
+        """Return non‑expired shares that apply to the user
+        (direct or via group)."""
+        return (
+            self.with_expiry_state()
+                .filter(Q(user=user) | Q(group__user=user))
+                .exclude(is_expired=True)
         )
 
 
@@ -613,9 +804,7 @@ class SharedSecretData(models.Model):
         related_name='share_data',
     )
 
-    grant_description = models.TextField(
-        null=True
-    )
+    grant_description = models.TextField(null=True)
 
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -673,22 +862,98 @@ class SharedSecretData(models.Model):
         constraints = [
             models.CheckConstraint(
                 check=(
-                        (Q(group__isnull=False) & Q(user__isnull=True)) |
-                        (Q(group__isnull=True) & Q(user__isnull=False))
+                    (Q(group__isnull=False) & Q(user__isnull=True)) | (Q(group__isnull=True) & Q(user__isnull=False))
                 ),
-                name='only_one_set'
+                name='only_one_set',
             ),
         ]
         unique_together = [('group', 'secret'), ('user', 'secret')]
+
+
+class SharedSecretDataQuerySet(models.QuerySet):
+    def for_user(self, user: User):
+        """Return non‑expired shares that apply to the user
+        (direct or via group)."""
+        return (
+            self.with_expiry_state()
+                .filter(Q(user=user) | Q(group__user=user))
+                .exclude(is_expired=True)
+        )
+
+
 
 
 @receiver(post_save, sender=Secret)
 def update_search_index(sender, **kwargs):
     Secret.objects.filter(id=kwargs['instance'].id).update(
         search_index=(
-                SearchVector('name', weight='A') +
-                SearchVector('description', weight='B') +
-                SearchVector('username', weight='C') +
-                SearchVector('filename', weight='D')
+            SearchVector('name', weight='A')
+            + SearchVector('description', weight='B')
+            + SearchVector('username', weight='C')
+            + SearchVector('filename', weight='D')
         ),
     )
+
+
+@dataclass(frozen=True, slots=True)
+class PermissionChecker:
+    user: User
+    secret: Secret
+    shares: SecretShareQuerySet
+    meta: SecretMetaSnapshot | None = None
+
+    def _secret_deleted(self) -> bool:
+        return self.secret.status == SecretStatus.DELETED
+
+    def _superuser_override(self) -> bool:
+        return self.user.is_superuser and settings.ALLOW_SUPERUSER_READS
+
+    def _access_policy(self) -> AccessPolicy:
+        if self.meta:
+            return self.meta.access_policy
+        return self.secret.access_policy
+
+    def is_discoverable(self) -> bool:
+        return self._access_policy() in {
+            AccessPolicy.ANY,
+            AccessPolicy.DISCOVERABLE,
+        }
+
+    def _has_permanent_share(self) -> bool:
+        return self.shares.filter(granted_until__isnull=True).exists()
+
+    def is_readable(self) -> AccessPermissionTypes:
+        if self._secret_deleted():
+            return AccessPermissionTypes.NOT_ALLOWED
+        if self._superuser_override():
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+
+        if self._access_policy() == AccessPolicy.ANY or self._has_permanent_share():
+            return AccessPermissionTypes.ALLOWED
+        if self.shares.exists():
+            return AccessPermissionTypes.TEMPORARILY_ALLOWED
+        return AccessPermissionTypes.NOT_ALLOWED
+
+    def is_shareable(self) -> AccessPermissionTypes:
+        """Checks if the user can share the secret."""
+        read_permission = self.is_readable()
+
+        # Only users with permanent read access can share
+        if read_permission == AccessPermissionTypes.ALLOWED:
+            return AccessPermissionTypes.ALLOWED
+        # NOTE this originally didn't check ALLOW_SUPERUSER_READS. On purpose?
+        if self._superuser_override():
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+
+        return AccessPermissionTypes.NOT_ALLOWED
+
+    def is_visible(self) -> AccessPermissionTypes:
+        """Checks if the secret is visible to the user in lists."""
+        status = self.meta.status if self.meta else self.secret.status
+        if status == SecretStatus.DELETED:
+            return AccessPermissionTypes.NOT_ALLOWED
+
+        if self.is_discoverable() or self.is_readable():
+            return AccessPermissionTypes.ALLOWED
+
+        return AccessPermissionTypes.NOT_ALLOWED
