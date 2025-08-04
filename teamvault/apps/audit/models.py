@@ -49,7 +49,7 @@ class LogEntry(models.Model):
     message = models.TextField()
     reason = models.TextField(
         blank=True,
-        null=True,
+        default='',
     )
     secret = models.ForeignKey(
         'secrets.Secret',

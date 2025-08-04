@@ -91,7 +91,7 @@ def log_secret_read(
 class HashIDModel(models.Model):
     hashid = models.CharField(
         max_length=24,
-        null=True,
+        default='',
         unique=True,
     )
 
@@ -141,13 +141,13 @@ class Secret(HashIDModel):
     )
     description = models.TextField(
         blank=True,
-        null=True,
+        default='',
         help_text=_('Further information on the secret.'),
     )
     filename = models.CharField(
         blank=True,
         max_length=255,
-        null=True,
+        default='',
     )
     last_changed = models.DateTimeField(
         auto_now_add=True,
@@ -178,7 +178,7 @@ class Secret(HashIDModel):
     url = models.CharField(
         blank=True,
         max_length=255,
-        null=True,
+        default='',
         # Django's builtin URL validation is pretty strict to the point
         # of rejecting perfectly good URLs, thus we roll our own very
         # liberal validation
@@ -187,7 +187,7 @@ class Secret(HashIDModel):
     username = models.CharField(
         blank=True,
         max_length=255,
-        null=True,
+        default='',
     )
 
     search_index = SearchVectorField(blank=True, null=True)
@@ -696,10 +696,10 @@ class SecretMetaSnapshot(models.Model):
     set_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secret_meta_snaps')
 
     # metadata
-    description = models.TextField(blank=True, null=True)
-    username = models.CharField(max_length=255, blank=True, null=True)
-    url = models.CharField(max_length=255, blank=True, null=True, validators=[validate_url])
-    filename = models.CharField(max_length=255, blank=True, null=True)
+    description = models.TextField(blank=True, default='')
+    username = models.CharField(max_length=255, blank=True, default='')
+    url = models.CharField(max_length=255, blank=True, default='', validators=[validate_url])
+    filename = models.CharField(max_length=255, blank=True, default='')
 
     # governance
     access_policy = models.PositiveSmallIntegerField(choices=AccessPolicy)
@@ -772,7 +772,7 @@ class SharedSecretData(models.Model):
     group = models.ForeignKey(
         Group,
         on_delete=models.CASCADE,
-        null=True,
+        default='',
         related_name='secret_share_data',
     )
 
@@ -789,7 +789,7 @@ class SharedSecretData(models.Model):
         related_name='share_data',
     )
 
-    grant_description = models.TextField(null=True)
+    grant_description = models.TextField(default='')
 
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
