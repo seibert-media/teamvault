@@ -46,7 +46,7 @@ dependencies = [
 ]
 
 # dynamic = ["version"] - Currently unsupported by uv_build
-version = '0.10.0'  # Also change in teamvault/__version__.py
+version = '0.10.1'  # Also change in teamvault/__version__.py
 
 [dependency-groups]
 dev = [
