@@ -1,14 +1,12 @@
 import binascii
-import warnings
 from base64 import b64decode, b64encode
 from json import JSONDecodeError, dumps, loads
 
-from teamvault.apps.secrets.models import Secret
-
 from cryptography.fernet import Fernet
+from django.conf import settings
 from django.db import migrations
 
-STATIC_TEST_KEY = b"WKGGUS52yN68AtcgOKKKqDzccS3hOy32ShZWKwDWe3Q="
+from teamvault.apps.secrets.models import Secret
 
 
 class LegacyJsonButNotBase64(Exception):
@@ -20,11 +18,11 @@ def migrate_file_secrets_to_new_save_method(apps, schema_editor):
     #   v1. encrypted_data is the file content f.encrypt(file_content) (0.9.2)
     #   v2. json object with .decode() 'file_content' (1.0.0 rc7)
     #   v3. json object with b64 encoded 'file_content' (1.0.0 rc8)
-    HistoricalSecretModel = apps.get_model('secrets', 'Secret')
-    file_secrets = HistoricalSecretModel.objects.filter(content_type=Secret.CONTENT_FILE)
-    f = Fernet(STATIC_TEST_KEY)
-    for secret in file_secrets:
-        revision = secret.current_revision
+    HistoricalSecretRevisionModel = apps.get_model('secrets', 'SecretRevision')
+    revisions = HistoricalSecretRevisionModel.objects.filter(secret__content_type=Secret.CONTENT_FILE)
+    f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+
+    for revision in revisions:
         decrypted_data = f.decrypt(revision.encrypted_data)
         try:
             payload = loads(decrypted_data)  # doesn't need decode, works on bytes
