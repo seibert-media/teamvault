@@ -258,11 +258,12 @@ class Secret(HashIDModel):
         return plaintext_data
 
     def get_otp(self, request):
-        if request.session.get("otp_key_data"):
-            data = request.session["otp_key_data"]
+        cached_otp_session_key = f'otp_key_data-{self.hashid}-{self.current_revision_id}'
+        if request.session.get(cached_otp_session_key):
+            data = request.session[cached_otp_session_key]
         else:
             data = self.get_data(request.user)
-            request.session["otp_key_data"] = {'otp_key': data['otp_key'], 'digits': int(data.get('digits', 6))}
+            request.session[cached_otp_session_key] = {'otp_key': data['otp_key'], 'digits': int(data.get('digits', 6))}
         otp_key = data['otp_key']
         digits = int(data.get('digits', 6))
         totp = TOTP(otp_key, digits=digits)
@@ -652,8 +653,7 @@ class SharedSecretData(models.Model):
         if not self.granted_until:
             return False
 
-        if now() + timedelta(hours=8) >= self.granted_until:
-            return True
+        return now() + timedelta(hours=8) >= self.granted_until
 
     @property
     def expiry_icon(self):
