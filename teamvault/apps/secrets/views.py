@@ -18,7 +18,7 @@ from django_htmx.http import trigger_client_event
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
-from .models import AccessPermissionTypes, Secret, SharedSecretData
+from .models import AccessPermissionTypes, Secret, SecretShareQuerySet, SharedSecretData
 from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
@@ -386,7 +386,7 @@ class SecretShareList(CreateView):
             self.queryset = self.get_queryset().with_expiry_state()
         return self.queryset.users()
 
-    def get_queryset(self):
+    def get_queryset(self) -> SecretShareQuerySet:
         return SharedSecretData.objects.filter(
             secret__hashid=self.kwargs[self.slug_url_kwarg]
         ).prefetch_related('secret', 'user', 'group')
@@ -406,6 +406,7 @@ class SecretShareList(CreateView):
 
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
+        user_can_read_initial = secret.is_readable_by_user(self.request.user)
         permission = secret.is_shareable_by_user(self.request.user)
         if not permission:
             raise PermissionDenied()
@@ -434,7 +435,10 @@ class SecretShareList(CreateView):
             }
         })
         response = self.render_to_response(context=context)
-        trigger_client_event(response, 'refreshMetadata')
+        if user_can_read_initial != secret.is_readable_by_user(self.request.user):
+            response.headers['HX-Refresh'] = "true"
+        else:
+            trigger_client_event(response, 'refreshMetadata')
         return response
 
     def get_form_class(self):
@@ -457,6 +461,7 @@ secret_share_list = login_required(SecretShareList.as_view())
 @require_http_methods(['DELETE'])
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
+    user_can_read_initial = share_data.secret.is_readable_by_user(request.user)
     permission = share_data.secret.is_shareable_by_user(request.user)
     if not permission:
         raise PermissionDenied()
@@ -488,8 +493,11 @@ def secret_share_delete(request, hashid, share_id):
         secret=secret,
     )
     response = HttpResponse(status=200)
-    trigger_client_event(response, 'refreshMetadata')
-    trigger_client_event(response, 'refreshShareData')
+    if user_can_read_initial != secret.is_readable_by_user(request.user):
+        response.headers['HX-Refresh'] = "true"
+    else:
+        trigger_client_event(response, 'refreshMetadata')
+        trigger_client_event(response, 'refreshShareData')
     return response
 
 

@@ -67,6 +67,8 @@ class HashIDModel(models.Model):
 
 
 class Secret(HashIDModel):
+    share_data: 'SecretShareQuerySet'
+
     HASHID_NAMESPACE = "Secret"
 
     ACCESS_POLICY_DISCOVERABLE = 1
