@@ -26,6 +26,10 @@ def migrate_file_secrets_to_new_save_method(apps, schema_editor):
         decrypted_data = f.decrypt(revision.encrypted_data)
         try:
             payload = loads(decrypted_data)  # doesn't need decode, works on bytes
+            if isinstance(payload, list):
+                # JSON can also be a list, where .get will not work
+                raise LegacyJsonButNotBase64
+
             content = payload.get("file_content")
             if isinstance(content, str):
                 # content is textual; decide whether it’s already B64
