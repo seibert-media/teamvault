@@ -5,6 +5,8 @@
     "@fontsource/poppins": "^5.0.14",
     "@fortawesome/fontawesome-free": "^6.6.0",
     "@popperjs/core": "^2.11.8",
+    "@rsbuild/core": "^1.4.15",
+    "@rsbuild/plugin-sass": "^1.3.5",
     "@tarekraafat/autocomplete.js": "^10.2.7",
     "@zxcvbn-ts/core": "^3.0.4",
     "@zxcvbn-ts/language-common": "^3.0.4",
@@ -13,7 +15,6 @@
     "bootstrap": "^5.3.3",
     "card": "^2.5.4",
     "clipboard": "^2.0.11",
-    "core-js": "^3.38.0",
     "dompurify": "^3.1.6",
     "esbuild": "^0.25.8",
     "htmx.org": "^1.9.12",
@@ -25,21 +26,16 @@
     "select2-bootstrap-5-theme": "^1.3.0"
   },
   "devDependencies": {
-    "@babel/core": "^7.25.2",
-    "@babel/preset-env": "^7.25.3",
-    "@babel/preset-typescript": "^7.27.1",
+    "@rspack/cli": "^1.4.11",
+    "@rspack/core": "^1.4.11",
     "@webpack-cli/generators": "^3.0.7",
-    "babel-loader": "^9.1.3",
     "css-loader": "^6.11.0",
-    "mini-css-extract-plugin": "^2.9.0",
-    "sass-embedded": "^1.86.0",
+    "sass-embedded": "^1.90.0",
     "sass-loader": "^16.0.5",
     "style-loader": "^3.3.4",
-    "webpack": "^5.93.0",
     "webpack-bundle-tracker": "^3.1.0",
-    "webpack-cli": "^5.1.4",
-    "webpack-dev-server": "^5.0.4",
-    "webpack-merge": "^6.0.1"
+    "webpack-merge": "^6.0.1",
+    "@types/node": "^24.2.1"
   },
   "packageChangelogComments": {
     "@eonasdan/tempus-dominus": "https://github.com/Eonasdan/tempus-dominus/releases",
@@ -54,7 +50,6 @@
     "bootstrap": "https://github.com/twbs/bootstrap/releases",
     "card": "https://github.com/jessepollak/card/releases",
     "clipboard": "https://github.com/zenorocha/clipboard.js/releases",
-    "core-js": "https://github.com/zloirock/core-js/blob/master/CHANGELOG.md",
     "dompurify": "https://github.com/cure53/DOMPurify/releases",
     "esbuild": "https://github.com/evanw/esbuild/blob/main/CHANGELOG.md",
     "htmx.org": "https://github.com/bigskysoftware/htmx/blob/master/CHANGELOG.md",
@@ -68,7 +63,6 @@
     "@webpack-cli/generators": "https://github.com/webpack/webpack-cli/blob/master/CHANGELOG.md",
     "babel-loader": "https://github.com/babel/babel-loader/blob/main/CHANGELOG.md",
     "css-loader": "https://github.com/webpack-contrib/css-loader/blob/master/CHANGELOG.md",
-    "mini-css-extract-plugin": "https://github.com/webpack-contrib/mini-css-extract-plugin/blob/master/CHANGELOG.md",
     "sass(-embedded)": "https://github.com/sass/dart-sass/blob/main/CHANGELOG.md",
     "sass-loader": "https://github.com/webpack-contrib/sass-loader/blob/master/CHANGELOG.md",
     "style-loader": "https://github.com/webpack-contrib/style-loader/blob/master/CHANGELOG.md",
@@ -81,11 +75,11 @@
   "version": "1.0.0",
   "description": "Teamvault",
   "scripts": {
-    "build": "webpack --config webpack.prod.js",
-    "serve": "webpack serve --config webpack.dev.js"
+    "build": "rsbuild build",
+    "serve": "rsbuild dev --open",
+    "preview": "rsbuild preview"
   },
   "trustedDependencies": [
-    "core-js",
     "esbuild"
   ]
 }
