@@ -573,7 +573,6 @@ def secret_search(request):
 
 @login_required
 @require_http_methods(["GET"])
-@transaction.non_atomic_requests
 def secret_revisions(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
     secret.check_read_access(request.user)
