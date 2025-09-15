@@ -94,7 +94,8 @@ class SecretAdd(CreateView):
         RevisionService.save_payload(
             secret=secret,
             actor=self.request.user,
-            payload=plaintext_data
+            payload=plaintext_data,
+            skip_acl=True,
         )
 
         # Create share objects
