@@ -9,6 +9,7 @@ class AuditLogCategoryChoices(TextChoices):
     SECRET_ELEVATED_SUPERUSER_READ = 'secret_elevated_superuser_read', _('secret_elevated_superuser_read')
     SECRET_PERMISSION_VIOLATION = 'secret_permission_violation', _('secret_permission_violation')
     SECRET_CHANGED = 'secret_changed', _('secret_changed')
+    SECRET_METADATA_CHANGED = 'secret_metadata_changed', _('secret_metadata_changed')
     SECRET_RESTORED = 'secret_restored', _('secret_restored')
     SECRET_NEEDS_CHANGING_REMINDER = 'secret_needs_changing_reminder', _('secret_needs_changing_reminder')
     SECRET_SHARED = 'secret_shared', _('secret_shared')
