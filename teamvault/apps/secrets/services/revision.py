@@ -63,6 +63,9 @@ class RevisionService:
 
         # 1. Build (or fetch) the revision representing _payload_
         revision = cls._build_revision(secret=secret, actor=actor, payload=payload)
+        payload_changed = revision.plaintext_data_sha256 != (
+            secret.current_revision.plaintext_data_sha256 if secret.current_revision_id else None
+        )
 
         # 2. Update Secret pointers/flags
         previous_id = secret.current_revision_id or 'none'
@@ -73,20 +76,22 @@ class RevisionService:
         secret.save(update_fields=['current_revision', 'last_changed', 'last_read', 'status'])
 
         # 3. Ensure we have an up‑to‑date metadata snapshot
-        baseline_missing = not SecretMetaSnapshot.objects.filter(secret=secret).exists()
+        baseline_missing = not SecretMetaSnapshot.objects.filter(revision__secret=secret).exists()
         if baseline_missing or meta_changed(secret):
             cls.snapshot(secret=secret, actor=actor, revision=revision)
 
         # 4. Audit log
+        log_category = AuditLogCategoryChoices.SECRET_CHANGED if payload_changed else AuditLogCategoryChoices.SECRET_METADATA_CHANGED
         log(
-            _("{user} set a new secret for '{name}' ({oldrev}->{newrev})").format(
+            _("{user} set a new {type} for '{name}' ({oldrev}->{newrev})").format(
                 user=actor.username,
                 name=secret.name,
+                type='secret' if payload_changed else 'metadata',
                 oldrev=previous_id,
                 newrev=revision.id,
             ),
             actor=actor,
-            category=AuditLogCategoryChoices.SECRET_CHANGED,
+            category=log_category,
             level='info',
             secret=secret,
             secret_revision=revision,
@@ -109,7 +114,6 @@ class RevisionService:
             raise ValueError('Secret has no current revision to snapshot')
 
         snap = SecretMetaSnapshot.objects.create(
-            secret=secret,
             revision=revision,
             set_by=actor,
             **copy_meta_from_secret(secret),

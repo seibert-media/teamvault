@@ -450,7 +450,7 @@ class SecretRevision(HashIDModel):
         models.PROTECT,
         related_name='password_revisions_set',
     )
-    last_read = models.DateTimeField(auto_now=True)
+    last_read = models.DateTimeField(blank=True, null=True)
 
     class Meta:
         ordering = ('-created',)
@@ -523,10 +523,6 @@ class SecretRevision(HashIDModel):
                 'set_by': set_by,
             },
         )
-
-        if not revision.latest_meta.name:
-            # Hashid exists only _after_ the first save.
-            revision.latest_meta.name = f'{secret.name} - {revision.hashid}'
 
         # save the length before encoding so multi-byte characters don't
         # mess up the result
@@ -608,7 +604,6 @@ class SecretRevision(HashIDModel):
             },
         )
 
-        new_rev.name = f'{secret.name} - {new_rev.hashid}'
         new_rev.save()
 
         raw = dumps(
@@ -627,7 +622,6 @@ class SecretRevision(HashIDModel):
         # otherwise create a fresh one for this actor
         if snap is None:
             snap = SecretMetaSnapshot.objects.create(
-                secret=secret,
                 revision=new_rev,
                 meta_sha256=wanted_hash,
                **snapshot_kwargs,
@@ -688,13 +682,6 @@ class SecretMetaSnapshot(models.Model):
     """
     Immutable copy of a Secret’s metadata
     """
-    secret = models.ForeignKey(
-        Secret,
-        on_delete=models.CASCADE,
-        related_name='meta_snaps',
-        # null=True,
-        # blank=True,
-    )
     revision = models.ForeignKey(
         'SecretRevision',
         on_delete=models.CASCADE,
@@ -868,18 +855,6 @@ class SharedSecretData(models.Model):
             ),
         ]
         unique_together = [('group', 'secret'), ('user', 'secret')]
-
-
-class SharedSecretDataQuerySet(models.QuerySet):
-    def for_user(self, user: User):
-        """Return non‑expired shares that apply to the user
-        (direct or via group)."""
-        return (
-            self.with_expiry_state()
-                .filter(Q(user=user) | Q(group__user=user))
-                .exclude(is_expired=True)
-        )
-
 
 
 
