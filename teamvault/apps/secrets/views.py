@@ -621,6 +621,7 @@ def secret_revision_detail(request, revision_hashid):
     # Apply the snapshot to a copy of the revision/secret so DB rows stay unmodified
     if meta:
         revision = copy(revision)
+        revision.secret = copy(revision.secret)
         apply_meta_to_secret(revision.secret, meta)
     else:
         meta = revision.secret
@@ -660,7 +661,7 @@ def secret_revision_download(request, revision_hashid):
         raise Http404
 
     file_bytes = revision.get_data(request.user)  # returns raw bytes for FILE type
-    filename = revision.filename or revision.secret.filename or revision.secret.name
+    filename = revision.latest_meta.filename or revision.secret.filename or revision.secret.name
 
     response = HttpResponse(file_bytes, content_type="application/octet-stream")
     response["Content-Disposition"] = (
