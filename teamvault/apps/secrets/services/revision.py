@@ -113,10 +113,12 @@ class RevisionService:
         if revision is None:
             raise ValueError('Secret has no current revision to snapshot')
 
-        snap = SecretMetaSnapshot.objects.create(
+        raw = dumps(copy_meta_from_secret(secret), sort_keys=True, default=str)
+        meta_sha256 = sha256(raw.encode()).hexdigest()
+        snap, _ = SecretMetaSnapshot.objects.get_or_create(
             revision=revision,
-            set_by=actor,
-            **copy_meta_from_secret(secret),
+            meta_sha256=meta_sha256,
+            defaults={'set_by': actor, **copy_meta_from_secret(secret)},
         )
         return snap
 
