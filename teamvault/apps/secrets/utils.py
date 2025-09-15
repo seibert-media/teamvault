@@ -8,8 +8,13 @@ from teamvault.apps.secrets.enums import ContentType
 
 
 META_FIELDS = (
-    "description", "username", "url", "filename",
-    "access_policy", "needs_changing_on_leave", "status",
+    'description',
+    'username',
+    'url',
+    'filename',
+    'access_policy',
+    'needs_changing_on_leave',
+    'status',
 )
 
 
@@ -29,15 +34,15 @@ def meta_changed(secret: "Secret") -> bool:
     return any(getattr(secret, f) != getattr(cur, f) for f in META_FIELDS)
 
 
-def copy_meta_from_secret(secret: "Secret") -> dict:
+def copy_meta_from_secret(secret: 'Secret'| 'SecretMetaSnapshot') -> dict:
     return {
-        "description": secret.description,
-        "username": secret.username,
-        "url": secret.url,
-        "filename": secret.filename,
-        "access_policy": secret.access_policy,
-        "needs_changing_on_leave": secret.needs_changing_on_leave,
-        "status": secret.status,
+        'description': secret.description,
+        'username': secret.username,
+        'url': secret.url,
+        'filename': secret.filename,
+        'access_policy': int(secret.access_policy),
+        'needs_changing_on_leave': secret.needs_changing_on_leave,
+        'status': int(secret.status),
     }
 
 

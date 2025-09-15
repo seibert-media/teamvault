@@ -568,26 +568,11 @@ class SecretRevision(HashIDModel):
                     )
                 )
 
-        if meta_snapshot is not None:
-            snap_src = meta_snapshot
-        else:
-            snap_src = old_revision.latest_meta
+        snap_src = meta_snapshot if meta_snapshot is not None else old_revision.latest_meta
 
         if snap_src is None:
             # legacy fallback: reconstruct from the Secret itself
-            snapshot_kwargs = copy_meta_from_secret(secret)
-            snapshot_kwargs['set_by'] = set_by
-        else:
-            snapshot_kwargs = {
-                'description': snap_src.description,
-                'username': snap_src.username,
-                'url': snap_src.url,
-                'filename': snap_src.filename,
-                'access_policy': snap_src.access_policy,
-                'needs_changing_on_leave': snap_src.needs_changing_on_leave,
-                'status': snap_src.status,
-                'set_by': set_by,
-            }
+            snap_src = secret
 
         new_rev, created = cls.objects.get_or_create(
             secret=secret,
@@ -603,7 +588,7 @@ class SecretRevision(HashIDModel):
         new_rev.save()
 
         raw = dumps(
-            {k: snapshot_kwargs[k] for k in snapshot_kwargs},
+            copy_meta_from_secret(snap_src),
             sort_keys=True,
             default=str,
         )
@@ -619,8 +604,9 @@ class SecretRevision(HashIDModel):
         if snap is None:
             snap = SecretMetaSnapshot.objects.create(
                 revision=new_rev,
+                set_by=set_by,
                 meta_sha256=wanted_hash,
-               **snapshot_kwargs,
+               **copy_meta_from_secret(snap_src),
             )
 
         new_rev.accessed_by.add(set_by)
@@ -721,16 +707,7 @@ class SecretMetaSnapshot(models.Model):
     def save(self, *args, **kwargs):
         # Compute hash over the _meaningful_ payload (excluding PK/timestamps)
         raw = dumps(
-            {
-                'description': self.description,
-                'username': self.username,
-                'url': self.url,
-                'filename': self.filename,
-                'access_policy': self.access_policy,
-                'needs_changing_on_leave': self.needs_changing_on_leave,
-                'status': self.status,
-                'set_by': self.set_by,
-            },
+            copy_meta_from_secret(self),
             sort_keys=True,
             default=str,
         )
