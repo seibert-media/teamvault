@@ -315,6 +315,8 @@ class SecretDetail(DetailView):
         context = super(SecretDetail, self).get_context_data(**kwargs)
         secret = self.get_object()
         permissions = secret.permission_checker(self.request.user)
+        context['SecretStatus'] = SecretStatus
+        context['ContentType'] = ContentType
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['secret_revision'] = secret.current_revision
         context['readable'] = permissions.is_readable()
@@ -370,6 +372,8 @@ class SecretList(ListView, FilterMixin):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['SecretStatus'] = SecretStatus
+        context['ContentType'] = ContentType
         context['filter'] = self._bound_filter
         context['readable_secrets'] = Secret.get_all_readable_by_user(self.request.user)
         return context
