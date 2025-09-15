@@ -10,7 +10,7 @@ from django.conf import settings
 from django.contrib.auth.models import Group, User
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
-from django.db import models, transaction
+from django.db import models
 from django.db.models import BooleanField, Case, Max, Q, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
@@ -23,7 +23,7 @@ from pyotp import TOTP
 import typing as t
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
-from teamvault.apps.secrets.utils import copy_meta_from_secret, meta_changed
+from teamvault.apps.secrets.utils import copy_meta_from_secret
 
 from .exceptions import PermissionError
 from ..audit.auditlog import log
@@ -248,6 +248,7 @@ class Secret(HashIDModel):
             user=user,
         )
         self.current_revision.accessed_by.add(user)
+        self.current_revision.last_read = now()
         self.current_revision.save()
         self.last_read = now()
         self.save()
@@ -303,12 +304,7 @@ class Secret(HashIDModel):
         if user.is_superuser:
             return queryset
 
-        allowed_shares = (
-            SharedSecretData.objects.with_expiry_state()
-            .filter(Q(user=user) | Q(group__user=user))
-            .exclude(is_expired=True)
-            .values('secret__pk')
-        )
+        allowed_shares = SharedSecretData.objects.for_user(user).values('secret__pk')
         return (
             queryset.filter(
                 Q(
