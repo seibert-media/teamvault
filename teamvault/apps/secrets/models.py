@@ -520,23 +520,23 @@ class SecretRevision(HashIDModel):
             },
         )
 
-        # save the length before encoding so multi-byte characters don't
-        # mess up the result
-        revision.length = (
-            len(plaintext_data['password'])
-            if content_type == ContentType.PASSWORD and 'password' in plaintext_data
-            else len(plaintext_data)
-        )
-        revision.encrypted_data = fernet.encrypt(dumps(plaintext_data).encode())
-
         if created:
+            # save the length before encoding so multi-byte characters don't
+            # mess up the result
+            revision.length = (
+                len(plaintext_data['password'])
+                if content_type == ContentType.PASSWORD and 'password' in plaintext_data
+                else len(plaintext_data)
+            )
+            revision.encrypted_data = fernet.encrypt(dumps(plaintext_data).encode())
+
             for f in (
                 "description", "username", "url", "filename",
                 "access_policy", "needs_changing_on_leave", "status",
             ):
                 setattr(revision, f, getattr(secret, f))
 
-        revision.save()
+            revision.save()
         revision.accessed_by.add(set_by)
 
         return revision
