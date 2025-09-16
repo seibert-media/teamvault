@@ -55,12 +55,12 @@ class RestoreRevisionTests(TestCase):
             return (
                 reverse(
                     RESTORE_URL_NAME,
-                    args=(secret.id, revision.id),
+                    args=(secret.hashid, revision.hashid),
                 )
                 + '?'
                 + urlencode({'meta_snap': meta_snap.id})
             )
-        return reverse(RESTORE_URL_NAME, args=(secret.id, revision.id))
+        return reverse(RESTORE_URL_NAME, args=(secret.hashid, revision.hashid))
 
     def test_superuser_can_restore_payload(self):
         """Superuser rolls back to rev1 – new revision becomes current."""

@@ -54,7 +54,7 @@ urlpatterns = (
         name="secrets.revision-download",
     ),
     path(
-        '<int:secret_id>/revisions/<int:revision_id>/restore/',
+        '<str:secret_hashid>/revisions/<str:revision_hashid>/restore/',
         views.restore_secret_revision,
         name='restore_secret_revision'
     ),
