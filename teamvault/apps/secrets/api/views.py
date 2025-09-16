@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
+from teamvault.apps.secrets.services.revision import RevisionService
 from .serializers import SecretDetailSerializer, SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
 from ..models import AccessPermissionTypes, Secret, SecretRevision, SharedSecretData
 from ..utils import generate_password
@@ -36,7 +37,11 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         instance = serializer.save()
         if hasattr(instance, '_data'):
-            instance.set_data(self.request.user, instance._data)
+            RevisionService.save_payload(
+                secret=instance,
+                actor=self.request.user,
+                payload=instance._data
+            )
             del instance._data
 
 
@@ -56,7 +61,12 @@ class SecretList(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
         if hasattr(instance, '_data'):
-            instance.set_data(self.request.user, instance._data, skip_access_check=True)
+            RevisionService.save_payload(
+                secret=instance,
+                actor=self.request.user,
+                payload=instance._data,
+                skip_acl=True,
+            )
             del instance._data
 
 
@@ -151,7 +161,7 @@ class SecretShareDetail(generics.RetrieveDestroyAPIView):
 def data_get(request, hashid):
     secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
     secret_revision.secret.check_read_access(request.user)
-    data = secret_revision.secret.get_data(request.user)
+    data = secret_revision.get_data(request.user)
     if secret_revision.secret.content_type == ContentType.PASSWORD:
         return Response({'password': data["password"]})
     elif secret_revision.secret.content_type == ContentType.FILE:
