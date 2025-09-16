@@ -22,8 +22,9 @@ GENERIC_FIELDS_FOOTER = [
 
 
 class SecretForm(forms.ModelForm):
-    access_policy = forms.ChoiceField(
-        choices=AccessPolicy,
+    access_policy = forms.TypedChoiceField(
+        choices=AccessPolicy.choices,
+        coerce=int,
         initial=AccessPolicy.DISCOVERABLE,
         widget=RadioSelect(),
     )
