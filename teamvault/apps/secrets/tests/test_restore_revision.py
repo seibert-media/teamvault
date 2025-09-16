@@ -4,7 +4,7 @@ from urllib.parse import urlencode
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from teamvault.apps.secrets.enums import AccessPolicy
+from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     SecretMetaSnapshot,
@@ -86,6 +86,15 @@ class RestoreRevisionTests(TestCase):
 
         self.secret.refresh_from_db()
         self.assertEqual(self.secret.description, self.meta_snap.description)
+        # if snapshot said NEEDS_CHANGING, restored secret must be NEEDS_CHANGING
+        self.meta_snap.status = SecretStatus.NEEDS_CHANGING
+        self.meta_snap.save(update_fields=['status'])
+        resp = self.client.post(self._restore_url(self.secret, self.rev2, self.meta_snap))
+        self.assertEqual(resp.status_code, 302)
+        self.secret.refresh_from_db()
+        self.assertEqual(self.secret.status, 2)
+        self.assertIsNotNone(self.secret.current_revision.restored_from)
+        self.assertEqual(self.secret.current_revision.restored_from_id, self.rev2.id)
 
     def test_regular_user_cannot_restore(self):
         self._login(self.bob)
@@ -103,3 +112,11 @@ class RestoreRevisionTests(TestCase):
         # current revision unchanged
         self.secret.refresh_from_db()
         self.assertEqual(self.secret.current_revision, self.rev2)  # still latest
+
+    def test_history_marks_needs_changing(self):
+        # mark latest snapshot as NEEDS_CHANGING
+        snap = self.meta_snap
+        snap.status = 2
+        snap.save(update_fields=['status'])
+        rows = RevisionService.get_revision_history(self.secret, self.owner)
+        self.assertTrue(any(r.needs_changing for r in rows))

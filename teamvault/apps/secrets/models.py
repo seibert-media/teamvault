@@ -447,6 +447,13 @@ class SecretRevision(HashIDModel):
         related_name='password_revisions_set',
     )
     last_read = models.DateTimeField(blank=True, null=True)
+    restored_from = models.ForeignKey(
+        'self',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='restored_children',
+    )
 
     class Meta:
         ordering = ('-created',)
