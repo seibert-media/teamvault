@@ -536,13 +536,6 @@ class SecretRevision(HashIDModel):
                 else len(plaintext_data)
             )
             revision.encrypted_data = fernet.encrypt(dumps(plaintext_data).encode())
-
-            for f in (
-                "description", "username", "url", "filename",
-                "access_policy", "needs_changing_on_leave", "status",
-            ):
-                setattr(revision, f, getattr(secret, f))
-
             revision.save()
         revision.accessed_by.add(set_by)
 

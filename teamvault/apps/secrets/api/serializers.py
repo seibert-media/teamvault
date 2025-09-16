@@ -11,7 +11,7 @@ from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTyp
 from ..models import Secret, SecretRevision, SharedSecretData
 
 
-class ContentType(models.TextChoices):
+class ContentTypeStr(models.TextChoices):
     PASSWORD = 'password', _('Password')
     CC = 'cc', _('Credit Card')
     FILE = 'file', _('File')
@@ -70,12 +70,12 @@ def serialize_file(secret_data):
     }
 
 
-def _extract_data(secret_data, content_type: ContentType | int):
-    if content_type in [ContentType.PASSWORD, ContentType.PASSWORD]:
+def _extract_data(secret_data, content_type: ContentTypeStr | int):
+    if content_type in [ContentTypeStr.PASSWORD, ContentTypeEnum.PASSWORD]:
         data = serialize_password(secret_data)
-    elif content_type in [ContentType.CC, ContentType.CC]:
+    elif content_type in [ContentTypeStr.CC, ContentTypeEnum.CC]:
         data = serialize_cc(secret_data)
-    elif content_type in [ContentType.FILE, ContentType.FILE]:
+    elif content_type in [ContentTypeStr.FILE, ContentTypeEnum.FILE]:
         data = serialize_file(secret_data)
     else:
         raise ValidationError(
@@ -128,7 +128,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         view_name='api.secret_detail',
     )
     content_type = serializers.ChoiceField(
-        choices=ContentType.choices,
+        choices=ContentTypeStr.choices,
         required=True
     )
     created_by = serializers.SlugRelatedField(
@@ -238,7 +238,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
 class SecretDetailSerializer(SecretSerializer):
     content_type = serializers.ChoiceField(
-        choices=ContentType.choices,
+        choices=ContentTypeStr.choices,
         required=False,  # content_type is unchangeable after a secret has been created
     )
     name = serializers.CharField(
