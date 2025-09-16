@@ -165,7 +165,7 @@ class SecretEdit(UpdateView):
         secret.save()
         plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
 
-        if plaintext_data is None: # Only metadata changed
+        if not plaintext_data: # Only metadata changed
             # Re-use the existing encrypted data to create a new revision
             if form.changed_data and secret.current_revision:
                 current_data = secret.current_revision.get_data(self.request.user)
@@ -619,9 +619,10 @@ def secret_revision_detail(request, revision_hashid):
 
     # Apply the snapshot to a copy of the revision/secret so DB rows stay unmodified
     if meta:
-        revision = copy(revision)
-        revision.secret = copy(revision.secret)
-        apply_meta_to_secret(revision.secret, meta)
+        revision_copy = copy(revision)
+        revision_copy.secret = copy(revision.secret)
+        apply_meta_to_secret(revision_copy.secret, meta)
+        revision = revision_copy
     else:
         meta = revision.secret
 
@@ -672,12 +673,12 @@ def secret_revision_download(request, revision_hashid):
 @login_required
 @user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["POST"])
-def restore_secret_revision(request, secret_id, revision_id):
+def restore_secret_revision(request, secret_hashid, revision_hashid):
     """Restores a specific revision of a secret by creating a new revision
     with the same data and setting it as the current revision.
     """
-    secret = get_object_or_404(Secret, pk=secret_id)
-    revision_to_restore = get_object_or_404(SecretRevision, pk=revision_id, secret=secret)
+    secret = get_object_or_404(Secret, hashid=secret_hashid)
+    revision_to_restore = get_object_or_404(SecretRevision, hashid=revision_hashid, secret=secret)
 
     snap_id = request.GET.get("meta_snap")
     meta_snap = None
