@@ -652,6 +652,32 @@ class SecretRevision(HashIDModel):
 
         return plaintext_data
 
+    def peek_data(self, user):
+        """Accesses the secret data without logging a read.
+        Used for creating revisions without cluttering the logs.
+        """
+        readable = self.permission_checker(user).is_readable()
+        if not readable:
+            raise PermissionError(
+                _("{user} not allowed to peek '{name}' ({id})").format(
+                    user=user,
+                    name=self.secret.name,
+                    id=self.secret.id,
+                )
+            )
+
+        f = Fernet(settings.TEAMVAULT_SECRET_KEY)
+        s = f.decrypt(self.encrypted_data).decode('utf-8')
+        try:
+            data = loads(s)
+            if self.secret.content_type == ContentType.FILE:
+                return base64.b64decode(data['file_content'])
+            return data
+        except JSONDecodeError:
+            if self.secret.content_type == ContentType.PASSWORD:
+                return {'password': s}
+        return s
+
     def __repr__(self):
         return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
 
