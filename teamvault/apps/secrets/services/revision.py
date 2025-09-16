@@ -34,6 +34,8 @@ class HistoryEntry:
     link: str
     current: bool
     snapshot: SecretMetaSnapshot | None
+    needs_changing: bool = False
+    restored_from: str | None = None
 
 
 class RevisionService:
@@ -149,11 +151,18 @@ class RevisionService:
             meta_snapshot=meta_snap,
             skip_access_check=True,
         )
+        if new_rev.restored_from is None:
+            new_rev.restored_from = old_revision
+            new_rev.save(update_fields=['restored_from'])
 
         # sync metadata from chosen snapshot (or latest)
         snapshot = meta_snap or new_rev.latest_meta
 
         changed_fields = apply_meta_to_secret(secret, snapshot)
+        if snapshot and snapshot.status == SecretStatus.NEEDS_CHANGING:
+            if 'status' not in changed_fields:
+                changed_fields.append('status')
+            secret.status = SecretStatus.NEEDS_CHANGING
 
         # restored revisions don't have a snapshot yet
         if snapshot is None:
@@ -363,6 +372,17 @@ class RevisionService:
             changes.extend(meta_changes)
             seen_snapshots.add(associated_snap.id)
 
+        snap_for_status = associated_snap or rev.latest_meta
+        needs_changing = bool(snap_for_status and snap_for_status.status == SecretStatus.NEEDS_CHANGING)
+        # If needs_changing but no explicit status diff in this row, add a visible hint
+        if needs_changing and not any(c.get('label') == 'Status' for c in changes):
+            changes.append({'label': 'Status', 'old': '—', 'new': 'NEEDS_CHANGING'})
+
+        # If this revision was created via restore, surface it inline
+        restored_from = getattr(rev, 'restored_from', None)
+        if restored_from:
+            changes.insert(0, {'label': 'Restored from', 'old': '—', 'new': restored_from.hashid})
+
         return HistoryEntry(
             ts=rev.created,
             kind='payload',
@@ -372,6 +392,8 @@ class RevisionService:
             link=reverse('secrets.revision-detail', args=[rev.hashid]),
             current=cls._is_current_payload(rev, secret),
             snapshot=associated_snap,
+            needs_changing=needs_changing,
+            restored_from=restored_from.hashid if restored_from else None,
         )
 
     @classmethod
@@ -396,6 +418,7 @@ class RevisionService:
             ),
             current=cls._is_current_meta(snap, secret),
             snapshot=snap,
+            needs_changing=(snap.status == SecretStatus.NEEDS_CHANGING),
         )
 
     @classmethod
