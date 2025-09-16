@@ -79,8 +79,9 @@ src = ["teamvault"]
 target-version = "py312"
 line-length = 120
 indent-width = 4
+preview = true
 extend-exclude = [
-    "./teamvault/apps/*/migrations"
+    "teamvault/apps/*/migrations"
 ]
 
 [tool.ruff.format]
@@ -104,7 +105,7 @@ select = [
     "ISC",     # flake8-implicit-str-concat
     "PERF",    # perflint
     "PLE",     # pylint errors
-    "PLR0",  # pylint refactor errors
+    "PLR",  # pylint refactor errors
     "PTH",   # flake8-use-pathlib
     "RUF100",  # ruff / unused-noqa
     "SIM",   # flake8-simplify
