@@ -193,7 +193,7 @@ class RevisionService:
 
         # merge missing fields for PASSWORD type
         if content_type == ContentType.PASSWORD and secret.current_revision:
-            prev = secret.current_revision.get_data(actor)
+            prev = secret.current_revision.peek_data(actor)
             payload.setdefault('password', prev.get('password'))
             if 'otp_key' in prev:
                 for fld in ('otp_key', 'digits', 'algorithm'):
@@ -537,8 +537,8 @@ class RevisionService:
 
         # Credit card diff (mask sensitive fields)
         if content_type == ContentType.CC:
-            new_data = new_rev.get_data(user)
-            old_data = prev_rev.get_data(user)
+            new_data = new_rev.peek_data(user)
+            old_data = prev_rev.peek_data(user)
 
             fields = ('holder', 'number', 'expiration_month', 'expiration_year', 'security_code', 'password')
             sensitive_fields = {'number', 'security_code', 'password'}
