@@ -686,10 +686,11 @@ class SecretRevision(HashIDModel):
         return self.secret.current_revision == self
 
 
-class SecretMetaSnapshot(models.Model):
+class SecretMetaSnapshot(HashIDModel):
     """
     Immutable copy of a Secret’s metadata
     """
+    HASHID_NAMESPACE = 'SecretMetaSnapshot'
     revision = models.ForeignKey(
         'SecretRevision',
         on_delete=models.CASCADE,
@@ -703,6 +704,7 @@ class SecretMetaSnapshot(models.Model):
     )
 
     # metadata
+    name = models.CharField(max_length=92)
     description = models.TextField(blank=True, null=True)
     username = models.CharField(max_length=255, blank=True, null=True)
     url = models.CharField(max_length=255, blank=True, null=True, validators=[validate_url])
@@ -713,8 +715,8 @@ class SecretMetaSnapshot(models.Model):
     needs_changing_on_leave = models.BooleanField()
     status = models.PositiveSmallIntegerField(choices=SecretStatus)
 
-    # FIXME why would we want to guard against duplicates?
-    # duplicate guard UNUSED!
+    # Deduplication guard: same revision + identical metadata payload → reuse
+    # the existing snapshot (avoids noise when nothing really changed).
     meta_sha256 = models.CharField(max_length=64, editable=False)
 
     class Meta:

@@ -9,6 +9,7 @@ from teamvault.apps.secrets.enums import ContentType
 
 
 META_FIELDS = (
+    'name',
     'description',
     'username',
     'url',
@@ -47,6 +48,7 @@ def meta_changed(secret: 'Secret') -> bool:
 
 def copy_meta_from_secret(secret: 'Secret | SecretMetaSnapshot') -> dict:
     return {
+        'name': secret.name,
         'description': secret.description,
         'username': secret.username,
         'url': secret.url,
