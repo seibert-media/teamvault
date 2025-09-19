@@ -96,7 +96,7 @@ class RestoreRevisionTests(TestCase):
         self.assertIsNotNone(self.secret.current_revision.restored_from)
         self.assertEqual(self.secret.current_revision.restored_from_id, self.rev2.id)
 
-    def test_regular_user_cannot_restore(self):
+    def test_regular_user_can_restore(self):
         self._login(self.bob)
 
         # give bob read‑access but NOT superuser
@@ -104,14 +104,17 @@ class RestoreRevisionTests(TestCase):
         perm = self.secret.permission_checker(self.bob).is_readable()
         self.assertEqual(perm, AccessPermissionTypes.ALLOWED)
 
+        pre_rev = self.secret.current_revision
         resp = self.client.post(self._restore_url(self.secret, self.rev1))
-        # view responds with redirect back to revision detail (status 302),
-        # NOT with 200
         self.assertEqual(resp.status_code, 302)
 
-        # current revision unchanged
+        # current revision moved to restored payload
         self.secret.refresh_from_db()
-        self.assertEqual(self.secret.current_revision, self.rev2)  # still latest
+        self.assertNotEqual(self.secret.current_revision, pre_rev)
+        self.assertEqual(
+            self.secret.current_revision.plaintext_data_sha256,
+            self.rev1.plaintext_data_sha256,
+        )
 
     def test_history_marks_needs_changing(self):
         # mark latest snapshot as NEEDS_CHANGING

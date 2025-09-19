@@ -7,6 +7,7 @@ from rest_framework import generics
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
+from teamvault.apps.secrets.exceptions import PermissionError as SecretPermissionError
 from rest_framework.response import Response
 
 from teamvault.apps.audit.auditlog import log
@@ -161,7 +162,10 @@ class SecretShareDetail(generics.RetrieveDestroyAPIView):
 def data_get(request, hashid):
     secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
     secret_revision.secret.check_read_access(request.user)
-    data = secret_revision.get_data(request.user)
+    try:
+        data = secret_revision.get_data(request.user)
+    except SecretPermissionError:
+        raise PermissionDenied
     if secret_revision.secret.content_type == ContentType.PASSWORD:
         return Response({'password': data["password"]})
     elif secret_revision.secret.content_type == ContentType.FILE:
