@@ -197,7 +197,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep = super(SecretSerializer, self).to_representation(instance)
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
-        rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
+        rep['data_readable'] = instance.check_read_access(self.context['request'].user)
         rep['hashid'] = instance.hashid
         rep['status'] = SECRET_STATUS_REPR[rep['status']]
         rep['web_url'] = instance.full_url

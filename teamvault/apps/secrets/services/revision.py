@@ -74,7 +74,9 @@ class RevisionService:
         secret.current_revision = revision
         secret.last_changed = now()
         secret.last_read = now()
-        secret.status = SecretStatus.OK if secret.status == SecretStatus.NEEDS_CHANGING else secret.status
+        # Only clear NEEDS_CHANGING when payload actually changes
+        if payload_changed and secret.status == SecretStatus.NEEDS_CHANGING:
+            secret.status = SecretStatus.OK
         secret.save(update_fields=['current_revision', 'last_changed', 'last_read', 'status'])
 
         # 3. Ensure we have an up‑to‑date metadata snapshot
@@ -141,7 +143,8 @@ class RevisionService:
             raise ValueError('Revision does not belong to secret')
 
         chk = secret.permission_checker(actor)
-        if chk.is_readable() != AccessPermissionTypes.SUPERUSER_ALLOWED:
+        # Permit restore to anyone who can edit (same gate as save_payload)
+        if chk.is_readable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User may not restore revisions')
 
         # create or reuse revision w/ identical payload
@@ -229,17 +232,6 @@ class RevisionService:
             )
             revision.encrypted_data = cls._fernet().encrypt(dumps(payload).encode())
             revision.otp_key_set = 'otp_key' in payload
-            # copy current secret meta
-            for fld in (
-                'description',
-                'username',
-                'url',
-                'filename',
-                'access_policy',
-                'needs_changing_on_leave',
-                'status',
-            ):
-                setattr(revision, fld, getattr(secret, fld))
             revision.save()
 
         revision.accessed_by.add(actor)
@@ -290,7 +282,7 @@ class RevisionService:
         # Add restore events
         restores = LogEntry.objects.filter(
             secret=secret, category=AuditLogCategoryChoices.SECRET_RESTORED
-        ).select_related('actor')
+        ).select_related('actor', 'secret_revision')
         for restore in restores:
             events.append(
                 {
@@ -335,18 +327,15 @@ class RevisionService:
                 row = cls._create_restore_history_entry(event, prev_revision, secret)
                 if row:
                     rows.append(row)
-                    # After a restore, update prev_revision to the restored revision
-                    # This ensures the next diff compares against the restored state
-
-                    to_match = re.search(r'create revision (\w+)', event['obj'].message or '')
-                    if to_match:
-                        try:
-                            prev_revision = SecretRevision.objects.get(id=to_match.group(1))
-                            # Also update prev_snapshot to the restored revision's snapshot
-                            if prev_revision.latest_meta:
-                                prev_snapshot = prev_revision.latest_meta
-                        except SecretRevision.DoesNotExist:
-                            pass
+                    # After restore, advance cursor to the restored revision
+                    restored_revision = getattr(event['obj'], 'secret_revision', None)
+                    if restored_revision:
+                        prev_revision = restored_revision
+                        # Prefer the snapshot chosen inside the row (as-of restore)
+                        if getattr(row, 'snapshot', None) is not None:
+                            prev_snapshot = row.snapshot
+                        elif prev_revision.latest_meta:
+                            prev_snapshot = prev_revision.latest_meta
 
         return rows
 
@@ -427,46 +416,31 @@ class RevisionService:
         restore = event['obj']
         changes = []
 
-        # Extract restored revision info from log message
-        message = restore.message or ''
-        from_match = re.search(r'from revision (\w+)', message)
-        to_match = re.search(r'create revision (\w+)', message)
+        # Use the structured FK instead of parsing log text
+        restored_revision = getattr(restore, 'secret_revision', None)
+        if restored_revision:
+            # Payload diff
+            if prev_revision:
+                payload_changes = cls._get_payload_diff(restored_revision, prev_revision, restore.actor)
+                changes.extend(payload_changes)
+            else:
+                changes.append({'label': 'Payload', 'old': '∅', 'new': 'Created'})
 
-        if from_match and to_match:
-            source_rev_id = from_match.group(1)
-            target_rev_id = to_match.group(1)
+            # Metadata diff against previous snapshot, using the snapshot state
+            # as-of the restore time (not any later snapshots on the same revision)
+            restored_snap = (
+                restored_revision.meta_snaps
+                .filter(created__lte=restore.time)
+                .order_by('-created')
+                .first()
+            )
+            if restored_snap and prev_revision and prev_revision.latest_meta:
+                meta_changes = cls._get_meta_diff(restored_snap, prev_revision.latest_meta)
+                changes.extend(meta_changes)
 
-            try:
-                # Get the newly created revision (result of the restore)
-                restored_revision = SecretRevision.objects.get(id=target_rev_id)
-
-                # Get payload changes between previous state and restored state
-                if prev_revision:
-                    payload_changes = cls._get_payload_diff(restored_revision, prev_revision, restore.actor)
-                    changes.extend(payload_changes)
-                else:
-                    changes.append({'label': 'Payload', 'old': '∅', 'new': 'Created'})
-
-                # Get metadata changes
-                restored_snap = cls._find_associated_snapshot(restored_revision, set())
-                if restored_snap and prev_revision and prev_revision.latest_meta:
-                    meta_changes = cls._get_meta_diff(restored_snap, prev_revision.latest_meta)
-                    changes.extend(meta_changes)
-
-                # Add a note about which revision was restored
-                if changes:
-                    changes.insert(0, {'label': _('Source'), 'old': '—', 'new': f'Revision {source_rev_id}'})
-
-                link = reverse('secrets.revision-detail', args=[restored_revision.hashid])
-
-            except SecretRevision.DoesNotExist:
-                # Fallback
-                changes.append(
-                    {'label': _('Restored from'), 'old': '—', 'new': f'Revision {source_rev_id if from_match else "?"}'}
-                )
-                link = secret.get_absolute_url()
+            link = reverse('secrets.revision-detail', args=[restored_revision.hashid])
         else:
-            # Fallback if we can't parse the message
+            # Fallback if the log entry is missing the FK
             changes.append({'label': _('Action'), 'old': '—', 'new': _('Restored to previous version')})
             link = secret.get_absolute_url()
 
@@ -478,7 +452,7 @@ class RevisionService:
             changes=changes,
             link=link,
             current=False,
-            snapshot=None,
+            snapshot=restored_snap if restored_revision else None,
         )
 
     @classmethod
@@ -523,7 +497,16 @@ class RevisionService:
     @classmethod
     def _get_meta_diff(cls, new_obj, prev_obj) -> list[dict]:
         """Compare metadata between two objects and return differences."""
-        fields = ('description', 'username', 'url', 'filename', 'access_policy', 'status', 'needs_changing_on_leave')
+        fields = (
+            'name',
+            'description',
+            'username',
+            'url',
+            'filename',
+            'access_policy',
+            'status',
+            'needs_changing_on_leave',
+        )
 
         diffs = []
         for field in fields:
@@ -560,8 +543,12 @@ class RevisionService:
 
         # Credit card diff (mask sensitive fields)
         if content_type == ContentType.CC:
-            new_data = new_rev.peek_data(user)
-            old_data = prev_rev.peek_data(user)
+            try:
+                new_data = new_rev.peek_data(user)
+                old_data = prev_rev.peek_data(user)
+            except Exception:
+                # Permission or other issue → return masked generic change
+                return [{'label': 'Payload', 'old': '••••', 'new': '••••'}]
 
             fields = ('holder', 'number', 'expiration_month', 'expiration_year', 'security_code', 'password')
             sensitive_fields = {'number', 'security_code', 'password'}

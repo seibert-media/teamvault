@@ -21,6 +21,7 @@ from django_htmx.http import trigger_client_event
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
 from .models import AccessPermissionTypes, Secret, SecretMetaSnapshot, SecretRevision, SecretShareQuerySet, SharedSecretData
+from .exceptions import PermissionError
 from .enums import AccessPolicy, ContentType, SecretStatus
 from .utils import apply_meta_to_secret, serialize_add_edit_data
 from ..accounts.models import UserProfile
@@ -168,7 +169,8 @@ class SecretEdit(UpdateView):
         if not plaintext_data: # Only metadata changed
             # Re-use the existing encrypted data to create a new revision
             if form.changed_data and secret.current_revision:
-                current_data = secret.current_revision.get_data(self.request.user)
+                # Avoid logging a read for internal book-keeping
+                current_data = secret.current_revision.peek_data(self.request.user)
                 RevisionService.save_payload(
                     secret=secret,
                     actor=self.request.user,
@@ -424,7 +426,7 @@ class SecretShareList(CreateView):
 
         context = {
             'secret': secret,
-            'shareable': secret.permission_checker(self.request.user).is_shareable(),
+            'shareable': secret.check_share_access(self.request.user),
             'shares': {
                 'groups': self.group_shares,
                 'users': self.user_shares,
@@ -434,7 +436,7 @@ class SecretShareList(CreateView):
 
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
-        permission = secret.permission_checker(self.request.user).is_shareable()
+        permission = secret.check_share_access(self.request.user)
         if not permission:
             raise PermissionDenied()
 
@@ -462,7 +464,7 @@ class SecretShareList(CreateView):
             }
         })
         response = self.render_to_response(context=context)
-        if user_can_read_initial != secret.is_readable_by_user(self.request.user):
+        if user_can_read_initial != secret.check_read_access(self.request.user):
             response.headers['HX-Refresh'] = "true"
         else:
             trigger_client_event(response, 'refreshMetadata')
@@ -488,7 +490,7 @@ secret_share_list = login_required(SecretShareList.as_view())
 @require_http_methods(['DELETE'])
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
-    permission = share_data.secret.permission_checker(request.user).is_shareable()
+    permission = share_data.secret.check_share_access(request.user)
     if not permission:
         raise PermissionDenied()
 
@@ -519,7 +521,7 @@ def secret_share_delete(request, hashid, share_id):
         secret=secret,
     )
     response = HttpResponse(status=200)
-    if user_can_read_initial != secret.is_readable_by_user(request.user):
+    if user_can_read_initial != secret.check_read_access(request.user):
         response.headers['HX-Refresh'] = "true"
     else:
         trigger_client_event(response, 'refreshMetadata')
@@ -542,7 +544,7 @@ def secret_search(request):
     for secret in filtered_secrets:
         metadata = ''
         icon = "lock-open"
-        if secret.permission_checker(request.user).is_readable():
+        if secret.check_read_access(request.user):
             if secret.content_type == ContentType.PASSWORD:
                 icon = "user"
                 metadata = getattr(secret, 'username')
@@ -606,8 +608,11 @@ def secret_revision_detail(request, revision_hashid):
     # Perform permission check against the parent secret
     revision.secret.check_read_access(request.user)
 
-    # Decrypt the revision's data for display
-    decrypted_data = revision.get_data(request.user)
+    # Decrypt the revision's data for display (handle historical ACL)
+    try:
+        decrypted_data = revision.get_data(request.user)
+    except PermissionError:
+        raise PermissionDenied
 
     # Optionally apply a metadata snapshot
     snap_id = request.GET.get("meta_snap")
@@ -636,9 +641,7 @@ def secret_revision_detail(request, revision_hashid):
         'shown_snapshot': shown_snapshot,
         'meta': meta,
         # TODO also show this to secret owner
-        'restore_allowed':
-            revision.secret.permission_checker(request.user).is_readable()
-            == AccessPermissionTypes.SUPERUSER_ALLOWED,
+        'restore_allowed': revision.secret.check_read_access(request.user),
     }
 
     return render(request, "secrets/secret_revision_detail.html", context)
@@ -660,7 +663,10 @@ def secret_revision_download(request, revision_hashid):
     if revision.secret.content_type != ContentType.FILE:
         raise Http404
 
-    file_bytes = revision.get_data(request.user)  # returns raw bytes for FILE type
+    try:
+        file_bytes = revision.get_data(request.user)  # returns raw bytes for FILE type
+    except PermissionError:
+        raise PermissionDenied
     filename = revision.latest_meta.filename or revision.secret.filename or revision.secret.name
 
     response = HttpResponse(file_bytes, content_type="application/octet-stream")
@@ -671,7 +677,6 @@ def secret_revision_download(request, revision_hashid):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser)
 @require_http_methods(["POST"])
 def restore_secret_revision(request, secret_hashid, revision_hashid):
     """Restores a specific revision of a secret by creating a new revision
