@@ -304,11 +304,11 @@ class RevisionService:
                 link = secret.get_absolute_url()
                 current = True
             else:
-                link = (
-                    reverse('secrets.revision-detail', args=[ch.revision.hashid])
-                    if kind != 'meta' or ch.revision_id == secret.current_revision_id
-                    else reverse('secrets.revision-detail', args=[ch.revision.hashid]) + f'?meta_snap={ch.snapshot.id}'
-                )
+                base_link = reverse('secrets.revision-detail', args=[ch.revision.hashid])
+                if kind == 'meta' and ch.revision_id != secret.current_revision_id:
+                    link = f"{base_link}?meta_snap={ch.snapshot.id}&change={ch.id}"
+                else:
+                    link = f"{base_link}?change={ch.id}"
                 current = (kind != 'meta' and ch.revision_id == secret.current_revision_id)
 
             rows.append(
@@ -322,7 +322,9 @@ class RevisionService:
                     current=current,
                     snapshot=ch.snapshot,
                     needs_changing=(ch.snapshot.status == SecretStatus.NEEDS_CHANGING),
-                    restored_from=None,
+                    restored_from=(
+                        ch.restored_from.revision.hashid if ch.restored_from_id else None
+                    ),
                 )
             )
             prev = ch
