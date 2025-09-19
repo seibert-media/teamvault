@@ -20,7 +20,7 @@ from django_htmx.http import trigger_client_event
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
-from .models import AccessPermissionTypes, Secret, SecretMetaSnapshot, SecretRevision, SecretShareQuerySet, SharedSecretData
+from .models import AccessPermissionTypes, Secret, SecretMetaSnapshot, SecretRevision, SecretShareQuerySet, SharedSecretData, SecretChange
 from .exceptions import PermissionError
 from .enums import AccessPolicy, ContentType, SecretStatus
 from .utils import apply_meta_to_secret, serialize_add_edit_data
@@ -633,6 +633,29 @@ def secret_revision_detail(request, revision_hashid):
 
     shown_snapshot = meta if snap_id else None
 
+    # Determine the specific change (if provided) to contextualize restore info
+    change_id = request.GET.get("change")
+    restore_event = None
+    if change_id:
+        try:
+            ch = SecretChange.objects.select_related('restored_from__revision').get(
+                pk=change_id,
+                secret=revision.secret,
+                revision=revision,
+            )
+            if ch.restored_from_id:
+                restore_event = ch
+        except SecretChange.DoesNotExist:
+            restore_event = None
+    else:
+        restore_event = (
+            SecretChange.objects
+            .select_related('restored_from__revision')
+            .filter(secret=revision.secret, revision=revision, restored_from__isnull=False)
+            .order_by('-created')
+            .first()
+        )
+
     context = {
         'revision': revision,
         'secret': revision.secret,  # Pass the parent secret for breadcrumbs/links
@@ -642,6 +665,7 @@ def secret_revision_detail(request, revision_hashid):
         'meta': meta,
         # TODO also show this to secret owner
         'restore_allowed': revision.secret.check_read_access(request.user),
+        'restore_event': restore_event,
     }
 
     return render(request, "secrets/secret_revision_detail.html", context)
