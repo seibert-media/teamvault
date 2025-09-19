@@ -36,6 +36,7 @@ class HistoryEntry:
     metadata: SecretMeta | None
     needs_changing: bool = False
     restored_from: str | None = None
+    change_id: int | None = None
 
 
 class RevisionService:
@@ -326,6 +327,7 @@ class RevisionService:
                     restored_from=(
                         ch.restored_from.revision.hashid if ch.restored_from_id else None
                     ),
+                    change_id=ch.id,
                 )
             )
             prev = ch
