@@ -17,7 +17,7 @@ from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     Secret,
-    SecretMetaSnapshot,
+    SecretMeta,
     SecretRevision,
     SecretChange,
 )
@@ -33,21 +33,21 @@ class HistoryEntry:
     changes: list[dict[str, str]]
     link: str
     current: bool
-    snapshot: SecretMetaSnapshot | None
+    metadata: SecretMeta | None
     needs_changing: bool = False
     restored_from: str | None = None
 
 
 class RevisionService:
-    """Central orchestration logic for revisions, metadata snapshots and
+    """Central orchestration logic for revisions, metadata records and
     the SecretChange graph.
 
     Invariants:
     - Every save_payload/restore produces a SecretChange node.
-    - Each SecretRevision referenced by a change has at least one snapshot
-      representing metadata at that moment (baseline per revision).
+    - Each SecretRevision referenced by a change has at least one metadata
+      record representing state at that moment (baseline per revision).
     - History and UI derive exclusively from SecretChange; we no longer infer
-      chronology from mixed audit logs or snapshot timing.
+      chronology from mixed audit logs or metadata timing heuristics.
     """
 
     @staticmethod
@@ -66,8 +66,9 @@ class RevisionService:
         payload: dict[str, Any],
         skip_acl: bool = False,
     ) -> SecretRevision:
-        """Create or reuse a payload revision, set it current, ensure a revision
-        snapshot exists for current metadata, and record a SecretChange.
+        """Create or reuse a payload revision, set it current, ensure a
+        per‑revision metadata record exists for the current state, and record
+        a SecretChange.
         """
         if not skip_acl and secret.permission_checker(actor).is_readable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User has no write access to secret payload')
@@ -88,12 +89,12 @@ class RevisionService:
             secret.status = SecretStatus.OK
         secret.save(update_fields=['current_revision', 'last_changed', 'last_read', 'status'])
 
-        # 3. Ensure we have a snapshot for THIS revision at this time
-        baseline_missing_for_rev = not SecretMetaSnapshot.objects.filter(revision=revision).exists()
+        # 3. Ensure we have metadata for THIS revision at this time
+        baseline_missing_for_rev = not SecretMeta.objects.filter(revision=revision).exists()
         if baseline_missing_for_rev or meta_changed(secret):
-            cls.snapshot(secret=secret, actor=actor, revision=revision)
-        if not SecretMetaSnapshot.objects.filter(revision=revision).exists():
-            cls.snapshot(secret=secret, actor=actor, revision=revision)
+            cls.capture_meta(secret=secret, actor=actor, revision=revision)
+        if not SecretMeta.objects.filter(revision=revision).exists():
+            cls.capture_meta(secret=secret, actor=actor, revision=revision)
 
         # 4. Audit log
         log_category = AuditLogCategoryChoices.SECRET_CHANGED if payload_changed else AuditLogCategoryChoices.SECRET_METADATA_CHANGED
@@ -112,12 +113,12 @@ class RevisionService:
             secret_revision=revision,
         )
         # 5. Record a SecretChange node
-        snap_for_change = SecretMetaSnapshot.objects.filter(revision=revision).latest('created')
+        meta_for_change = SecretMeta.objects.filter(revision=revision).latest('created')
         parent = SecretChange.objects.filter(secret=secret).order_by('-created').first()
         change = SecretChange.objects.create(
             secret=secret,
             revision=revision,
-            snapshot=snap_for_change,
+            metadata=meta_for_change,
             actor=actor,
         )
         if parent:
@@ -126,28 +127,28 @@ class RevisionService:
         return revision
 
     @classmethod
-    def snapshot(
+    def capture_meta(
         cls,
         *,
         secret: Secret,
         actor,
         revision: SecretRevision | None = None,
-    ) -> SecretMetaSnapshot:
-        """Freeze the current metadata of secret into an immutable
-        :class:`SecretMetaSnapshot`.
+    ) -> SecretMeta:
+        """Capture the current metadata of secret into an immutable
+        :class:`SecretMeta` record tied to the given revision.
         """
         revision = revision or secret.current_revision
         if revision is None:
-            raise ValueError('Secret has no current revision to snapshot')
+            raise ValueError('Secret has no current revision to capture meta for')
 
         raw = dumps(copy_meta_from_secret(secret), sort_keys=True, default=str)
         meta_sha256 = sha256(raw.encode()).hexdigest()
-        snap, _ = SecretMetaSnapshot.objects.get_or_create(
+        meta_rec, _ = SecretMeta.objects.get_or_create(
             revision=revision,
             meta_sha256=meta_sha256,
             defaults={'set_by': actor, **copy_meta_from_secret(secret)},
         )
-        return snap
+        return meta_rec
 
     @classmethod
     @transaction.atomic
@@ -157,9 +158,9 @@ class RevisionService:
         secret: Secret,
         actor,
         old_revision: SecretRevision,
-        meta_snap: SecretMetaSnapshot | None = None,
+        meta_rec: SecretMeta | None = None,
     ) -> SecretRevision:
-        """Make old_revision (and optional meta_snap) the new current revision,
+        """Make old_revision (and optional meta) the new current revision,
         apply metadata, and record a SecretChange with restored_from linking to
         the source change. Allowed for users who can edit the secret.
         """
@@ -175,24 +176,24 @@ class RevisionService:
         new_rev = SecretRevision._create_from_revision(
             old_revision=old_revision,
             set_by=actor,
-            meta_snapshot=meta_snap,
+            secret_meta=meta_rec,
             skip_access_check=True,
         )
         # Chronology is modeled via SecretChange.restored_from; do not mutate
         # SecretRevision rows when restoring.
 
-        # sync metadata from chosen snapshot (or latest)
-        snapshot = meta_snap or new_rev.latest_meta
+        # sync metadata from chosen meta record (or latest)
+        applied_meta = meta_rec or new_rev.latest_meta
 
-        changed_fields = apply_meta_to_secret(secret, snapshot)
-        if snapshot and snapshot.status == SecretStatus.NEEDS_CHANGING:
+        changed_fields = apply_meta_to_secret(secret, applied_meta)
+        if applied_meta and applied_meta.status == SecretStatus.NEEDS_CHANGING:
             if 'status' not in changed_fields:
                 changed_fields.append('status')
             secret.status = SecretStatus.NEEDS_CHANGING
 
-        # restored revisions don't have a snapshot yet
-        if snapshot is None:
-            snapshot = cls.snapshot(secret=secret, actor=actor, revision=new_rev)
+        # restored revisions may lack a meta record yet
+        if applied_meta is None:
+            applied_meta = cls.capture_meta(secret=secret, actor=actor, revision=new_rev)
 
         secret.current_revision = new_rev
         secret.last_changed = now()
@@ -213,7 +214,7 @@ class RevisionService:
             reason=f'Restored from revision {old_revision.id}',
         )
         # Record SecretChange for restore
-        snap_for_change = SecretMetaSnapshot.objects.filter(revision=new_rev).latest('created')
+        meta_for_change = SecretMeta.objects.filter(revision=new_rev).latest('created')
         parent = SecretChange.objects.filter(secret=secret).order_by('-created').first()
         restored_from_change = (
             SecretChange.objects.filter(secret=secret, revision=old_revision)
@@ -223,7 +224,7 @@ class RevisionService:
         change = SecretChange.objects.create(
             secret=secret,
             revision=new_rev,
-            snapshot=snap_for_change,
+            metadata=meta_for_change,
             actor=actor,
             restored_from=restored_from_change,
         )
@@ -282,7 +283,7 @@ class RevisionService:
         """History built from SecretChange graph."""
         changes = list(
             SecretChange.objects.filter(secret=secret)
-            .select_related('actor', 'revision', 'snapshot')
+            .select_related('actor', 'revision', 'metadata')
             .order_by('created')
         )
         rows: list[HistoryEntry] = []
@@ -290,7 +291,7 @@ class RevisionService:
 
         for ch in changes:
             payload_changes = cls._get_payload_diff(ch.revision, prev.revision if prev else None, user)
-            meta_changes = cls._get_meta_diff(ch.snapshot, prev.snapshot if prev else None)
+            meta_changes = cls._get_meta_diff(ch.metadata, prev.metadata if prev else None)
 
             # Determine kind
             kind = 'restore' if ch.restored_from_id else ('payload' if payload_changes else 'meta')
@@ -300,13 +301,13 @@ class RevisionService:
             merged.extend(meta_changes)
 
             # Determine link + current flags
-            if kind == 'meta' and ch.snapshot and secret.current_revision and ch.snapshot.hashid == getattr(secret.current_revision.latest_meta, 'hashid', None):
+            if kind == 'meta' and ch.metadata and secret.current_revision and ch.metadata.hashid == getattr(secret.current_revision.latest_meta, 'hashid', None):
                 link = secret.get_absolute_url()
                 current = True
             else:
                 base_link = reverse('secrets.revision-detail', args=[ch.revision.hashid])
                 if kind == 'meta' and ch.revision_id != secret.current_revision_id:
-                    link = f"{base_link}?meta_snap={ch.snapshot.id}&change={ch.id}"
+                    link = f"{base_link}?meta={ch.metadata.id}&change={ch.id}"
                 else:
                     link = f"{base_link}?change={ch.id}"
                 current = (kind != 'meta' and ch.revision_id == secret.current_revision_id)
@@ -320,8 +321,8 @@ class RevisionService:
                     changes=merged,
                     link=link,
                     current=current,
-                    snapshot=ch.snapshot,
-                    needs_changing=(ch.snapshot.status == SecretStatus.NEEDS_CHANGING),
+                    metadata=ch.metadata,
+                    needs_changing=(ch.metadata.status == SecretStatus.NEEDS_CHANGING),
                     restored_from=(
                         ch.restored_from.revision.hashid if ch.restored_from_id else None
                     ),

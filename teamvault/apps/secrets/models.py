@@ -540,7 +540,7 @@ class SecretRevision(HashIDModel):
         *,
         old_revision: t.Self,
         set_by: User,
-        meta_snapshot: "SecretMetaSnapshot | None" = None,
+        secret_meta: "SecretMeta | None" = None,
         skip_access_check: bool = False,
     ) -> t.Self:
         """Re‑use the data of an existing revision to create a new one and
@@ -561,11 +561,11 @@ class SecretRevision(HashIDModel):
                     )
                 )
 
-        snap_src = meta_snapshot if meta_snapshot is not None else old_revision.latest_meta
+        meta_src = secret_meta if secret_meta is not None else old_revision.latest_meta
 
-        if snap_src is None:
+        if meta_src is None:
             # legacy fallback: reconstruct from the Secret itself
-            snap_src = secret
+            meta_src = secret
 
         new_rev, created = cls.objects.get_or_create(
             secret=secret,
@@ -580,34 +580,30 @@ class SecretRevision(HashIDModel):
 
         new_rev.save()
 
-        raw = dumps(
-            copy_meta_from_secret(snap_src),
-            sort_keys=True,
-            default=str,
-        )
+        raw = dumps(copy_meta_from_secret(meta_src), sort_keys=True, default=str)
         wanted_hash = sha256(raw.encode()).hexdigest()
 
-        # try to reuse an identical snapshot (same revision + hash)
-        snap = SecretMetaSnapshot.objects.filter(
+        # try to reuse an identical meta record (same revision + hash)
+        meta_rec = SecretMeta.objects.filter(
             revision=new_rev,
             meta_sha256=wanted_hash,
         ).first()
 
-        # otherwise create a fresh one for this actor
-        if snap is None:
-            snap = SecretMetaSnapshot.objects.create(
+        # otherwise create a fresh meta record for this actor
+        if meta_rec is None:
+            meta_rec = SecretMeta.objects.create(
                 revision=new_rev,
                 set_by=set_by,
                 meta_sha256=wanted_hash,
-               **copy_meta_from_secret(snap_src),
+               **copy_meta_from_secret(meta_src),
             )
 
         new_rev.accessed_by.add(set_by)
         return new_rev
 
     def permission_checker(self, user):
-        """Return a PermissionChecker for either the latest metadata snapshot
-        or, if no snapshot exists yet, the parent Secret itself.
+        """Return a PermissionChecker for either the latest metadata record
+        or, if no meta exists yet, the parent Secret itself.
         """
         meta = self.latest_meta
         shares = self.secret.share_data.for_user(user)
@@ -621,8 +617,8 @@ class SecretRevision(HashIDModel):
 
     @property
     def latest_meta(self):
-        """Return the newest metadata snapshot"""
-        return self.meta_snaps.first()
+        """Return the newest metadata record"""
+        return self.metas.first()
 
     def get_data(self, user):
         readable = self.permission_checker(user).is_readable()
@@ -679,21 +675,21 @@ class SecretRevision(HashIDModel):
         return self.secret.current_revision == self
 
 
-class SecretMetaSnapshot(HashIDModel):
+class SecretMeta(HashIDModel):
     """
-    Immutable copy of a Secret’s metadata
+    Immutable copy of a Secret’s metadata at a specific change point.
     """
-    HASHID_NAMESPACE = 'SecretMetaSnapshot'
+    HASHID_NAMESPACE = 'SecretMeta'
     revision = models.ForeignKey(
         'SecretRevision',
         on_delete=models.CASCADE,
-        related_name='meta_snaps',
+        related_name='metas',
     )
     created = models.DateTimeField(auto_now_add=True)
     set_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
-        related_name='secret_meta_snaps'
+        related_name='secret_metas'
     )
 
     # metadata
@@ -709,7 +705,7 @@ class SecretMetaSnapshot(HashIDModel):
     status = models.PositiveSmallIntegerField(choices=SecretStatus)
 
     # Deduplication guard: same revision + identical metadata payload → reuse
-    # the existing snapshot (avoids noise when nothing really changed).
+    # the existing meta record (avoids noise when nothing really changed).
     meta_sha256 = models.CharField(max_length=64, editable=False)
 
     class Meta:
@@ -723,15 +719,11 @@ class SecretMetaSnapshot(HashIDModel):
         ]
 
     def __str__(self):
-        return f'MetaSnapshot {self.id} for rev {self.revision_id}'
+        return f'SecretMeta {self.id} for rev {self.revision_id}'
 
     def save(self, *args, **kwargs):
         # Compute hash over the _meaningful_ payload (excluding PK/timestamps)
-        raw = dumps(
-            copy_meta_from_secret(self),
-            sort_keys=True,
-            default=str,
-        )
+        raw = dumps(copy_meta_from_secret(self), sort_keys=True, default=str)
         self.meta_sha256 = sha256(raw.encode()).hexdigest()
         super().save(*args, **kwargs)
 
@@ -741,20 +733,20 @@ class SecretChange(models.Model):
 
     Invariants and intent:
     - Each change points to exactly one payload revision (SecretRevision) and one
-      metadata snapshot (SecretMetaSnapshot) that belongs to that revision.
+      metadata record (SecretMeta) that belongs to that revision.
     - Payload rows (SecretRevision) remain deduplicated by (secret, sha256) to
       preserve accessed_by and needs_changing semantics. Multiple changes may
       reference the same revision when a payload recurs (e.g., after a restore).
     - parents models a directed acyclic graph (DAG) of changes. In normal use
       there is a single parent (linear history). Restores branch by linking the
       new change to the previous head, while restored_from references the prior
-      change that provided the payload/snapshot lineage.
+      change that provided the payload/meta lineage.
     - History, UI, and APIs should consume SecretChange exclusively; do not use
       legacy fields on SecretRevision for chronology.
     """
     secret = models.ForeignKey('Secret', on_delete=models.CASCADE, related_name='changes')
     revision = models.ForeignKey('SecretRevision', on_delete=models.PROTECT, related_name='changes')
-    snapshot = models.ForeignKey('SecretMetaSnapshot', on_delete=models.PROTECT, related_name='changes')
+    metadata = models.ForeignKey('SecretMeta', on_delete=models.PROTECT, related_name='changes')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secret_changes')
     created = models.DateTimeField(auto_now_add=True)
 
@@ -790,9 +782,9 @@ class SecretChange(models.Model):
         if self.revision_id and self.secret_id and self.revision.secret_id != self.secret_id:
             raise ValidationError("revision.secret != secret")
 
-        # 2) snapshot must belong to revision
-        if self.snapshot_id and self.revision_id and self.snapshot.revision_id != self.revision_id:
-            raise ValidationError("snapshot.revision != revision")
+        # 2) meta record must belong to revision
+        if self.metadata_id and self.revision_id and self.metadata.revision_id != self.revision_id:
+            raise ValidationError("meta.revision != revision")
 
         # 3) restored_from (if any) must be same secret
         if self.restored_from_id and self.restored_from.secret_id != self.secret_id:
@@ -953,7 +945,7 @@ class PermissionChecker:
     user: User
     secret: Secret
     shares: SecretShareQuerySet
-    meta: SecretMetaSnapshot | None = None
+    meta: SecretMeta | None = None
 
     def _secret_deleted(self) -> bool:
         return self.secret.status == SecretStatus.DELETED

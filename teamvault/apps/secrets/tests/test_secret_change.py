@@ -20,7 +20,7 @@ class SecretChangeTests(TestCase):
         self.assertEqual(len(changes), 1)
         first = changes[0]
         self.assertEqual(first.revision.secret_id, s.id)
-        self.assertEqual(first.snapshot.revision_id, first.revision_id)
+        self.assertEqual(first.metadata.revision_id, first.revision_id)
 
         # Second payload change → new change with parent=first
         RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
@@ -29,7 +29,7 @@ class SecretChangeTests(TestCase):
         second = changes[-1]
         self.assertIn(first, second.parents.all())
         self.assertEqual(second.revision.secret_id, s.id)
-        self.assertEqual(second.snapshot.revision_id, second.revision_id)
+        self.assertEqual(second.metadata.revision_id, second.revision_id)
 
     def test_metadata_only_creates_change(self):
         s = self.secret
@@ -44,8 +44,8 @@ class SecretChangeTests(TestCase):
         last = changes[-1]
         # payload unchanged → same revision id as before
         self.assertEqual(last.revision_id, s.current_revision_id)
-        # snapshot must point to that revision
-        self.assertEqual(last.snapshot.revision_id, last.revision_id)
+        # metadata must point to that revision
+        self.assertEqual(last.metadata.revision_id, last.revision_id)
 
     def test_restore_creates_change_with_restored_from(self):
         s = self.secret
@@ -69,28 +69,28 @@ class SecretChangeTests(TestCase):
         bob = make_user('bob')
         s1 = self.secret
         s2 = new_secret(bob)
-        # Use a valid snapshot+revision from s1, but try to attach to s2
+        # Use a valid metadata+revision from s1, but try to attach to s2
         ch1 = SecretChange.objects.filter(secret=s1).latest('created')
         with self.assertRaises(ValidationError):
             SecretChange(
                 secret=s2,
                 revision=ch1.revision,
-                snapshot=ch1.snapshot,
+                metadata=ch1.metadata,
                 actor=self.owner,
             ).save()
 
-    def test_validation_mismatched_snapshot_revision(self):
+    def test_validation_mismatched_metadata_revision(self):
         s = self.secret
-        # Create a second payload so we have snapshots on two different revisions
+        # Create a second payload so we have metadata on two different revisions
         RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
         r1 = s.secretrevision_set.order_by('created').first()
         r2 = s.secretrevision_set.order_by('created').last()
-        snap_r2 = r2.meta_snaps.latest('created')
+        meta_r2 = r2.metas.latest('created')
         with self.assertRaises(ValidationError):
             SecretChange(
                 secret=s,
                 revision=r1,
-                snapshot=snap_r2,
+                metadata=meta_r2,
                 actor=self.owner,
             ).save()
 

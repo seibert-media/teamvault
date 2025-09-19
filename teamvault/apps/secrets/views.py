@@ -20,7 +20,7 @@ from django_htmx.http import trigger_client_event
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
-from .models import AccessPermissionTypes, Secret, SecretMetaSnapshot, SecretRevision, SecretShareQuerySet, SharedSecretData, SecretChange
+from .models import AccessPermissionTypes, Secret, SecretMeta, SecretRevision, SecretShareQuerySet, SharedSecretData, SecretChange
 from .exceptions import PermissionError
 from .enums import AccessPolicy, ContentType, SecretStatus
 from .utils import apply_meta_to_secret, serialize_add_edit_data
@@ -614,15 +614,15 @@ def secret_revision_detail(request, revision_hashid):
     except PermissionError:
         raise PermissionDenied
 
-    # Optionally apply a metadata snapshot
-    snap_id = request.GET.get("meta_snap")
+    # Optionally apply existing secret metadata
+    meta_id = request.GET.get("meta")
     meta = get_object_or_404(
-        SecretMetaSnapshot,
-        pk=snap_id,
+        SecretMeta,
+        pk=meta_id,
         revision=revision
-    ) if snap_id else revision.latest_meta
+    ) if meta_id else revision.latest_meta
 
-    # Apply the snapshot to a copy of the revision/secret so DB rows stay unmodified
+    # Apply the metadata to a copy of the revision/secret so DB rows stay unmodified
     if meta:
         revision_copy = copy(revision)
         revision_copy.secret = copy(revision.secret)
@@ -631,7 +631,7 @@ def secret_revision_detail(request, revision_hashid):
     else:
         meta = revision.secret
 
-    shown_snapshot = meta if snap_id else None
+    shown_meta = meta if meta_id else None
 
     # Determine the specific change (if provided) to contextualize restore info
     change_id = request.GET.get("change")
@@ -661,7 +661,7 @@ def secret_revision_detail(request, revision_hashid):
         'secret': revision.secret,  # Pass the parent secret for breadcrumbs/links
         'decrypted_data': decrypted_data,
         'ContentType': ContentType,
-        'shown_snapshot': shown_snapshot,
+        'shown_meta': shown_meta,
         'meta': meta,
         # TODO also show this to secret owner
         'restore_allowed': revision.secret.check_read_access(request.user),
@@ -709,19 +709,19 @@ def restore_secret_revision(request, secret_hashid, revision_hashid):
     secret = get_object_or_404(Secret, hashid=secret_hashid)
     revision_to_restore = get_object_or_404(SecretRevision, hashid=revision_hashid, secret=secret)
 
-    snap_id = request.GET.get("meta_snap")
-    meta_snap = None
-    if snap_id:
-        meta_snap = get_object_or_404(
-            SecretMetaSnapshot,
-            pk=snap_id,
+    meta_id = request.GET.get("meta")
+    meta_rec = None
+    if meta_id:
+        meta_rec = get_object_or_404(
+            SecretMeta,
+            pk=meta_id,
             revision=revision_to_restore,
         )
     new_rev = RevisionService.restore(
         secret=secret,
         actor=request.user,
         old_revision=revision_to_restore,
-        meta_snap=meta_snap
+        meta_rec=meta_rec
     )
 
     messages.success(request, f"Successfully restored revision {revision_to_restore.id}. "

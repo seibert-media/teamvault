@@ -7,7 +7,7 @@ from django.urls import reverse
 from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
-    SecretMetaSnapshot,
+    SecretMeta,
     SecretChange,
 )
 from teamvault.apps.secrets.services.revision import RevisionService
@@ -24,7 +24,7 @@ class RestoreRevisionTests(TestCase):
         self.su = make_user('root', superuser=True)
         self.bob = make_user('bob')
 
-        # secret with 2 payload revisions + 1 meta snapshot
+        # secret with 2 payload revisions + 1 secret meta
         self.secret = new_secret(self.owner, access_policy=AccessPolicy.DISCOVERABLE)
         self.rev1 = self.secret.current_revision  # baseline
 
@@ -44,22 +44,22 @@ class RestoreRevisionTests(TestCase):
             actor=self.owner,
             payload=payload,
         )
-        self.meta_snap = SecretMetaSnapshot.objects.filter(revision=self.rev2).latest('created')
+        self.meta = SecretMeta.objects.filter(revision=self.rev2).latest('created')
 
         self.client = Client()
 
     def _login(self, user):
         self.assertTrue(self.client.login(username=user.username, password='pw'))
 
-    def _restore_url(self, secret, revision, meta_snap=None):
-        if meta_snap:
+    def _restore_url(self, secret, revision, meta=None):
+        if meta:
             return (
                 reverse(
                     RESTORE_URL_NAME,
                     args=(secret.hashid, revision.hashid),
                 )
                 + '?'
-                + urlencode({'meta_snap': meta_snap.id})
+                + urlencode({'meta': meta.id})
             )
         return reverse(RESTORE_URL_NAME, args=(secret.hashid, revision.hashid))
 
@@ -78,19 +78,19 @@ class RestoreRevisionTests(TestCase):
             self.rev1.plaintext_data_sha256,
         )
 
-    def test_superuser_can_restore_with_snapshot(self):
-        """Restore rev2 + explicit metadata snapshot: metadata must match
-        snapshot values (description in our setup)."""
+    def test_superuser_can_restore_with_meta(self):
+        """Restore rev2 + explicit metadata: metadata must match
+        values (description in our setup)."""
         self._login(self.su)
-        resp = self.client.post(self._restore_url(self.secret, self.rev2, self.meta_snap))
+        resp = self.client.post(self._restore_url(self.secret, self.rev2, self.meta))
         self.assertEqual(resp.status_code, 302)
 
         self.secret.refresh_from_db()
-        self.assertEqual(self.secret.description, self.meta_snap.description)
-        # if snapshot said NEEDS_CHANGING, restored secret must be NEEDS_CHANGING
-        self.meta_snap.status = SecretStatus.NEEDS_CHANGING
-        self.meta_snap.save(update_fields=['status'])
-        resp = self.client.post(self._restore_url(self.secret, self.rev2, self.meta_snap))
+        self.assertEqual(self.secret.description, self.meta.description)
+        # if metadata said NEEDS_CHANGING, restored secret must be NEEDS_CHANGING
+        self.meta.status = SecretStatus.NEEDS_CHANGING
+        self.meta.save(update_fields=['status'])
+        resp = self.client.post(self._restore_url(self.secret, self.rev2, self.meta))
         self.assertEqual(resp.status_code, 302)
         self.secret.refresh_from_db()
         self.assertEqual(self.secret.status, 2)
@@ -120,9 +120,9 @@ class RestoreRevisionTests(TestCase):
         )
 
     def test_history_marks_needs_changing(self):
-        # mark latest snapshot as NEEDS_CHANGING
-        snap = self.meta_snap
-        snap.status = 2
-        snap.save(update_fields=['status'])
+        # mark latest metadata as NEEDS_CHANGING
+        meta_rec = self.meta
+        meta_rec.status = 2
+        meta_rec.save(update_fields=['status'])
         rows = RevisionService.get_revision_history(self.secret, self.owner)
         self.assertTrue(any(r.needs_changing for r in rows))
