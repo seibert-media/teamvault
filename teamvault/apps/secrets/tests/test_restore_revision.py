@@ -8,6 +8,7 @@ from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     SecretMetaSnapshot,
+    SecretChange,
 )
 from teamvault.apps.secrets.services.revision import RevisionService
 from .utils import COMMON_OVERRIDES, make_user, new_secret
@@ -93,8 +94,10 @@ class RestoreRevisionTests(TestCase):
         self.assertEqual(resp.status_code, 302)
         self.secret.refresh_from_db()
         self.assertEqual(self.secret.status, 2)
-        self.assertIsNotNone(self.secret.current_revision.restored_from)
-        self.assertEqual(self.secret.current_revision.restored_from_id, self.rev2.id)
+        # latest change references the restored-from change (rev2 lineage)
+        latest_change = SecretChange.objects.filter(secret=self.secret).latest('created')
+        self.assertIsNotNone(latest_change.restored_from)
+        self.assertEqual(latest_change.restored_from.revision_id, self.rev2.id)
 
     def test_regular_user_can_restore(self):
         self._login(self.bob)

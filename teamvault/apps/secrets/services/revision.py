@@ -1,4 +1,3 @@
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from hashlib import sha256
@@ -13,13 +12,14 @@ from django.urls import reverse
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from teamvault.apps.audit.auditlog import log
-from teamvault.apps.audit.models import AuditLogCategoryChoices, LogEntry
+from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     Secret,
     SecretMetaSnapshot,
     SecretRevision,
+    SecretChange,
 )
 from teamvault.apps.secrets.utils import apply_meta_to_secret, copy_meta_from_secret, meta_changed
 
@@ -39,7 +39,16 @@ class HistoryEntry:
 
 
 class RevisionService:
-    """Central orchestration logic for Secret revisions & metadata snapshots."""
+    """Central orchestration logic for revisions, metadata snapshots and
+    the SecretChange graph.
+
+    Invariants:
+    - Every save_payload/restore produces a SecretChange node.
+    - Each SecretRevision referenced by a change has at least one snapshot
+      representing metadata at that moment (baseline per revision).
+    - History and UI derive exclusively from SecretChange; we no longer infer
+      chronology from mixed audit logs or snapshot timing.
+    """
 
     @staticmethod
     def _fernet():
@@ -57,8 +66,8 @@ class RevisionService:
         payload: dict[str, Any],
         skip_acl: bool = False,
     ) -> SecretRevision:
-        """Create or reuse a payload revision, make it current & snapshot metadata
-        if necessary.
+        """Create or reuse a payload revision, set it current, ensure a revision
+        snapshot exists for current metadata, and record a SecretChange.
         """
         if not skip_acl and secret.permission_checker(actor).is_readable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User has no write access to secret payload')
@@ -79,9 +88,11 @@ class RevisionService:
             secret.status = SecretStatus.OK
         secret.save(update_fields=['current_revision', 'last_changed', 'last_read', 'status'])
 
-        # 3. Ensure we have an up‑to‑date metadata snapshot
-        baseline_missing = not SecretMetaSnapshot.objects.filter(revision__secret=secret).exists()
-        if baseline_missing or meta_changed(secret):
+        # 3. Ensure we have a snapshot for THIS revision at this time
+        baseline_missing_for_rev = not SecretMetaSnapshot.objects.filter(revision=revision).exists()
+        if baseline_missing_for_rev or meta_changed(secret):
+            cls.snapshot(secret=secret, actor=actor, revision=revision)
+        if not SecretMetaSnapshot.objects.filter(revision=revision).exists():
             cls.snapshot(secret=secret, actor=actor, revision=revision)
 
         # 4. Audit log
@@ -100,6 +111,18 @@ class RevisionService:
             secret=secret,
             secret_revision=revision,
         )
+        # 5. Record a SecretChange node
+        snap_for_change = SecretMetaSnapshot.objects.filter(revision=revision).latest('created')
+        parent = SecretChange.objects.filter(secret=secret).order_by('-created').first()
+        change = SecretChange.objects.create(
+            secret=secret,
+            revision=revision,
+            snapshot=snap_for_change,
+            actor=actor,
+        )
+        if parent:
+            change.parents.add(parent)
+
         return revision
 
     @classmethod
@@ -136,8 +159,9 @@ class RevisionService:
         old_revision: SecretRevision,
         meta_snap: SecretMetaSnapshot | None = None,
     ) -> SecretRevision:
-        """Turn old_revision (and optional meta_snap) into the new current
-        revision. Only superusers may call this.
+        """Make old_revision (and optional meta_snap) the new current revision,
+        apply metadata, and record a SecretChange with restored_from linking to
+        the source change. Allowed for users who can edit the secret.
         """
         if secret.pk != old_revision.secret_id:
             raise ValueError('Revision does not belong to secret')
@@ -154,9 +178,8 @@ class RevisionService:
             meta_snapshot=meta_snap,
             skip_access_check=True,
         )
-        if new_rev.restored_from is None:
-            new_rev.restored_from = old_revision
-            new_rev.save(update_fields=['restored_from'])
+        # Chronology is modeled via SecretChange.restored_from; do not mutate
+        # SecretRevision rows when restoring.
 
         # sync metadata from chosen snapshot (or latest)
         snapshot = meta_snap or new_rev.latest_meta
@@ -189,6 +212,23 @@ class RevisionService:
             secret_revision=new_rev,
             reason=f'Restored from revision {old_revision.id}',
         )
+        # Record SecretChange for restore
+        snap_for_change = SecretMetaSnapshot.objects.filter(revision=new_rev).latest('created')
+        parent = SecretChange.objects.filter(secret=secret).order_by('-created').first()
+        restored_from_change = (
+            SecretChange.objects.filter(secret=secret, revision=old_revision)
+            .order_by('-created')
+            .first()
+        )
+        change = SecretChange.objects.create(
+            secret=secret,
+            revision=new_rev,
+            snapshot=snap_for_change,
+            actor=actor,
+            restored_from=restored_from_change,
+        )
+        if parent:
+            change.parents.add(parent)
 
         return new_rev
 
@@ -239,239 +279,56 @@ class RevisionService:
 
     @classmethod
     def get_revision_history(cls, secret: Secret, user) -> list[HistoryEntry]:
-        """Build a complete history of all changes (payload + metadata) for a secret."""
-        events = cls._collect_all_events(secret)
-        history_entries = cls._process_events_to_history(events, secret, user)
-        return sorted(history_entries, key=lambda e: e.ts, reverse=True)
-
-    @classmethod
-    def _collect_all_events(cls, secret: Secret) -> list[dict]:
-        """Collect all timeline events for a secret."""
-        events = []
-
-        # Add revision events
-        revisions = (
-            secret.secretrevision_set.select_related('set_by').prefetch_related('meta_snaps').order_by('created')
-        )
-        for rev in revisions:
-            events.append(
-                {
-                    'type': 'revision',
-                    'ts': rev.created,
-                    'obj': rev,
-                    'user': rev.set_by,
-                }
-            )
-
-        # Add snapshot events
-        snapshots = (
-            SecretMetaSnapshot.objects.filter(revision__secret=secret)
-            .select_related('revision', 'set_by')
+        """History built from SecretChange graph."""
+        changes = list(
+            SecretChange.objects.filter(secret=secret)
+            .select_related('actor', 'revision', 'snapshot')
             .order_by('created')
         )
-        for snap in snapshots:
-            events.append(
-                {
-                    'type': 'snapshot',
-                    'ts': snap.created,
-                    'obj': snap,
-                    'user': snap.set_by,
-                }
-            )
+        rows: list[HistoryEntry] = []
+        prev = None
 
-        # Add restore events
-        restores = LogEntry.objects.filter(
-            secret=secret, category=AuditLogCategoryChoices.SECRET_RESTORED
-        ).select_related('actor', 'secret_revision')
-        for restore in restores:
-            events.append(
-                {
-                    'type': 'restore',
-                    'ts': restore.time,
-                    'obj': restore,
-                    'user': restore.actor,
-                }
-            )
+        for ch in changes:
+            payload_changes = cls._get_payload_diff(ch.revision, prev.revision if prev else None, user)
+            meta_changes = cls._get_meta_diff(ch.snapshot, prev.snapshot if prev else None)
 
-        return sorted(events, key=lambda e: e['ts'])
+            # Determine kind
+            kind = 'restore' if ch.restored_from_id else ('payload' if payload_changes else 'meta')
+            # Merge changes: payload first for readability
+            merged = []
+            merged.extend(payload_changes)
+            merged.extend(meta_changes)
 
-    @classmethod
-    def _process_events_to_history(cls, events: list[dict], secret: Secret, user) -> list[HistoryEntry]:
-        """Convert timeline events into history entries."""
-        rows = []
-        prev_revision = None
-        prev_snapshot = None
-        seen_revisions = set()
-        seen_snapshots = set()
-
-        for event in events:
-            if event['type'] == 'revision' and event['obj'].hashid not in seen_revisions:
-                row = cls._create_revision_history_entry(
-                    event, prev_revision, prev_snapshot, secret, user, seen_snapshots
-                )
-                if row:
-                    rows.append(row)
-                    prev_revision = event['obj']
-                    if row.snapshot:
-                        prev_snapshot = row.snapshot
-                seen_revisions.add(event['obj'].id)
-
-            elif event['type'] == 'snapshot' and event['obj'].id not in seen_snapshots:
-                row = cls._create_snapshot_history_entry(event, prev_snapshot, secret)
-                if row:
-                    rows.append(row)
-                    prev_snapshot = event['obj']
-                seen_snapshots.add(event['obj'].id)
-
-            elif event['type'] == 'restore':
-                row = cls._create_restore_history_entry(event, prev_revision, secret)
-                if row:
-                    rows.append(row)
-                    # After restore, advance cursor to the restored revision
-                    restored_revision = getattr(event['obj'], 'secret_revision', None)
-                    if restored_revision:
-                        prev_revision = restored_revision
-                        # Prefer the snapshot chosen inside the row (as-of restore)
-                        if getattr(row, 'snapshot', None) is not None:
-                            prev_snapshot = row.snapshot
-                        elif prev_revision.latest_meta:
-                            prev_snapshot = prev_revision.latest_meta
-
-        return rows
-
-    @classmethod
-    def _create_revision_history_entry(
-        cls, event: dict, prev_revision, prev_snapshot, secret: Secret, user, seen_snapshots: set
-    ) -> HistoryEntry:
-        """Create a history entry for a revision event."""
-        rev = event['obj']
-        changes = []
-
-        # Get payload changes
-        if prev_revision:
-            payload_changes = cls._get_payload_diff(rev, prev_revision, user)
-            changes.extend(payload_changes)
-        else:
-            changes.append({'label': 'Payload', 'old': '∅', 'new': 'Created'})
-
-        # Check for associated snapshot created at same time
-        associated_snap = cls._find_associated_snapshot(rev, seen_snapshots)
-        if associated_snap:
-            meta_changes = cls._get_meta_diff(associated_snap, prev_snapshot)
-            changes.extend(meta_changes)
-            seen_snapshots.add(associated_snap.id)
-
-        snap_for_status = associated_snap or rev.latest_meta
-        needs_changing = bool(snap_for_status and snap_for_status.status == SecretStatus.NEEDS_CHANGING)
-        # If needs_changing but no explicit status diff in this row, add a visible hint
-        if needs_changing and not any(c.get('label') == 'Status' for c in changes):
-            changes.append({'label': 'Status', 'old': '—', 'new': 'NEEDS_CHANGING'})
-
-        # If this revision was created via restore, surface it inline
-        restored_from = getattr(rev, 'restored_from', None)
-        if restored_from:
-            changes.insert(0, {'label': 'Restored from', 'old': '—', 'new': restored_from.hashid})
-
-        return HistoryEntry(
-            ts=rev.created,
-            kind='payload',
-            user=rev.set_by.username,
-            name=secret.name,
-            changes=changes,
-            link=reverse('secrets.revision-detail', args=[rev.hashid]),
-            current=cls._is_current_payload(rev, secret),
-            snapshot=associated_snap,
-            needs_changing=needs_changing,
-            restored_from=restored_from.hashid if restored_from else None,
-        )
-
-    @classmethod
-    def _create_snapshot_history_entry(cls, event: dict, prev_snapshot, secret: Secret) -> HistoryEntry | None:
-        """Create a history entry for a metadata-only snapshot event."""
-        snap = event['obj']
-        changes = cls._get_meta_diff(snap, prev_snapshot)
-
-        if not changes:
-            return None
-
-        return HistoryEntry(
-            ts=snap.created,
-            kind='meta',
-            user=snap.set_by.username,
-            name=secret.name,
-            changes=changes,
-            link=(
-                secret.get_absolute_url()
-                if cls._is_current_meta(snap, secret)
-                else reverse('secrets.revision-detail', args=[snap.revision.hashid]) + f'?meta_snap={snap.id}'
-            ),
-            current=cls._is_current_meta(snap, secret),
-            snapshot=snap,
-            needs_changing=(snap.status == SecretStatus.NEEDS_CHANGING),
-        )
-
-    @classmethod
-    def _create_restore_history_entry(cls, event: dict, prev_revision, secret: Secret) -> HistoryEntry:
-        """Create a history entry for a restore event."""
-        restore = event['obj']
-        changes = []
-
-        # Use the structured FK instead of parsing log text
-        restored_revision = getattr(restore, 'secret_revision', None)
-        if restored_revision:
-            # Payload diff
-            if prev_revision:
-                payload_changes = cls._get_payload_diff(restored_revision, prev_revision, restore.actor)
-                changes.extend(payload_changes)
+            # Determine link + current flags
+            if kind == 'meta' and ch.snapshot and secret.current_revision and ch.snapshot.hashid == getattr(secret.current_revision.latest_meta, 'hashid', None):
+                link = secret.get_absolute_url()
+                current = True
             else:
-                changes.append({'label': 'Payload', 'old': '∅', 'new': 'Created'})
+                link = (
+                    reverse('secrets.revision-detail', args=[ch.revision.hashid])
+                    if kind != 'meta' or ch.revision_id == secret.current_revision_id
+                    else reverse('secrets.revision-detail', args=[ch.revision.hashid]) + f'?meta_snap={ch.snapshot.id}'
+                )
+                current = (kind != 'meta' and ch.revision_id == secret.current_revision_id)
 
-            # Metadata diff against previous snapshot, using the snapshot state
-            # as-of the restore time (not any later snapshots on the same revision)
-            restored_snap = (
-                restored_revision.meta_snaps
-                .filter(created__lte=restore.time)
-                .order_by('-created')
-                .first()
+            rows.append(
+                HistoryEntry(
+                    ts=ch.created,
+                    kind=kind,  # type: ignore
+                    user=ch.actor.username,
+                    name=secret.name,
+                    changes=merged,
+                    link=link,
+                    current=current,
+                    snapshot=ch.snapshot,
+                    needs_changing=(ch.snapshot.status == SecretStatus.NEEDS_CHANGING),
+                    restored_from=None,
+                )
             )
-            if restored_snap and prev_revision and prev_revision.latest_meta:
-                meta_changes = cls._get_meta_diff(restored_snap, prev_revision.latest_meta)
-                changes.extend(meta_changes)
+            prev = ch
 
-            link = reverse('secrets.revision-detail', args=[restored_revision.hashid])
-        else:
-            # Fallback if the log entry is missing the FK
-            changes.append({'label': _('Action'), 'old': '—', 'new': _('Restored to previous version')})
-            link = secret.get_absolute_url()
+        return sorted(rows, key=lambda e: e.ts, reverse=True)
 
-        return HistoryEntry(
-            ts=restore.time,
-            kind='restore',
-            user=restore.actor.username,
-            name=secret.name,
-            changes=changes,
-            link=link,
-            current=False,
-            snapshot=restored_snap if restored_revision else None,
-        )
-
-    @classmethod
-    def _find_associated_snapshot(cls, revision: SecretRevision, seen_snapshots: set):
-        """Find a snapshot associated with this revision created at approximately the same time."""
-        for snap in revision.meta_snaps.all():
-            if snap.id not in seen_snapshots and abs((snap.created - revision.created).total_seconds()) < 2:
-                return snap
-        return None
-
-    @staticmethod
-    def _is_current_meta(snapshot: SecretMetaSnapshot, secret: Secret) -> bool:
-        """Check if this snapshot represents the current metadata state."""
-        if not snapshot or not secret.current_revision:
-            return False
-
-        # The current metadata is the latest snapshot of the current revision
-        current_meta = secret.current_revision.latest_meta
-        return snapshot.id == getattr(current_meta, 'id', None)
 
     @staticmethod
     def _render_field_label(field_name: str) -> str:

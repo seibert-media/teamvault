@@ -447,13 +447,6 @@ class SecretRevision(HashIDModel):
         related_name='password_revisions_set',
     )
     last_read = models.DateTimeField(blank=True, null=True)
-    restored_from = models.ForeignKey(
-        'self',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='restored_children',
-    )
 
     class Meta:
         ordering = ('-created',)
@@ -741,6 +734,90 @@ class SecretMetaSnapshot(HashIDModel):
         )
         self.meta_sha256 = sha256(raw.encode()).hexdigest()
         super().save(*args, **kwargs)
+
+
+class SecretChange(models.Model):
+    """Immutable change event capturing the state of a secret at a point in time.
+
+    Invariants and intent:
+    - Each change points to exactly one payload revision (SecretRevision) and one
+      metadata snapshot (SecretMetaSnapshot) that belongs to that revision.
+    - Payload rows (SecretRevision) remain deduplicated by (secret, sha256) to
+      preserve accessed_by and needs_changing semantics. Multiple changes may
+      reference the same revision when a payload recurs (e.g., after a restore).
+    - parents models a directed acyclic graph (DAG) of changes. In normal use
+      there is a single parent (linear history). Restores branch by linking the
+      new change to the previous head, while restored_from references the prior
+      change that provided the payload/snapshot lineage.
+    - History, UI, and APIs should consume SecretChange exclusively; do not use
+      legacy fields on SecretRevision for chronology.
+    """
+    secret = models.ForeignKey('Secret', on_delete=models.CASCADE, related_name='changes')
+    revision = models.ForeignKey('SecretRevision', on_delete=models.PROTECT, related_name='changes')
+    snapshot = models.ForeignKey('SecretMetaSnapshot', on_delete=models.PROTECT, related_name='changes')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secret_changes')
+    created = models.DateTimeField(auto_now_add=True)
+
+    # DAG edges (usually single-parent linear, but allow branching)
+    parents = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        related_name='children',
+        blank=True,
+        through='SecretChangeParent',
+        through_fields=('child', 'parent'),
+    )
+
+    # Optional link to the change that was the source of a restore
+    restored_from = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='restores')
+
+    class Meta:
+        ordering = ('created',)
+        indexes = [
+            models.Index(fields=['secret', 'created'], name='secretchange_secret_create_idx'),
+            models.Index(fields=['actor', 'created'], name='secretchange_actor_create_idx'),
+            models.Index(fields=['revision'], name='secretchange_revision_idx'),
+        ]
+        constraints = [
+            models.CheckConstraint(
+                check=~models.Q(restored_from=models.F('id')),
+                name='secretchange_no_self_restore',
+            ),
+        ]
+
+    def clean(self):
+        # 1) revision must belong to secret
+        if self.revision_id and self.secret_id and self.revision.secret_id != self.secret_id:
+            raise ValidationError("revision.secret != secret")
+
+        # 2) snapshot must belong to revision
+        if self.snapshot_id and self.revision_id and self.snapshot.revision_id != self.revision_id:
+            raise ValidationError("snapshot.revision != revision")
+
+        # 3) restored_from (if any) must be same secret
+        if self.restored_from_id and self.restored_from.secret_id != self.secret_id:
+            raise ValidationError("restored_from.secret != secret")
+
+    def save(self, *args, **kwargs):
+        # Soft immutability: no updates after insert
+        if self.pk is not None:
+            raise ValidationError("SecretChange is immutable; create a new row instead.")
+        self.full_clean()
+        return super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f'Change {self.id} for {self.secret_id} at {self.created.isoformat()}'
+
+
+class SecretChangeParent(models.Model):
+    parent = models.ForeignKey('SecretChange', on_delete=models.CASCADE, related_name='+')
+    child = models.ForeignKey('SecretChange', on_delete=models.CASCADE, related_name='+')
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['parent', 'child'], name='uniq_change_parent_child'),
+            models.CheckConstraint(check=~models.Q(parent=models.F('child')), name='no_self_parent_edge'),
+        ]
 
 
 class SecretShareQuerySet(models.QuerySet):

@@ -28,9 +28,10 @@ class RevisionHistoryTests(TestCase):
             payload={'password': 'second‑pw'}
         )
         self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
+        # With per‑revision snapshots, we now create a baseline snapshot for each revision
         self.assertEqual(
             SecretMetaSnapshot.objects.filter(revision__secret=s).count(),
-            1,  # baseline only
+            2,
         )
 
         # 3rd change: ONLY metadata update
@@ -52,10 +53,9 @@ class RevisionHistoryTests(TestCase):
         )
         self.assertEqual(
             SecretMetaSnapshot.objects.filter(revision__secret=s).count(),
-            2,  # baseline + meta‑change
+            3,  # 2 baselines + meta‑change snapshot
         )
 
-        # History view contract: 3 “rows” (2 payload, 1 meta diff)
-        payload_revs = SecretRevision.objects.filter(secret=s).count()
-        meta_diffs = SecretMetaSnapshot.objects.filter(revision__secret=s).count() - 1
-        self.assertEqual(payload_revs + meta_diffs, 3)
+        # History view contract: 3 rows (2 payload, 1 meta diff)
+        rows = RevisionService.get_revision_history(s, self.owner)
+        self.assertEqual(len(rows), 3)
