@@ -305,7 +305,7 @@ class RevisionService:
         seen_snapshots = set()
 
         for event in events:
-            if event['type'] == 'revision' and event['obj'].id not in seen_revisions:
+            if event['type'] == 'revision' and event['obj'].hashid not in seen_revisions:
                 row = cls._create_revision_history_entry(
                     event, prev_revision, prev_snapshot, secret, user, seen_snapshots
                 )
