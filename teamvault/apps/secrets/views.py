@@ -614,13 +614,26 @@ def secret_revision_detail(request, revision_hashid):
     except PermissionError:
         raise PermissionDenied
 
-    # Optionally apply existing secret metadata
+    # Resolve change (if provided), then choose meta accordingly
+    change_id = request.GET.get("change")
+    change_obj = None
+    if change_id:
+        try:
+            change_obj = SecretChange.objects.select_related('metadata').get(
+                pk=change_id,
+                secret=revision.secret,
+                revision=revision,
+            )
+        except SecretChange.DoesNotExist:
+            change_obj = None
+
     meta_id = request.GET.get("meta")
-    meta = get_object_or_404(
-        SecretMeta,
-        pk=meta_id,
-        revision=revision
-    ) if meta_id else revision.latest_meta
+    if meta_id:
+        meta = get_object_or_404(SecretMeta, pk=meta_id, revision=revision)
+    elif change_obj and change_obj.metadata_id:
+        meta = change_obj.metadata
+    else:
+        meta = revision.latest_meta
 
     # Apply the metadata to a copy of the revision/secret so DB rows stay unmodified
     if meta:
