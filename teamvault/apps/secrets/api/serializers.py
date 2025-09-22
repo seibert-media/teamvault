@@ -2,6 +2,7 @@ from base64 import b64decode, b64encode
 
 from django.contrib.auth.models import Group, User
 from django.db import models
+from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -197,10 +198,13 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep = super(SecretSerializer, self).to_representation(instance)
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
-        rep['data_readable'] = instance.check_read_access(self.context['request'].user)
         rep['hashid'] = instance.hashid
         rep['status'] = SECRET_STATUS_REPR[rep['status']]
         rep['web_url'] = instance.full_url
+        try:
+            rep['data_readable'] = instance.check_read_access(self.context['request'].user)
+        except (PermissionError, Http404):
+            rep['data_readable'] = False
         return rep
 
     def validate(self, data):
