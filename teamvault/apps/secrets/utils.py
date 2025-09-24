@@ -28,25 +28,7 @@ def extract_url_and_params(data):
     return data_as_url, data_params
 
 
-def meta_changed(secret: 'Secret') -> bool:
-    """Return True if the Secret's *current metadata fields* differ from the most
-    recent metadata taken for this Secret (across all revisions).
-    This avoids creating a new SecretMeta on every payload-only revision.
-    """
-    from .models import SecretMeta
-
-    cur = (
-        SecretMeta.objects
-        .filter(revision__secret=secret)
-        .order_by('-created')
-        .first()
-    )
-    if cur is None:
-        return True
-    return any(getattr(secret, f) != getattr(cur, f) for f in META_FIELDS)
-
-
-def copy_meta_from_secret(secret: 'Secret | SecretMeta') -> dict:
+def copy_meta_from_secret(secret: 'Secret') -> dict:
     return {
         'name': secret.name,
         'description': secret.description,
@@ -59,10 +41,13 @@ def copy_meta_from_secret(secret: 'Secret | SecretMeta') -> dict:
     }
 
 
-def apply_meta_to_secret(secret: 'Secret', meta: 'SecretMeta') -> list[str]:
+def apply_snapshot_to_secret(secret: 'Secret', change: 'SecretChange') -> list[str]:
+    """Apply metadata snapshot fields from a SecretChange onto a Secret.
+    Returns the list of fields that changed.
+    """
     dirty = []
     for f in META_FIELDS:
-        val = getattr(meta, f)
+        val = getattr(change, f)
         if getattr(secret, f) != val:
             setattr(secret, f, val)
             dirty.append(f)

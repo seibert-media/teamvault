@@ -17,11 +17,10 @@ from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     Secret,
-    SecretMeta,
     SecretRevision,
     SecretChange,
 )
-from teamvault.apps.secrets.utils import apply_meta_to_secret, copy_meta_from_secret, meta_changed
+from teamvault.apps.secrets.utils import apply_snapshot_to_secret, copy_meta_from_secret
 
 
 @dataclass
@@ -33,22 +32,17 @@ class HistoryEntry:
     changes: list[dict[str, str]]
     link: str
     current: bool
-    metadata: SecretMeta | None
     needs_changing: bool = False
     restored_from: str | None = None
-    change_id: int | None = None
 
 
 class RevisionService:
-    """Central orchestration logic for revisions, metadata records and
-    the SecretChange graph.
+    """Orchestrates payload saves, restores, and history snapshots.
 
     Invariants:
     - Every save_payload/restore produces a SecretChange node.
-    - Each SecretRevision referenced by a change has at least one metadata
-      record representing state at that moment (baseline per revision).
-    - History and UI derive exclusively from SecretChange; we no longer infer
-      chronology from mixed audit logs or metadata timing heuristics.
+    - SecretChange rows carry a snapshot of the metadata.
+    - History and UI derive exclusively from SecretChange.
     """
 
     @staticmethod
@@ -67,9 +61,8 @@ class RevisionService:
         payload: dict[str, Any],
         skip_acl: bool = False,
     ) -> SecretRevision:
-        """Create or reuse a payload revision, set it current, ensure a
-        per‑revision metadata record exists for the current state, and record
-        a SecretChange.
+        """Create or reuse a payload revision, set it current, and record
+        a SecretChange with a metadata snapshot.
         """
         if not skip_acl and secret.permission_checker(actor).is_readable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User has no write access to secret payload')
@@ -90,13 +83,6 @@ class RevisionService:
             secret.status = SecretStatus.OK
         secret.save(update_fields=['current_revision', 'last_changed', 'last_read', 'status'])
 
-        # 3. Ensure we have metadata for THIS revision at this time
-        baseline_missing_for_rev = not SecretMeta.objects.filter(revision=revision).exists()
-        if baseline_missing_for_rev or meta_changed(secret):
-            cls.capture_meta(secret=secret, actor=actor, revision=revision)
-        if not SecretMeta.objects.filter(revision=revision).exists():
-            cls.capture_meta(secret=secret, actor=actor, revision=revision)
-
         # 4. Audit log
         log_category = AuditLogCategoryChoices.SECRET_CHANGED if payload_changed else AuditLogCategoryChoices.SECRET_METADATA_CHANGED
         log(
@@ -113,60 +99,33 @@ class RevisionService:
             secret=secret,
             secret_revision=revision,
         )
-        # 5. Record a SecretChange node
-        meta_for_change = SecretMeta.objects.filter(revision=revision).latest('created')
+        # 5. Record a SecretChange node with snapshot
         parent = SecretChange.objects.filter(secret=secret).order_by('-created').first()
-        change = SecretChange.objects.create(
+        SecretChange.objects.create(
             secret=secret,
             revision=revision,
-            metadata=meta_for_change,
             actor=actor,
+            parent=parent,
+            **copy_meta_from_secret(secret),
         )
-        if parent:
-            change.parents.add(parent)
 
         return revision
 
     @classmethod
-    def capture_meta(
-        cls,
-        *,
-        secret: Secret,
-        actor,
-        revision: SecretRevision | None = None,
-    ) -> SecretMeta:
-        """Capture the current metadata of secret into an immutable
-        :class:`SecretMeta` record tied to the given revision.
-        """
-        revision = revision or secret.current_revision
-        if revision is None:
-            raise ValueError('Secret has no current revision to capture meta for')
-
-        raw = dumps(copy_meta_from_secret(secret), sort_keys=True, default=str)
-        meta_sha256 = sha256(raw.encode()).hexdigest()
-        meta_rec, _ = SecretMeta.objects.get_or_create(
-            revision=revision,
-            meta_sha256=meta_sha256,
-            defaults={'set_by': actor, **copy_meta_from_secret(secret)},
-        )
-        return meta_rec
-
     @classmethod
     @transaction.atomic
-    def restore(
+    def restore_to_change(
         cls,
         *,
         secret: Secret,
         actor,
-        old_revision: SecretRevision,
-        meta_rec: SecretMeta | None = None,
+        change: SecretChange,
     ) -> SecretRevision:
-        """Make old_revision (and optional meta) the new current revision,
-        apply metadata, and record a SecretChange with restored_from linking to
-        the source change. Allowed for users who can edit the secret.
+        """Restore the secret to the exact state captured by `change`:
+        payload and metadata snapshot.
         """
-        if secret.pk != old_revision.secret_id:
-            raise ValueError('Revision does not belong to secret')
+        if secret.pk != change.secret_id:
+            raise ValueError('Change does not belong to secret')
 
         chk = secret.permission_checker(actor)
         # Permit restore to anyone who can edit (same gate as save_payload)
@@ -175,62 +134,41 @@ class RevisionService:
 
         # create or reuse revision w/ identical payload
         new_rev = SecretRevision._create_from_revision(
-            old_revision=old_revision,
+            old_revision=change.revision,
             set_by=actor,
-            secret_meta=meta_rec,
             skip_access_check=True,
         )
         # Chronology is modeled via SecretChange.restored_from; do not mutate
         # SecretRevision rows when restoring.
 
-        # sync metadata from chosen meta record (or latest)
-        applied_meta = meta_rec or new_rev.latest_meta
-
-        changed_fields = apply_meta_to_secret(secret, applied_meta)
-        if applied_meta and applied_meta.status == SecretStatus.NEEDS_CHANGING:
-            if 'status' not in changed_fields:
-                changed_fields.append('status')
-            secret.status = SecretStatus.NEEDS_CHANGING
-
-        # restored revisions may lack a meta record yet
-        if applied_meta is None:
-            applied_meta = cls.capture_meta(secret=secret, actor=actor, revision=new_rev)
-
+        changed_fields = apply_snapshot_to_secret(secret, change)
         secret.current_revision = new_rev
         secret.last_changed = now()
         secret.save(update_fields=['current_revision', 'last_changed', *changed_fields])
 
         log(
-            _("{user} restored '{name}' from revision {rev} to create revision {new_rev}").format(
+            _("{user} restored '{name}' to change {change}").format(
                 user=actor.username,
                 name=secret.name,
-                rev=old_revision.id,
-                new_rev=new_rev.id,
+                change=change.hashid,
             ),
             actor=actor,
             category=AuditLogCategoryChoices.SECRET_RESTORED,
             level='warning',
             secret=secret,
             secret_revision=new_rev,
-            reason=f'Restored from revision {old_revision.id}',
+            reason=f'Restored to change {change.hashid}',
         )
         # Record SecretChange for restore
-        meta_for_change = SecretMeta.objects.filter(revision=new_rev).latest('created')
         parent = SecretChange.objects.filter(secret=secret).order_by('-created').first()
-        restored_from_change = (
-            SecretChange.objects.filter(secret=secret, revision=old_revision)
-            .order_by('-created')
-            .first()
-        )
-        change = SecretChange.objects.create(
+        SecretChange.objects.create(
             secret=secret,
             revision=new_rev,
-            metadata=meta_for_change,
             actor=actor,
-            restored_from=restored_from_change,
+            restored_from=change,
+            parent=parent,
+            **copy_meta_from_secret(secret),
         )
-        if parent:
-            change.parents.add(parent)
 
         return new_rev
 
@@ -281,37 +219,46 @@ class RevisionService:
 
     @classmethod
     def get_revision_history(cls, secret: Secret, user) -> list[HistoryEntry]:
-        """History built from SecretChange graph."""
+        """History built from SecretChange graph using parent→child edges for diffs.
+
+        Display ordering remains chronological (created desc) for readability.
+        """
         changes = list(
             SecretChange.objects.filter(secret=secret)
-            .select_related('actor', 'revision', 'metadata')
+            .select_related('actor', 'revision', 'parent', 'parent__revision')
             .order_by('created')
         )
+
         rows: list[HistoryEntry] = []
-        prev = None
+
+        # Identify the latest change (represents the current state)
+        latest_change_id = changes[-1].id if changes else None
 
         for ch in changes:
-            payload_changes = cls._get_payload_diff(ch.revision, prev.revision if prev else None, user)
-            meta_changes = cls._get_meta_diff(ch.metadata, prev.metadata if prev else None)
+            parent = ch.parent
+
+            prev_rev = parent.revision if parent else None
+
+            payload_changes = cls._get_payload_diff(ch.revision, prev_rev, user)
+            meta_changes = cls._get_meta_diff(ch, parent)
 
             # Determine kind
             kind = 'restore' if ch.restored_from_id else ('payload' if payload_changes else 'meta')
+
             # Merge changes: payload first for readability
             merged = []
             merged.extend(payload_changes)
             merged.extend(meta_changes)
 
             # Determine link + current flags
-            if kind == 'meta' and ch.metadata and secret.current_revision and ch.metadata.hashid == getattr(secret.current_revision.latest_meta, 'hashid', None):
+            is_latest = (ch.id == latest_change_id)
+            if is_latest:
+                # Current state: link to canonical secret detail view
                 link = secret.get_absolute_url()
-                current = True
             else:
                 base_link = reverse('secrets.revision-detail', args=[ch.revision.hashid])
-                if kind == 'meta' and ch.revision_id != secret.current_revision_id:
-                    link = f"{base_link}?meta={ch.metadata.id}&change={ch.id}"
-                else:
-                    link = f"{base_link}?change={ch.id}"
-                current = (kind != 'meta' and ch.revision_id == secret.current_revision_id)
+                link = f"{base_link}?change={ch.hashid}"
+            current = (ch.revision_id == secret.current_revision_id)
 
             rows.append(
                 HistoryEntry(
@@ -322,15 +269,10 @@ class RevisionService:
                     changes=merged,
                     link=link,
                     current=current,
-                    metadata=ch.metadata,
-                    needs_changing=(ch.metadata.status == SecretStatus.NEEDS_CHANGING),
-                    restored_from=(
-                        ch.restored_from.revision.hashid if ch.restored_from_id else None
-                    ),
-                    change_id=ch.id,
+                    needs_changing=(ch.status == SecretStatus.NEEDS_CHANGING),
+                    restored_from=(ch.restored_from.revision.hashid if ch.restored_from_id else None),
                 )
             )
-            prev = ch
 
         return sorted(rows, key=lambda e: e.ts, reverse=True)
 
@@ -357,8 +299,8 @@ class RevisionService:
         return str(value)
 
     @classmethod
-    def _get_meta_diff(cls, new_obj, prev_obj) -> list[dict]:
-        """Compare metadata between two objects and return differences."""
+    def _get_meta_diff(cls, new_obj: SecretChange, prev_obj: SecretChange | None) -> list[dict]:
+        """Compare metadata snapshot between two SecretChange rows."""
         fields = (
             'name',
             'description',

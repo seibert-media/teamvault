@@ -23,7 +23,6 @@ from pyotp import TOTP
 import typing as t
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
-from teamvault.apps.secrets.utils import copy_meta_from_secret
 
 from .exceptions import PermissionError
 from ..audit.auditlog import log
@@ -540,7 +539,6 @@ class SecretRevision(HashIDModel):
         *,
         old_revision: t.Self,
         set_by: User,
-        secret_meta: "SecretMeta | None" = None,
         skip_access_check: bool = False,
     ) -> t.Self:
         """Re‑use the data of an existing revision to create a new one and
@@ -561,12 +559,6 @@ class SecretRevision(HashIDModel):
                     )
                 )
 
-        meta_src = secret_meta if secret_meta is not None else old_revision.latest_meta
-
-        if meta_src is None:
-            # legacy fallback: reconstruct from the Secret itself
-            meta_src = secret
-
         new_rev, created = cls.objects.get_or_create(
             secret=secret,
             plaintext_data_sha256=old_revision.plaintext_data_sha256,
@@ -580,45 +572,17 @@ class SecretRevision(HashIDModel):
 
         new_rev.save()
 
-        raw = dumps(copy_meta_from_secret(meta_src), sort_keys=True, default=str)
-        wanted_hash = sha256(raw.encode()).hexdigest()
-
-        # try to reuse an identical meta record (same revision + hash)
-        meta_rec = SecretMeta.objects.filter(
-            revision=new_rev,
-            meta_sha256=wanted_hash,
-        ).first()
-
-        # otherwise create a fresh meta record for this actor
-        if meta_rec is None:
-            meta_rec = SecretMeta.objects.create(
-                revision=new_rev,
-                set_by=set_by,
-                meta_sha256=wanted_hash,
-               **copy_meta_from_secret(meta_src),
-            )
-
         new_rev.accessed_by.add(set_by)
         return new_rev
 
     def permission_checker(self, user):
-        """Return a PermissionChecker for either the latest metadata record
-        or, if no meta exists yet, the parent Secret itself.
-        """
-        meta = self.latest_meta
+        """Return a PermissionChecker based on the parent Secret's current metadata."""
         shares = self.secret.share_data.for_user(user)
-
         return PermissionChecker(
             user=user,
             secret=self.secret,
-            meta=meta,
-            shares=shares
+            shares=shares,
         )
-
-    @property
-    def latest_meta(self):
-        """Return the newest metadata record"""
-        return self.metas.first()
 
     def get_data(self, user):
         readable = self.permission_checker(user).is_readable()
@@ -675,90 +639,39 @@ class SecretRevision(HashIDModel):
         return self.secret.current_revision == self
 
 
-class SecretMeta(HashIDModel):
-    """
-    Immutable copy of a Secret’s metadata at a specific change point.
-    """
-    HASHID_NAMESPACE = 'SecretMeta'
-    revision = models.ForeignKey(
-        'SecretRevision',
-        on_delete=models.CASCADE,
-        related_name='metas',
-    )
-    created = models.DateTimeField(auto_now_add=True)
-    set_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.PROTECT,
-        related_name='secret_metas'
-    )
-
-    # metadata
-    name = models.CharField(max_length=92)
-    description = models.TextField(blank=True, null=True)
-    username = models.CharField(max_length=255, blank=True, null=True)
-    url = models.CharField(max_length=255, blank=True, null=True, validators=[validate_url])
-    filename = models.CharField(max_length=255, blank=True, null=True)
-
-    # governance
-    access_policy = models.PositiveSmallIntegerField(choices=AccessPolicy)
-    needs_changing_on_leave = models.BooleanField()
-    status = models.PositiveSmallIntegerField(choices=SecretStatus)
-
-    # Deduplication guard: same revision + identical metadata payload → reuse
-    # the existing meta record (avoids noise when nothing really changed).
-    meta_sha256 = models.CharField(max_length=64, editable=False)
-
-    class Meta:
-        ordering = ('-created',)
-        get_latest_by = 'created'
-        constraints = [
-            models.UniqueConstraint(
-                fields=('revision', 'meta_sha256'),
-                name='uniq_meta_per_revision',
-            )
-        ]
-
-    def __str__(self):
-        return f'SecretMeta {self.id} for rev {self.revision_id}'
-
-    def save(self, *args, **kwargs):
-        # Compute hash over the _meaningful_ payload (excluding PK/timestamps)
-        raw = dumps(copy_meta_from_secret(self), sort_keys=True, default=str)
-        self.meta_sha256 = sha256(raw.encode()).hexdigest()
-        super().save(*args, **kwargs)
-
-
-class SecretChange(models.Model):
+class SecretChange(HashIDModel):
+    HASHID_NAMESPACE = 'SecretChange'
     """Immutable change event capturing the state of a secret at a point in time.
 
     Invariants and intent:
-    - Each change points to exactly one payload revision (SecretRevision) and one
-      metadata record (SecretMeta) that belongs to that revision.
+    - Each change points to exactly one payload revision (SecretRevision) and contains the
+      metadata of the secret at that point in time.
     - Payload rows (SecretRevision) remain deduplicated by (secret, sha256) to
       preserve accessed_by and needs_changing semantics. Multiple changes may
       reference the same revision when a payload recurs (e.g., after a restore).
-    - parents models a directed acyclic graph (DAG) of changes. In normal use
-      there is a single parent (linear history). Restores branch by linking the
-      new change to the previous head, while restored_from references the prior
-      change that provided the payload/meta lineage.
+    - History is linear: each change has at most one parent (the previous head).
+      Restores create a new head; `restored_from` keeps provenance to the source
+      change, but does not introduce branching.
     - History, UI, and APIs should consume SecretChange exclusively; do not use
       legacy fields on SecretRevision for chronology.
     """
     secret = models.ForeignKey('Secret', on_delete=models.CASCADE, related_name='changes')
     revision = models.ForeignKey('SecretRevision', on_delete=models.PROTECT, related_name='changes')
-    metadata = models.ForeignKey('SecretMeta', on_delete=models.PROTECT, related_name='changes')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secret_changes')
     created = models.DateTimeField(auto_now_add=True)
 
-    # DAG edges (usually single-parent linear, but allow branching)
-    parents = models.ManyToManyField(
-        'self',
-        symmetrical=False,
-        related_name='children',
-        blank=True,
-        through='SecretChangeParent',
-        through_fields=('child', 'parent'),
-    )
+    # Linear edge: parent → this change (single chain).
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='children')
+
+    # Snapshot of metadata at the moment of change
+    name = models.CharField(max_length=92)
+    description = models.TextField(blank=True, null=True)
+    username = models.CharField(max_length=255, blank=True, null=True)
+    url = models.CharField(max_length=255, blank=True, null=True, validators=[validate_url])
+    filename = models.CharField(max_length=255, blank=True, null=True)
+    access_policy = models.PositiveSmallIntegerField(choices=AccessPolicy)
+    needs_changing_on_leave = models.BooleanField(default=True)
+    status = models.PositiveSmallIntegerField(choices=SecretStatus, default=SecretStatus.OK)
 
     # Optional link to the change that was the source of a restore
     restored_from = models.ForeignKey('self', null=True, blank=True, on_delete=models.SET_NULL, related_name='restores')
@@ -769,47 +682,38 @@ class SecretChange(models.Model):
             models.Index(fields=['secret', 'created'], name='secretchange_secret_create_idx'),
             models.Index(fields=['actor', 'created'], name='secretchange_actor_create_idx'),
             models.Index(fields=['revision'], name='secretchange_revision_idx'),
+            models.Index(fields=['parent'], name='secretchange_parent_idx'),
         ]
         constraints = [
             models.CheckConstraint(
                 check=~models.Q(restored_from=models.F('id')),
                 name='secretchange_no_self_restore',
             ),
+            models.CheckConstraint(
+                check=~models.Q(parent=models.F('id')),
+                name='secretchange_no_self_parent',
+            ),
         ]
 
     def clean(self):
         # 1) revision must belong to secret
         if self.revision_id and self.secret_id and self.revision.secret_id != self.secret_id:
-            raise ValidationError("revision.secret != secret")
-
-        # 2) meta record must belong to revision
-        if self.metadata_id and self.revision_id and self.metadata.revision_id != self.revision_id:
-            raise ValidationError("meta.revision != revision")
+            raise ValidationError('revision.secret != secret')
 
         # 3) restored_from (if any) must be same secret
         if self.restored_from_id and self.restored_from.secret_id != self.secret_id:
-            raise ValidationError("restored_from.secret != secret")
+            raise ValidationError('restored_from.secret != secret')
 
     def save(self, *args, **kwargs):
         # Soft immutability: no updates after insert
         if self.pk is not None:
-            raise ValidationError("SecretChange is immutable; create a new row instead.")
-        self.full_clean()
+            raise ValidationError('SecretChange is immutable; create a new row instead.')
+        # hashid is generated in HashIDModel.save(); exclude it from pre-save validation
+        self.full_clean(exclude=['hashid'])
         return super().save(*args, **kwargs)
 
     def __str__(self):
         return f'Change {self.id} for {self.secret_id} at {self.created.isoformat()}'
-
-
-class SecretChangeParent(models.Model):
-    parent = models.ForeignKey('SecretChange', on_delete=models.CASCADE, related_name='+')
-    child = models.ForeignKey('SecretChange', on_delete=models.CASCADE, related_name='+')
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=['parent', 'child'], name='uniq_change_parent_child'),
-            models.CheckConstraint(check=~models.Q(parent=models.F('child')), name='no_self_parent_edge'),
-        ]
 
 
 class SecretShareQuerySet(models.QuerySet):
@@ -832,11 +736,7 @@ class SecretShareQuerySet(models.QuerySet):
     def for_user(self, user: User):
         """Return non‑expired shares that apply to the user
         (direct or via group)."""
-        return (
-            self.with_expiry_state()
-                .filter(Q(user=user) | Q(group__user=user))
-                .exclude(is_expired=True)
-        )
+        return self.with_expiry_state().filter(Q(user=user) | Q(group__user=user)).exclude(is_expired=True)
 
 
 class SharedSecretData(models.Model):
@@ -927,7 +827,6 @@ class SharedSecretData(models.Model):
         unique_together = [('group', 'secret'), ('user', 'secret')]
 
 
-
 @receiver(post_save, sender=Secret)
 def update_search_index(sender, **kwargs):
     Secret.objects.filter(id=kwargs['instance'].id).update(
@@ -945,7 +844,6 @@ class PermissionChecker:
     user: User
     secret: Secret
     shares: SecretShareQuerySet
-    meta: SecretMeta | None = None
 
     def _secret_deleted(self) -> bool:
         return self.secret.status == SecretStatus.DELETED
@@ -954,8 +852,6 @@ class PermissionChecker:
         return self.user.is_superuser and settings.ALLOW_SUPERUSER_READS
 
     def _access_policy(self) -> AccessPolicy:
-        if self.meta:
-            return self.meta.access_policy
         return self.secret.access_policy
 
     def is_discoverable(self) -> bool:
@@ -994,7 +890,7 @@ class PermissionChecker:
 
     def is_visible(self) -> AccessPermissionTypes:
         """Checks if the secret is visible to the user in lists."""
-        status = self.meta.status if self.meta else self.secret.status
+        status = self.secret.status
         if status == SecretStatus.DELETED:
             return AccessPermissionTypes.NOT_ALLOWED
 

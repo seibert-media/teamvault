@@ -2,10 +2,7 @@ from copy import copy
 
 from django.test import TestCase, override_settings
 
-from teamvault.apps.secrets.models import (
-    SecretMeta,
-    SecretRevision,
-)
+from teamvault.apps.secrets.models import SecretRevision, SecretChange
 from teamvault.apps.secrets.services.revision import RevisionService
 from .utils import COMMON_OVERRIDES, make_user, new_secret
 
@@ -28,8 +25,8 @@ class RevisionHistoryTests(TestCase):
             payload={'password': 'second‑pw'}
         )
         self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
-        # With per‑revision metadata, we now create a baseline metadata for each revision
-        self.assertEqual(SecretMeta.objects.filter(revision__secret=s).count(), 2)
+        # Two distinct payload revisions
+        self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
 
         # 3rd change: ONLY metadata update
         s.description = 'New description'
@@ -44,11 +41,9 @@ class RevisionHistoryTests(TestCase):
             payload=copy(current_payload)
         )
 
-        self.assertEqual(
-            SecretRevision.objects.filter(secret=s).count(),
-            2,  # still two distinct payloads
-        )
-        self.assertEqual(SecretMeta.objects.filter(revision__secret=s).count(), 3)
+        self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
+        # Three SecretChange rows (2 payload + 1 metadata-only snapshot)
+        self.assertEqual(SecretChange.objects.filter(secret=s).count(), 3)
 
         # History view contract: 3 rows (2 payload, 1 meta diff)
         rows = RevisionService.get_revision_history(s, self.owner)
