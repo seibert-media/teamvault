@@ -6,7 +6,6 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
-from django.db import transaction
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
@@ -20,10 +19,10 @@ from django_htmx.http import trigger_client_event
 
 from .filters import SecretFilter
 from .forms import CCForm, FileForm, PasswordForm, SecretShareForm
-from .models import AccessPermissionTypes, Secret, SecretMeta, SecretRevision, SecretShareQuerySet, SharedSecretData, SecretChange
+from .models import AccessPermissionTypes, Secret, SecretRevision, SecretShareQuerySet, SharedSecretData, SecretChange
 from .exceptions import PermissionError
 from .enums import AccessPolicy, ContentType, SecretStatus
-from .utils import apply_meta_to_secret, serialize_add_edit_data
+from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
@@ -596,17 +595,53 @@ def secret_revisions(request, hashid):
 def secret_revision_detail(request, revision_hashid):
     """Displays the state of a secret at a specific point in time, based on a
     SecretRevision.
+    
+    Only redirect to the main secret detail when the requested view represents
+    the current state (latest change). Older metadata changes on the current
+    payload stay on the change detail.
     """
     try:
         revision = SecretRevision.objects.select_related('secret').get(hashid=revision_hashid)
     except SecretRevision.DoesNotExist:
         raise Http404
 
-    if revision.is_current_revision:
-        return redirect(revision.secret.get_absolute_url())
-
     # Perform permission check against the parent secret
     revision.secret.check_read_access(request.user)
+
+    # Resolve change (if provided) and determine whether it is the latest
+    change_hash = request.GET.get("change")
+    shown_change = None
+    if change_hash:
+        shown_change = SecretChange.objects.filter(
+            hashid=change_hash,
+            secret=revision.secret,
+            revision=revision,
+        ).first()
+
+    # Fallback: use the most recent change that references this revision
+    if shown_change is None:
+        shown_change = (
+            SecretChange.objects
+            .filter(secret=revision.secret, revision=revision)
+            .order_by('-created')
+            .first()
+        )
+
+    # If the revision is current and the requested (or implied) change is the
+    # latest change overall, redirect to the regular secret detail view.
+    if revision.is_current_revision:
+        latest_change = (
+            SecretChange.objects
+            .filter(secret=revision.secret)
+            .order_by('-created')
+            .first()
+        )
+        if latest_change and shown_change and latest_change.id == shown_change.id:
+            return redirect(revision.secret.get_absolute_url())
+        # Also redirect when no explicit change was requested and there is no
+        # change row (shouldn't normally happen, but keep behavior intuitive).
+        if not change_hash and shown_change is None:
+            return redirect(revision.secret.get_absolute_url())
 
     # Decrypt the revision's data for display (handle historical ACL)
     try:
@@ -614,68 +649,31 @@ def secret_revision_detail(request, revision_hashid):
     except PermissionError:
         raise PermissionDenied
 
-    # Resolve change (if provided), then choose meta accordingly
-    change_id = request.GET.get("change")
-    change_obj = None
-    if change_id:
-        try:
-            change_obj = SecretChange.objects.select_related('metadata').get(
-                pk=change_id,
-                secret=revision.secret,
-                revision=revision,
-            )
-        except SecretChange.DoesNotExist:
-            change_obj = None
-
-    meta_id = request.GET.get("meta")
-    if meta_id:
-        meta = get_object_or_404(SecretMeta, pk=meta_id, revision=revision)
-    elif change_obj and change_obj.metadata_id:
-        meta = change_obj.metadata
-    else:
-        meta = revision.latest_meta
-
-    # Apply the metadata to a copy of the revision/secret so DB rows stay unmodified
-    if meta:
+    # Apply snapshot to a detached copy for display only
+    if shown_change:
         revision_copy = copy(revision)
         revision_copy.secret = copy(revision.secret)
-        apply_meta_to_secret(revision_copy.secret, meta)
+        # inline apply: mirror utils.apply_snapshot_to_secret to avoid circular import
+        for f in ('name','description','username','url','filename','access_policy','needs_changing_on_leave','status'):
+            setattr(revision_copy.secret, f, getattr(shown_change, f))
         revision = revision_copy
-    else:
-        meta = revision.secret
 
-    shown_meta = meta if meta_id else None
-
-    # Determine the specific change (if provided) to contextualize restore info
-    change_id = request.GET.get("change")
-    restore_event = None
-    if change_id:
-        try:
-            ch = SecretChange.objects.select_related('restored_from__revision').get(
-                pk=change_id,
-                secret=revision.secret,
-                revision=revision,
-            )
-            if ch.restored_from_id:
-                restore_event = ch
-        except SecretChange.DoesNotExist:
-            restore_event = None
-    else:
-        restore_event = (
-            SecretChange.objects
-            .select_related('restored_from__revision')
-            .filter(secret=revision.secret, revision=revision, restored_from__isnull=False)
-            .order_by('-created')
-            .first()
-        )
+    # Determine restore provenance for banner
+    restore_event = (
+        SecretChange.objects
+        .select_related('restored_from__revision')
+        .filter(secret=revision.secret, revision=revision, restored_from__isnull=False)
+        .order_by('-created')
+        .first()
+    )
 
     context = {
         'revision': revision,
         'secret': revision.secret,  # Pass the parent secret for breadcrumbs/links
         'decrypted_data': decrypted_data,
         'ContentType': ContentType,
-        'shown_meta': shown_meta,
-        'meta': meta,
+        'shown_change': shown_change,
+        'meta': revision.secret,
         # TODO also show this to secret owner
         'restore_allowed': revision.secret.check_read_access(request.user),
         'restore_event': restore_event,
@@ -704,7 +702,7 @@ def secret_revision_download(request, revision_hashid):
         file_bytes = revision.get_data(request.user)  # returns raw bytes for FILE type
     except PermissionError:
         raise PermissionDenied
-    filename = revision.latest_meta.filename or revision.secret.filename or revision.secret.name
+    filename = revision.secret.filename or revision.secret.name
 
     response = HttpResponse(file_bytes, content_type="application/octet-stream")
     response["Content-Disposition"] = (
@@ -716,29 +714,26 @@ def secret_revision_download(request, revision_hashid):
 @login_required
 @require_http_methods(["POST"])
 def restore_secret_revision(request, secret_hashid, revision_hashid):
-    """Restores a specific revision of a secret by creating a new revision
-    with the same data and setting it as the current revision.
+    """Restore the secret to the state captured by a specific change hash.
+    Requires `?change=<change_hashid>`.
     """
     secret = get_object_or_404(Secret, hashid=secret_hashid)
-    revision_to_restore = get_object_or_404(SecretRevision, hashid=revision_hashid, secret=secret)
+    _ = get_object_or_404(SecretRevision, hashid=revision_hashid, secret=secret)
 
-    meta_id = request.GET.get("meta")
-    meta_rec = None
-    if meta_id:
-        meta_rec = get_object_or_404(
-            SecretMeta,
-            pk=meta_id,
-            revision=revision_to_restore,
-        )
-    new_rev = RevisionService.restore(
+    change_hash = request.GET.get("change")
+    if not change_hash:
+        raise Http404
+    change = get_object_or_404(SecretChange, hashid=change_hash, secret=secret)
+
+    new_rev = RevisionService.restore_to_change(
         secret=secret,
         actor=request.user,
-        old_revision=revision_to_restore,
-        meta_rec=meta_rec
+        change=change,
     )
 
-    messages.success(request, f"Successfully restored revision {revision_to_restore.id}. "
-                              f"New revision {new_rev.id} is now the current version.")
+    messages.success(
+        request,
+        f"Restored to change {change.hashid}. New revision {new_rev.id} is now current.",
+    )
 
-    # Redirect back to the main detail view for the secret
     return redirect(secret.get_absolute_url())
