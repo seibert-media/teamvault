@@ -67,12 +67,18 @@ def serialize_add_edit_data(cleaned_data, secret):
                 else:
                     plaintext_data[attr] = data_params[attr]
     elif secret.content_type == ContentType.FILE:
+        file = cleaned_data.get('file')
+        if not file:
+            return plaintext_data
+
         try:
-            plaintext_data['file_content'] = base64.b64encode(cleaned_data['file'].read()).decode()
-            secret.filename = cleaned_data['file'].name
-            secret.save()
+            plaintext_data['file_content'] = base64.b64encode(file.read()).decode()
         except Exception as e:
-            raise ValidationError('File type not suported') from e
+            raise ValidationError('File type not supported') from e
+
+        if hasattr(file, 'name') and file.name:
+            secret.filename = file.name
+            secret.save()
     elif secret.content_type == ContentType.CC:
         plaintext_data = {
             'holder': cleaned_data['holder'],
