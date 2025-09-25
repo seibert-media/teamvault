@@ -1,0 +1,31 @@
+{
+  "manifest_version": 3,
+  "name": "TeamVault",
+  "description": "Password manager extension for TeamVault with search and autofill.",
+  "version": "0.1.0",
+  "action": {
+    "default_title": "TeamVault",
+    "default_popup": "popup.html"
+  },
+  "options_page": "options.html",
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "scripting",
+    "tabs",
+    "contextMenus",
+    "cookies"
+  ],
+  "host_permissions": [],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://*/*", "http://*/*"],
+      "js": ["content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
