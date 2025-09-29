@@ -58,7 +58,7 @@ def migrate_file_secrets_to_new_save_method(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("secrets", "0037_change_secretrevision_plaintextdata_key_of_password_type"),
+        ("secrets", "0038_secretrevision_last_read_secretchange"),
     ]
 
     operations = [
