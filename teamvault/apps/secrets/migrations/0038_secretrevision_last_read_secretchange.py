@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('secrets', '0038_migrate_old_file_saves_into_new_format'),
+        ('secrets', '0037_change_secretrevision_plaintextdata_key_of_password_type'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
