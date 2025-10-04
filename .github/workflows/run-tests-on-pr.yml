@@ -1,0 +1,90 @@
+name: Run Django Tests on PR
+
+on:
+  pull_request:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [ "3.10", "3.11", "3.12" ]
+
+
+    env:
+      TEAMVAULT_CONFIG_FILE: ${{ github.workspace }}/teamvault.cfg
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/teamvault
+      PGPORT: 5432
+
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: teamvault
+          POSTGRES_USER: teamvault
+          POSTGRES_PASSWORD: teamvault
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
+
+    steps:
+      - name: Install system build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+          build-essential \
+          libffi-dev \
+          libldap2-dev \
+          libpq-dev \
+          libsasl2-dev \
+          postgresql-contrib
+
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+          cache-dependency-glob: |
+            **/uv.lock
+            **/pyproject.toml
+
+      - name: Cache venv
+        uses: actions/cache@v4
+        with:
+          path: |
+            .venv
+          key: uv-venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
+          restore-keys: |
+            uv-venv-${{ runner.os }}-py${{ matrix.python-version }}-
+
+      - name: Install dependencies
+        working-directory: ${{ github.workspace }}
+        run: |
+          uv sync && uv pip install -e .
+
+      - name: Activate venv for later steps
+        shell: bash
+        run: |
+          echo "${{ github.workspace }}/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Set Up TeamVault Config File
+        working-directory: ${{ github.workspace }}
+        run: |
+          teamvault setup
+
+      - name: Run Tests
+        working-directory: ${{ github.workspace }}/teamvault
+        run: |
+          python manage.py test
