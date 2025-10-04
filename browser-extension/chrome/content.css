@@ -1,0 +1,61 @@
+:root {
+  --tv-accent: #f8592c;
+  --tv-dark: #2f2d35;
+  --tv-main: #1a1c22;
+  --tv-info: #289cdd;
+  --tv-success: #13ca5c;
+  --tv-tertiary: #424242;
+}
+
+.tv-autofill-btn {
+  position: fixed;
+  z-index: 2147483646;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--tv-accent);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  cursor: pointer;
+  user-select: none;
+}
+.tv-autofill-btn:hover { filter: brightness(1.05); }
+.tv-autofill-btn:active { transform: translateY(1px); }
+.tv-autofill-toaster {
+  position: fixed;
+  z-index: 2147483647;
+  background: var(--tv-dark);
+  color: #fff;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font: 12px/1.3 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+}
+
+.tv-autofill-menu {
+  position: fixed;
+  z-index: 2147483647;
+  min-width: 220px;
+  background: #14161b;
+  color: #eaeaf0;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+  overflow: hidden;
+  font: 13px/1.4 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+}
+.tv-autofill-menu .tv-item {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.tv-autofill-menu .tv-item:hover { background: rgba(248,89,44,0.12); }
+.tv-autofill-menu .tv-title { font-weight: 600; }
+.tv-autofill-menu .tv-sub { font-size: 12px; opacity: 0.9; }
+.tv-autofill-menu .tv-pin { font-size: 11px; color: var(--tv-accent); margin-left: 6px; }

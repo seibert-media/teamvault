@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <defs>
+    <style>
+      .a { fill: #f8592c; }
+      .b { fill: #ffffff; font: 700 28px system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+    </style>
+  </defs>
+  <circle class="a" cx="32" cy="32" r="30" />
+  <text class="b" x="32" y="38" text-anchor="middle">TV</text>
+</svg>
+
