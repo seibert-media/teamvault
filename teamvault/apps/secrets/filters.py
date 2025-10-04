@@ -9,6 +9,7 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
 from teamvault.apps.secrets.models import Secret
+from teamvault.apps.secrets.enums import ContentType, SecretStatus
 
 User = get_user_model()
 
@@ -39,17 +40,17 @@ class Icons(enum.Enum):
 class ContentTypeChoice(IntegerChoices):
     # TODO: Merge CONTENT_* vars with these ones.
     #  Preferably migrate occurances of Secret.CONTENT_CHOICES to this class
-    PASSWORD = Secret.CONTENT_PASSWORD, mark_safe(Icons.KEY.html + _('Password'))
-    CREDIT_CARD = Secret.CONTENT_CC, mark_safe(Icons.CREDIT_CARD.html + _('Credit Card'))
-    FILE = Secret.CONTENT_FILE, mark_safe(Icons.FILE.html + _('File'))
+    PASSWORD = ContentType.PASSWORD, mark_safe(Icons.KEY.html + _('Password'))
+    CREDIT_CARD = ContentType.CC, mark_safe(Icons.CREDIT_CARD.html + _('Credit Card'))
+    FILE = ContentType.FILE, mark_safe(Icons.FILE.html + _('File'))
 
 
 class StatusChoices(IntegerChoices):
     # TODO: Merge STATUS_* vars with these ones.
     #  Preferably migrate occurances of Secret.STATUS_CHOICES to this class
-    OK = Secret.STATUS_OK, mark_safe(Icons.KEY.html + _('Regular'))
-    NEEDS_CHANGING = Secret.STATUS_NEEDS_CHANGING, mark_safe(Icons.REFRESH_DANGER.html + _('Needs Changing'))
-    DELETED = Secret.STATUS_DELETED, mark_safe(Icons.DELETED_DANGER.html) + f"{add_tooltip( _('Deleted'),_('Hide deleted secrets per default by changing your settings.'))}"
+    OK = SecretStatus.OK, mark_safe(Icons.KEY.html + _('Regular'))
+    NEEDS_CHANGING = SecretStatus.NEEDS_CHANGING, mark_safe(Icons.REFRESH_DANGER.html + _('Needs Changing'))
+    DELETED = SecretStatus.DELETED, mark_safe(Icons.DELETED_DANGER.html) + f"{add_tooltip( _('Deleted'),_('Hide deleted secrets per default by changing your settings.'))}"
 
 
 class SecretFilter(django_filters.FilterSet):
