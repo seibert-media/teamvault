@@ -1,20 +1,15 @@
-from copy import copy
 from datetime import timedelta
-from urllib.parse import urlencode
 
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
-from django.test import Client, TestCase, override_settings
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.timezone import now
 
-from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
+from teamvault.apps.secrets.enums import AccessPolicy
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
-    SecretChange,
     SharedSecretData,
 )
-from teamvault.apps.secrets.services.revision import RevisionService
 
 from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
