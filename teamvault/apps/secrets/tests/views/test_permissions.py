@@ -81,7 +81,7 @@ class SecretReadPermissionTests(TestCase):
         )
         self.client.force_login(self.other)
         resp = self.client.get(reverse("secrets.secret-detail", args=[secret.hashid]))
-        self.assertEqual(resp.status_code, 200)  # discoverable by default → page loads
+        self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context["readable"], AccessPermissionTypes.NOT_ALLOWED)
 
 
@@ -97,18 +97,18 @@ class SecretVisibilityPermissionTests(TestCase):
         return self.client.get(reverse("secrets.secret-detail", args=[secret.hashid]))
 
     def test_visible_but_not_readable_when_discoverable_and_no_share(self):
-        secret = new_secret(self.owner, share_with_owner=False, access_policy=AccessPolicy.DISCOVERABLE)
-        resp = self._get(self.owner, secret)
-        self.assertEqual(resp.status_code, 200)  # discoverable ⇒ visible
+        secret = new_secret(self.owner, access_policy=AccessPolicy.DISCOVERABLE)
+        resp = self._get(self.other, secret)
+        self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context["readable"], AccessPermissionTypes.NOT_ALLOWED)
 
     def test_hidden_not_visible_without_share(self):
-        secret = new_secret(self.owner, share_with_owner=False, access_policy=AccessPolicy.HIDDEN)
+        secret = new_secret(self.owner,access_policy=AccessPolicy.HIDDEN)
         resp = self._get(self.other, secret)
         self.assertEqual(resp.status_code, 404)
 
     def test_hidden_but_visible_with_share(self):
-        secret = new_secret(self.owner, share_with_owner=True)
+        secret = new_secret(self.owner)
         SharedSecretData.objects.create(secret=secret, user=self.other, granted_by=self.owner)
 
         resp = self._get(self.other, secret)
