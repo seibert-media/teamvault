@@ -4,8 +4,20 @@ import string
 from urllib.parse import urlparse, parse_qs
 
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
+from django.core.exceptions import ValidationError
+from teamvault.apps.secrets.enums import ContentType
 
-from .models import Secret
+
+META_FIELDS = (
+    'name',
+    'description',
+    'username',
+    'url',
+    'filename',
+    'access_policy',
+    'needs_changing_on_leave',
+    'status',
+)
 
 
 def extract_url_and_params(data):
@@ -16,11 +28,37 @@ def extract_url_and_params(data):
     return data_as_url, data_params
 
 
+def copy_meta_from_secret(secret: 'Secret') -> dict:
+    return {
+        'name': secret.name,
+        'description': secret.description,
+        'username': secret.username,
+        'url': secret.url,
+        'filename': secret.filename,
+        'access_policy': int(secret.access_policy),
+        'needs_changing_on_leave': secret.needs_changing_on_leave,
+        'status': int(secret.status),
+    }
+
+
+def apply_snapshot_to_secret(secret: 'Secret', change: 'SecretChange') -> list[str]:
+    """Apply metadata snapshot fields from a SecretChange onto a Secret.
+    Returns the list of fields that changed.
+    """
+    dirty = []
+    for f in META_FIELDS:
+        val = getattr(change, f)
+        if getattr(secret, f) != val:
+            setattr(secret, f, val)
+            dirty.append(f)
+    return dirty
+
+
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
-    if secret.content_type == Secret.CONTENT_PASSWORD:
-        cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data["otp_key_data"])
-        if cleaned_data.get("password"):
+    if secret.content_type == ContentType.PASSWORD:
+        cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data['otp_key_data'])
+        if cleaned_data.get('password'):
             plaintext_data['password'] = cleaned_data['password']
         for attr in ['secret', 'digits', 'algorithm']:
             if data_params.get(attr):
@@ -28,14 +66,20 @@ def serialize_add_edit_data(cleaned_data, secret):
                     plaintext_data['otp_key'] = data_params[attr]
                 else:
                     plaintext_data[attr] = data_params[attr]
-    elif secret.content_type == Secret.CONTENT_FILE:
+    elif secret.content_type == ContentType.FILE:
+        file = cleaned_data.get('file')
+        if not file:
+            return plaintext_data
+
         try:
-            plaintext_data['file_content'] = base64.b64encode(cleaned_data['file'].read()).decode()
-            secret.filename = cleaned_data['file'].name
-            secret.save()
+            plaintext_data['file_content'] = base64.b64encode(file.read()).decode()
         except Exception as e:
-            raise ('File type not suported', e)
-    elif secret.content_type == Secret.CONTENT_CC:
+            raise ValidationError('File type not supported') from e
+
+        if hasattr(file, 'name') and file.name:
+            secret.filename = file.name
+            secret.save()
+    elif secret.content_type == ContentType.CC:
         plaintext_data = {
             'holder': cleaned_data['holder'],
             'number': cleaned_data['number'],
