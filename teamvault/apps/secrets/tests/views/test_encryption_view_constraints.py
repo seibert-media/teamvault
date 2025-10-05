@@ -1,5 +1,3 @@
-# teamvault/apps/secrets/tests/views/test_encryption_view_constraints.py
-
 from base64 import b64encode
 
 from django.test import TestCase, override_settings
@@ -71,7 +69,6 @@ class EncryptionViewConstraintsTests(TestCase):
         self.assertIn("attachment;", cd)
         self.assertIn("filename*=", cd)
         self.assertEqual(resp.content, self.file_bytes)
-
 
     def test_secret_list_page_does_not_render_plaintext_for_file_secret(self):
         """List page must not inline decrypted bytes."""
