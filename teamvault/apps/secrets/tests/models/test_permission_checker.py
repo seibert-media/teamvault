@@ -46,6 +46,7 @@ class PermissionCheckerTests(TestCase):
             visible=AccessPermissionTypes.ALLOWED,
         )
 
+
     def test_discoverable_without_share(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.DISCOVERABLE)
         chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
@@ -233,3 +234,14 @@ class PermissionCheckerTests(TestCase):
         chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self.assertEqual(chk.is_visible(), AccessPermissionTypes.ALLOWED)
         self.assertEqual(chk.is_readable(), AccessPermissionTypes.ALLOWED)
+
+    def test_hidden_visible_for_owner_when_explicitly_shared(self):
+        sec = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN, share_with_owner=False)
+        chk = PermissionChecker(self.owner, sec, sec.share_data.for_user(self.owner))
+
+        self._assert_perm(
+            chk,
+            readable=AccessPermissionTypes.ALLOWED,
+            shareable=AccessPermissionTypes.ALLOWED,
+            visible=AccessPermissionTypes.ALLOWED,
+        )
