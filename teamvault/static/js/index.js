@@ -1,3 +1,5 @@
+// Import vendor tom select css
+import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 // Import our custom CSS
 import '../scss/base.scss'
 
@@ -9,6 +11,7 @@ import autoCompleteJS from '@tarekraafat/autocomplete.js';
 import ClipboardJS from "clipboard";
 import DOMPurify from 'dompurify';
 import {TempusDominus} from '@eonasdan/tempus-dominus'
+import TomSelect from 'tom-select';
 
 import {initZxcvbn} from './zxcvbn.ts'
 
@@ -73,3 +76,6 @@ $.fn.select2.amd.require(['select2/selection/search'], function (Search) {
     this.handleSearch();
   };
 }, null, true);
+
+// tom-select
+window.TomSelect = TomSelect
