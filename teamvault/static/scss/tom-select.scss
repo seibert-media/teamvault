@@ -1,0 +1,43 @@
+.usersearch {
+   position: relative;
+  cursor: text !important;
+
+  .search-icon,
+  .ts-control input {
+    cursor: text !important;
+  }
+}
+
+.ts-dropdown {
+  .active {
+    background-color: var(--bs-secondary-bg);
+  }
+
+  .no-results {
+    color: var(--bs-body-color, #e5e7eb);
+    float: left;
+  }
+}
+
+.ts-wrapper {
+
+  &.form-control {
+    border: 0 !important;
+    cursor: text !important;
+
+
+    .ts-control {
+      cursor: text !important;
+      box-shadow: none !important;
+
+      input,
+      .dropdown-input {
+        color: var(--bs-body-color) !important;
+      }
+    }
+  }
+}
+
+.ts-option-name-field {
+  color: var(--bs-body-color);
+}

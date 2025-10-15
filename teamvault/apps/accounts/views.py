@@ -2,8 +2,13 @@ from django.contrib import messages
 from django.contrib.auth.decorators import user_passes_test, login_required
 from django.contrib.auth.models import User
 from django.db import transaction
-from django.http import HttpResponseRedirect
-from django.shortcuts import get_object_or_404
+from django.db.models import Q
+from django.http import (
+    HttpResponseBadRequest,
+    HttpResponseRedirect,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
@@ -55,6 +60,15 @@ class UserDetail(DetailView):
 
 
 user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def user_detail_from_request(request):
+    username = request.GET.get('username', '').strip()
+    if not username:
+        return HttpResponseBadRequest(_('Username is required'))
+    user = get_object_or_404(User, username=username)
+    return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': user}))
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -120,3 +134,27 @@ def user_activate(request, username, deactivate=False):
             user=user,
         )
     return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': user.username}))
+
+
+def search_user(request):
+    if not request.user.is_superuser:
+        return {}
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return {}
+    users_queryset = User.objects.filter(Q(username__icontains=q) | Q(first_name__icontains=q) | Q(last_name__icontains=q))[:15]
+    results: list[dict[str, str]] = [{
+                'username': user.username,
+                'cn': f'{user.first_name} {user.last_name}'.strip()
+            } for user in users_queryset]
+    return JsonResponse({"results": results})
+
+
+def get_user_avatar_partial(request):
+    if not request.user.is_superuser:
+        return {}
+    username = request.GET.get('username', '').strip()
+    if not username:
+        return {}
+    user = User.objects.get(username=username)
+    return render(request, 'accounts/_avatar.html', {'user': user, 'tooltip_title': username})

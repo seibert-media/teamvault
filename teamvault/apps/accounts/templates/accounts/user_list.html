@@ -5,9 +5,25 @@
 {% block content %}
     <div class="row justify-content-center">
         <div class="col-lg-8">
-            <h1>
-                {% trans "Users" %}
-            </h1>
+            <div class="row d-flex justify-content-between">
+                <div class="col">
+                    <h1 class="h1">
+                        {% trans "Users" %}
+                    </h1>
+                </div>
+                <div class="col text-end align-self-center ps-3">
+                    <div class="usersearch d-flex align-items-center border border-2 rounded-3 ps-3"
+                         data-target="#user-list-search" tabindex="0" role="search" id="usersearch-div">
+                        <label for="user-list-search">
+                            <i class="fa fa-search search-icon" aria-hidden="true"></i>
+                        </label>
+                        <select id="user-list-search" type="text" class="form-control"
+                                placeholder="Search user...">
+                        </select>
+                    </div>
+                </div>
+            </div>
+
             <div class="card">
                 <div class="card-body table-responsive">
                     <table class="table table-hover">
@@ -49,4 +65,65 @@
             {% include "pagination.html" %}
         </div>
     </div>
+{% endblock %}
+{% block additionalJS %}
+    <script>
+        const userUrl = '{% url "accounts.search-user" %}'
+        const avatarUrl = '{% url "accounts.user.avatar" %}'
+        var ts = new TomSelect('#user-list-search', {
+            closeAfterSelect: true,
+            create: false,
+            dropdownParent: '#usersearch-div',
+            labelField: 'username',
+            maxItems: 1,
+            openOnFocus: false,
+            searchField: ['username', 'cn'],
+            valueField: 'username',
+            load: function (query, callback) {
+                if (!query) return callback();
+                const params = new URLSearchParams({
+                    q: query,
+                });
+                fetch(`${userUrl}?${params.toString()}`)
+                    .then(res => res.json())
+                    .then(json => callback(json.results))
+                    .catch(() => callback());
+            },
+            onLoad: function () {
+                const dropdownEl = this.dropdown;
+                htmx.process(dropdownEl);
+            },
+            render: {
+                option(data, escape) {
+                    return `<div class="row align-items-center justify-between">
+                                <div class="col-auto d-flex justify-content-center justify-content-lg-end align-items-center">
+                                   <span id="avatar-span-${escape(data.username)}">
+                                       <div class="avatar-container me-2" hx-get="${avatarUrl}?username=${escape(data.username)}"
+                                            hx-target="this"
+                                            hx-swap="innerHTML"
+                                            hx-trigger="load">
+                                       </div>
+                                   </span
+                                </div>
+                                <div class="col-auto ts-option-name-field">${escape(data.cn)}</div>
+                            </div>`;
+                },
+                item(data, escape) {
+                    return `<div>${escape(data.cn)}</div>`;
+                }
+            }
+        });
+
+        ts.on('item_add', (value) => {
+            window.location.href = `{% url 'accounts.user-detail-from-request' %}?username=${value}`;
+        });
+
+        const userSearchBar = document.getElementById('usersearch-div');
+        const inputEl = userSearchBar.children[2].children[0].children[0]
+        userSearchBar.addEventListener('click', _ => {
+            if (document.activeElement === inputEl) return;
+            inputEl.focus();
+        })
+    </script>
+
 {% endblock %}
