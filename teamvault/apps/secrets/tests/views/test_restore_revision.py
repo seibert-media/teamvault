@@ -10,7 +10,7 @@ from teamvault.apps.secrets.models import (
     SecretChange,
 )
 from teamvault.apps.secrets.services.revision import RevisionService
-from .utils import COMMON_OVERRIDES, make_user, new_secret
+from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 RESTORE_URL_NAME = 'restore_secret_revision'
 

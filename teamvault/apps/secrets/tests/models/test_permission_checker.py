@@ -10,7 +10,7 @@ from teamvault.apps.secrets.models import (
     SharedSecretData,
 )
 
-from .utils import COMMON_OVERRIDES, make_user, new_secret
+from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 
 @override_settings(**COMMON_OVERRIDES)
