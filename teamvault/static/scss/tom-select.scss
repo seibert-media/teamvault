@@ -1,5 +1,5 @@
 .usersearch {
-   position: relative;
+  position: relative;
   cursor: text !important;
 
   .search-icon,
@@ -17,6 +17,11 @@
     color: var(--bs-body-color, #e5e7eb);
     float: left;
   }
+
+  .spinner {
+    float: left;
+    margin-left: 1em;
+  }
 }
 
 .ts-wrapper {
@@ -24,7 +29,6 @@
   &.form-control {
     border: 0 !important;
     cursor: text !important;
-
 
     .ts-control {
       cursor: text !important;
