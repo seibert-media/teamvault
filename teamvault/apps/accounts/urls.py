@@ -1,7 +1,15 @@
 from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
-from . import views
+from .views import (
+    get_user_avatar_partial,
+    search_user,
+    user_activate,
+    user_detail,
+    user_detail_from_request,
+    user_settings,
+    users,
+)
 
 urlpatterns = (
     path(
@@ -16,28 +24,44 @@ urlpatterns = (
     ),
     path(
         'users/',
-        views.users,
+        users,
         name='accounts.user-list',
     ),
     path(
+        'users/avatar/',
+        get_user_avatar_partial,
+        name='accounts.user.avatar',
+    ),
+    path(
+        'users/detail/',
+        user_detail_from_request,
+        name='accounts.user-detail-from-request',
+    ),
+
+    path(
+        'users/search/',
+        search_user,
+        name='accounts.search-user',
+    ),
+    path(
         'users/<str:username>/',
-        views.user_detail,
+        user_detail,
         name='accounts.user-detail',
     ),
     path(
         'users/<str:username>/reactivate',
-        views.user_activate,
+        user_activate,
         name='accounts.user-reactivate',
     ),
     path(
         'users/<str:username>/deactivate',
-        views.user_activate,
+        user_activate,
         {'deactivate': True},
         name='accounts.user-deactivate',
     ),
     path(
         'settings/',
-        views.user_settings,
+        user_settings,
         name='accounts.user-settings',
     ),
 )
