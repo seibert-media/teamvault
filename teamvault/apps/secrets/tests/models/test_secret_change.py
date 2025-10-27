@@ -4,7 +4,7 @@ from django.test import TestCase, override_settings
 from teamvault.apps.secrets.models import SecretChange
 from teamvault.apps.secrets.services.revision import RevisionService
 from teamvault.apps.secrets.utils import copy_meta_from_secret
-from .utils import COMMON_OVERRIDES, make_user, new_secret
+from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 
 @override_settings(**COMMON_OVERRIDES)
