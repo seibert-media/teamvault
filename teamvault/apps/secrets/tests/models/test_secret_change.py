@@ -1,5 +1,6 @@
-from django.core.exceptions import ValidationError
+from django.core.exceptions import PermissionDenied, ValidationError
 from django.test import TestCase, override_settings
+from django.urls import reverse
 
 from teamvault.apps.secrets.models import SecretChange
 from teamvault.apps.secrets.services.revision import RevisionService
@@ -89,3 +90,55 @@ class SecretChangeTests(TestCase):
         ch.actor = other
         with self.assertRaises(ValidationError):
             ch.save()
+
+    def test_delete_change_relinks_children(self):
+        s = self.secret
+        admin = make_user('admin', superuser=True)
+        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
+        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v3'})
+        changes = list(SecretChange.objects.filter(secret=s).order_by('created'))
+        first, target, last = changes[0], changes[1], changes[2]
+
+        relinked = RevisionService.delete_change(change=target, actor=admin)
+
+        self.assertEqual(relinked, 1)
+        self.assertFalse(SecretChange.objects.filter(pk=target.pk).exists())
+        updated_last = SecretChange.objects.get(pk=last.pk)
+        self.assertEqual(updated_last.parent_id, first.id)
+
+    def test_delete_change_requires_superuser(self):
+        s = self.secret
+        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
+        target = SecretChange.objects.filter(secret=s).order_by('created')[1]
+        with self.assertRaises(PermissionDenied):
+            RevisionService.delete_change(change=target, actor=self.owner)
+
+    def test_superuser_can_delete_change_via_view(self):
+        s = self.secret
+        admin = make_user('admin2', superuser=True)
+        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
+        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v3'})
+        changes = list(SecretChange.objects.filter(secret=s).order_by('created'))
+        first, target, last = changes[0], changes[1], changes[2]
+
+        self.client.force_login(admin)
+        url = reverse('secrets.secret-change-delete', kwargs={'hashid': s.hashid, 'change_hashid': target.hashid})
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response['Location'], reverse('secrets.secret-revisions', kwargs={'hashid': s.hashid}))
+        self.assertFalse(SecretChange.objects.filter(pk=target.pk).exists())
+        updated_last = SecretChange.objects.get(pk=last.pk)
+        self.assertEqual(updated_last.parent_id, first.id)
+
+    def test_non_superuser_cannot_delete_change_via_view(self):
+        s = self.secret
+        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
+        target = SecretChange.objects.filter(secret=s).order_by('created')[1]
+
+        self.client.force_login(self.owner)
+        url = reverse('secrets.secret-change-delete', kwargs={'hashid': s.hashid, 'change_hashid': target.hashid})
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertTrue(SecretChange.objects.filter(pk=target.pk).exists())

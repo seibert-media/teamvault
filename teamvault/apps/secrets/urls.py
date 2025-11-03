@@ -44,6 +44,11 @@ urlpatterns = (
         name='secrets.secret-revisions',
     ),
     path(
+        'secrets/<str:hashid>/changes/<str:change_hashid>/delete',
+        views.secret_change_delete,
+        name='secrets.secret-change-delete',
+    ),
+    path(
         'revisions/<str:revision_hashid>/',
         views.secret_revision_detail,
         name='secrets.revision-detail',

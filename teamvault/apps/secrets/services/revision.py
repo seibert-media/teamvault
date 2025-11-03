@@ -32,6 +32,7 @@ class HistoryEntry:
     changes: list[dict[str, str]]
     link: str
     current: bool
+    change_hash: str
     needs_changing: bool = False
     restored_from: str | None = None
 
@@ -269,12 +270,45 @@ class RevisionService:
                     changes=merged,
                     link=link,
                     current=current,
+                    change_hash=ch.hashid,
                     needs_changing=(ch.status == SecretStatus.NEEDS_CHANGING),
                     restored_from=(ch.restored_from.revision.hashid if ch.restored_from_id else None),
                 )
             )
 
         return sorted(rows, key=lambda e: e.ts, reverse=True)
+
+    @classmethod
+    @transaction.atomic
+    def delete_change(cls, *, change: SecretChange, actor) -> int:
+        """Remove a SecretChange and relink its children to preserve chronology.
+
+        Returns the number of child rows that were re-parented.
+        """
+        if not actor.is_superuser:
+            raise PermissionDenied('Only superusers may delete secret history checkpoints')
+
+        secret = change.secret
+        parent = change.parent
+        relinked = SecretChange.objects.filter(parent=change).update(parent=parent)
+
+        log(
+            _("{user} deleted change {change_hash} for '{name}' (relinked {relinked} children)").format(
+                user=actor.username,
+                change_hash=change.hashid,
+                name=secret.name,
+                relinked=relinked,
+            ),
+            actor=actor,
+            category=AuditLogCategoryChoices.SECRET_CHANGED,
+            level='warning',
+            secret=secret,
+            secret_revision=change.revision,
+            reason=f'Deleted change {change.hashid}',
+        )
+
+        change.delete()
+        return relinked
 
 
     @staticmethod

@@ -752,7 +752,31 @@ class RestoreSecretRevisionView(View):
         return redirect(secret.get_absolute_url())
 
 
+class SecretChangeDeleteView(View):
+    http_method_names = ['post']
+
+    def post(self, request, hashid, change_hashid, *args, **kwargs):
+        secret = get_object_or_404(Secret, hashid=hashid)
+        change = get_object_or_404(SecretChange, hashid=change_hashid, secret=secret)
+
+        if not request.user.is_superuser:
+            raise PermissionDenied
+
+        change_hash = change.hashid
+        relinked = RevisionService.delete_change(change=change, actor=request.user)
+
+        message = _("Deleted change {change}.").format(change=change_hash)
+        if relinked:
+            message += " " + _("Relinked {count} subsequent change{plural}.").format(
+                count=relinked,
+                plural=pluralize(relinked),
+            )
+        messages.success(request, message)
+        return redirect('secrets.secret-revisions', hashid=hashid)
+
+
 secret_revisions = login_required(SecretRevisionHistoryView.as_view())
 secret_revision_detail = login_required(SecretRevisionDetailView.as_view())
 secret_revision_download = login_required(SecretRevisionDownloadView.as_view())
 restore_secret_revision = login_required(RestoreSecretRevisionView.as_view())
+secret_change_delete = login_required(SecretChangeDeleteView.as_view())
