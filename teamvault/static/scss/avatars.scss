@@ -24,6 +24,10 @@
 svg.avatar {
   background-color: var(--bs-gray-500);
   font-size: calc(var(--tv-avatar-size) * 0.4);
+
+   /* revert bootstrap default positioning & transform */
+  position: revert;
+  transform: none;
 }
 
 a {
