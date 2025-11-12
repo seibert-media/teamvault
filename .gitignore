@@ -1,7 +1,9 @@
+__pycache__/
 *.egg-info/
 build/
 dist/
 huey.db
+node_modules/
 teamvault.cfg
 teamvault/static/bundled/
 teamvault/static_collected/

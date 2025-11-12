@@ -10,6 +10,7 @@ from django.utils import timezone
 
 from django.contrib.auth.models import User, Group
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
+from teamvault.apps.secrets.enums import ContentType, SecretStatus
 
 
 class Command(BaseCommand):
@@ -68,9 +69,9 @@ class Command(BaseCommand):
                         description=description,
                         url=url,
                         username=username_field,
-                        content_type=Secret.CONTENT_PASSWORD,
+                        content_type=ContentType.PASSWORD,
                         created_by=user,
-                        status=Secret.STATUS_OK,
+                        status=SecretStatus.OK,
                     )
                     # Optionally, share the secret with random groups/users
                     if groups and random.choice([True, False]):
