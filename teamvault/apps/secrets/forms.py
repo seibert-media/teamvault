@@ -5,6 +5,7 @@ from django.contrib.auth.models import Group, User
 from django.core.exceptions import ValidationError
 from django.forms.widgets import RadioSelect
 from django.utils.translation import gettext_lazy as _
+from teamvault.apps.secrets.enums import AccessPolicy
 
 from .models import Secret, SharedSecretData
 from .utils import extract_url_and_params
@@ -21,9 +22,10 @@ GENERIC_FIELDS_FOOTER = [
 
 
 class SecretForm(forms.ModelForm):
-    access_policy = forms.ChoiceField(
-        choices=Secret.ACCESS_POLICY_CHOICES,
-        initial=Secret.ACCESS_POLICY_DISCOVERABLE,
+    access_policy = forms.TypedChoiceField(
+        choices=AccessPolicy.choices,
+        coerce=int,
+        initial=AccessPolicy.DISCOVERABLE,
         widget=RadioSelect(),
     )
     description = forms.CharField(

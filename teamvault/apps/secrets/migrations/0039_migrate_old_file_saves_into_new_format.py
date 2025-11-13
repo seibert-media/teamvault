@@ -7,6 +7,7 @@ from django.conf import settings
 from django.db import migrations
 
 from teamvault.apps.secrets.models import Secret
+from teamvault.apps.secrets.enums import ContentType
 
 
 class LegacyJsonButNotBase64(Exception):
@@ -19,7 +20,7 @@ def migrate_file_secrets_to_new_save_method(apps, schema_editor):
     #   v2. json object with .decode() 'file_content' (1.0.0 rc7)
     #   v3. json object with b64 encoded 'file_content' (1.0.0 rc8)
     HistoricalSecretRevisionModel = apps.get_model('secrets', 'SecretRevision')
-    revisions = HistoricalSecretRevisionModel.objects.filter(secret__content_type=Secret.CONTENT_FILE)
+    revisions = HistoricalSecretRevisionModel.objects.filter(secret__content_type=ContentType.FILE)
     f = Fernet(settings.TEAMVAULT_SECRET_KEY)
 
     for revision in revisions:
@@ -57,7 +58,7 @@ def migrate_file_secrets_to_new_save_method(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("secrets", "0037_change_secretrevision_plaintextdata_key_of_password_type"),
+        ("secrets", "0038_secretrevision_last_read_secretchange"),
     ]
 
     operations = [
