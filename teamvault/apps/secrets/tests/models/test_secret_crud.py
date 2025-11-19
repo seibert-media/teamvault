@@ -1,4 +1,5 @@
 from base64 import b64encode
+from unittest import mock
 
 from django.test import TestCase, override_settings
 
@@ -6,6 +7,7 @@ from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from teamvault.apps.secrets.exceptions import PermissionError
 from teamvault.apps.secrets.models import Secret, SecretRevision, SecretChange
 from teamvault.apps.secrets.services.revision import RevisionService
+from teamvault.apps.secrets.utils import copy_meta_from_secret
 from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 
@@ -83,6 +85,52 @@ class SecretModelCrudTests(TestCase):
             SecretChange.objects.filter(secret=s).count(),
             changes_before,
         )
+
+    def test_noop_payload_edit_does_not_emit_change(self):
+        s: Secret = new_secret(self.owner, name="noop")
+        s.refresh_from_db()
+        changes_before = SecretChange.objects.filter(secret=s).count()
+        last_changed_before = s.last_changed
+        last_read_before = s.last_read
+
+        payload_same = s.current_revision.peek_data(self.owner)
+        RevisionService.save_payload(secret=s, actor=self.owner, payload=payload_same)
+
+        s.refresh_from_db()
+        self.assertEqual(SecretChange.objects.filter(secret=s).count(), changes_before)
+        self.assertEqual(s.last_changed, last_changed_before)
+        self.assertEqual(s.last_read, last_read_before)
+
+    def test_parent_re_fetched_after_secret_update(self):
+        s: Secret = new_secret(self.owner, name="linear-history")
+        concurrent_actor = make_user("concurrent")
+        new_payload = {"password": "v2"}
+
+        original_save = Secret.save
+
+        def wrapped_save(self, *args, **kwargs):
+            result = original_save(self, *args, **kwargs)
+            if self.pk == s.pk and not wrapped_save.injected:
+                wrapped_save.injected = True
+                parent = SecretChange.objects.filter(secret=self).order_by("-created").first()
+                SecretChange.objects.create(
+                    secret=self,
+                    revision=self.current_revision,
+                    actor=concurrent_actor,
+                    parent=parent,
+                    **copy_meta_from_secret(self),
+                )
+            return result
+
+        wrapped_save.injected = False
+
+        with mock.patch.object(Secret, "save", wrapped_save):
+            RevisionService.save_payload(secret=s, actor=self.owner, payload=new_payload)
+
+        changes = list(SecretChange.objects.filter(secret=s).order_by("created"))
+        concurrent_change = changes[-2]
+        head = changes[-1]
+        self.assertEqual(head.parent_id, concurrent_change.id)
 
     def test_update_file_payload_roundtrip(self):
         s: Secret = new_secret(self.owner, name="filey")

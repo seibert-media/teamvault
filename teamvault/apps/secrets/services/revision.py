@@ -74,6 +74,13 @@ class RevisionService:
             secret.current_revision.plaintext_data_sha256 if secret.current_revision_id else None
         )
 
+        previous_change = SecretChange.objects.filter(secret=secret).order_by('-created').first()
+        incoming_snapshot = copy_meta_from_secret(secret)
+        meta_changed = cls._snapshot_differs(incoming_snapshot, previous_change)
+
+        if not payload_changed and not meta_changed:
+            return revision
+
         # 2. Update Secret pointers/flags
         previous_id = secret.current_revision_id or 'none'
         secret.current_revision = revision
@@ -101,13 +108,19 @@ class RevisionService:
             secret_revision=revision,
         )
         # 5. Record a SecretChange node with snapshot
-        parent = SecretChange.objects.filter(secret=secret).order_by('-created').first()
+        parent = (
+            SecretChange.objects.select_for_update()
+            .filter(secret=secret)
+            .order_by('-created')
+            .first()
+        )
+        snapshot = copy_meta_from_secret(secret)
         SecretChange.objects.create(
             secret=secret,
             revision=revision,
             actor=actor,
             parent=parent,
-            **copy_meta_from_secret(secret),
+            **snapshot,
         )
 
         return revision
@@ -331,6 +344,17 @@ class RevisionService:
         if field_name == 'status':
             return SecretStatus(value).name
         return str(value)
+
+    @staticmethod
+    def _snapshot_differs(snapshot: dict[str, Any], previous: SecretChange | None) -> bool:
+        """Return True when metadata snapshot differs from the previous change."""
+        if previous is None:
+            return True
+
+        for field, value in snapshot.items():
+            if getattr(previous, field) != value:
+                return True
+        return False
 
     @classmethod
     def _get_meta_diff(cls, new_obj: SecretChange, prev_obj: SecretChange | None) -> list[dict]:
