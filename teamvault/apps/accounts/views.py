@@ -13,12 +13,13 @@ from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, UpdateView
+from teamvault.apps.secrets.enums import SecretStatus
 
 from .forms import UserProfileForm
 from .models import UserProfile as UserProfileModel
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ..secrets.models import Secret, SecretRevision
+from ..secrets.models import SecretRevision
 
 
 class UserProfile(UpdateView):
@@ -88,7 +89,7 @@ def user_activate(request, username, deactivate=False):
         ).exclude(
             secret__needs_changing_on_leave=False,
         ).exclude(
-            secret__status=Secret.STATUS_NEEDS_CHANGING,
+            secret__status=SecretStatus.NEEDS_CHANGING
         ).select_related(
             'secret',
         )
@@ -98,7 +99,7 @@ def user_activate(request, username, deactivate=False):
                 secrets.add(rev.secret)
         with transaction.atomic():
             for secret in secrets:
-                secret.status = Secret.STATUS_NEEDS_CHANGING
+                secret.status = SecretStatus.NEEDS_CHANGING
                 secret.save()
                 msg = _(
                     "secret '{secret}' needs changing because user '{user}' was deactivated"

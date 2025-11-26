@@ -8,21 +8,21 @@ from django.core.management import call_command
 from django.test import override_settings
 from django_test_migrations.contrib.unittest_case import MigratorTestCase
 
-from teamvault.apps.secrets.models import Secret
+from teamvault.apps.secrets.enums import ContentType
 
 STATIC_TEST_KEY = b"WKGGUS52yN68AtcgOKKKqDzccS3hOy32ShZWKwDWe3Q="
 
 
 @override_settings(TEAMVAULT_SECRET_KEY=STATIC_TEST_KEY)
-class Secret0038MigrationTest(MigratorTestCase):
+class Secret0039MigrationTest(MigratorTestCase):
     """
         Ensure file migration works as expected.
         After migration we want all files to be safed as encrypted dict,
         where the content is b64 encoded
     """
     apps = ['accounts', 'audit', 'settings']
-    migrate_from = ('secrets', '0037_change_secretrevision_plaintextdata_key_of_password_type')
-    migrate_to = ('secrets', '0038_migrate_old_file_saves_into_new_format')
+    migrate_from = ('secrets', '0038_secretrevision_last_read_secretchange')
+    migrate_to = ('secrets', '0039_migrate_old_file_saves_into_new_format')
 
     def prepare(self):
         self.fernet_key = Fernet(settings.TEAMVAULT_SECRET_KEY)
@@ -30,13 +30,13 @@ class Secret0038MigrationTest(MigratorTestCase):
         user.save()
         call_command('migrate', 'settings', verbosity=0)
         call_command('migrate', 'social_django', verbosity=0)
-        call_command('migrate', 'secrets', '0037', verbosity=0)
-        call_command('loaddata', 'test_file_v3_migration_fixtures.json', verbosity=0)
         call_command('migrate', 'secrets', '0038', verbosity=0)
+        call_command('loaddata', 'test_file_v3_migration_fixtures.json', verbosity=0)
+        call_command('migrate', 'secrets', '0039', verbosity=0)
 
     def test_migration_secrets0038(self):
         HistoricalSecretRevisionModel = self.new_state.apps.get_model('secrets', 'SecretRevision')
-        revisions = HistoricalSecretRevisionModel.objects.filter(secret__content_type=Secret.CONTENT_FILE)
+        revisions = HistoricalSecretRevisionModel.objects.filter(secret__content_type=ContentType.FILE)
         for revision in revisions:
             self.assertTrue(self.check_if_file_secret_is_v3(revision))
 

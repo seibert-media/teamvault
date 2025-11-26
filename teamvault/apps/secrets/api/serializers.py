@@ -2,38 +2,40 @@ from base64 import b64decode, b64encode
 
 from django.contrib.auth.models import Group, User
 from django.db import models
+from django.http import Http404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
+from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 
 from ..models import Secret, SecretRevision, SharedSecretData
 
 
-class ContentType(models.TextChoices):
+class ContentTypeStr(models.TextChoices):
     PASSWORD = 'password', _('Password')
     CC = 'cc', _('Credit Card')
     FILE = 'file', _('File')
 
 
 ACCESS_POLICY_REPR = {
-    Secret.ACCESS_POLICY_ANY: "any",
-    Secret.ACCESS_POLICY_HIDDEN: "hidden",
-    Secret.ACCESS_POLICY_DISCOVERABLE: "discoverable",
+    AccessPolicy.ANY: "any",
+    AccessPolicy.HIDDEN: "hidden",
+    AccessPolicy.DISCOVERABLE: "discoverable",
 }
 REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
 
 CONTENT_TYPE_REPR = {
-    Secret.CONTENT_CC: "cc",
-    Secret.CONTENT_FILE: "file",
-    Secret.CONTENT_PASSWORD: "password",
+    ContentTypeEnum.CC: "cc",
+    ContentTypeEnum.FILE: "file",
+    ContentTypeEnum.PASSWORD: "password",
 }
 REPR_CONTENT_TYPE = {v: k for k, v in CONTENT_TYPE_REPR.items()}
 
 SECRET_STATUS_REPR = {
-    Secret.STATUS_DELETED: "deleted",
-    Secret.STATUS_NEEDS_CHANGING: "needs_changing",
-    Secret.STATUS_OK: "ok",
+    SecretStatus.DELETED: "deleted",
+    SecretStatus.NEEDS_CHANGING: "needs_changing",
+    SecretStatus.OK: "ok",
 }
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
@@ -69,12 +71,12 @@ def serialize_file(secret_data):
     }
 
 
-def _extract_data(secret_data, content_type: ContentType | int):
-    if content_type in [ContentType.PASSWORD, Secret.CONTENT_PASSWORD]:
+def _extract_data(secret_data, content_type: ContentTypeStr | int):
+    if content_type in [ContentTypeStr.PASSWORD, ContentTypeEnum.PASSWORD]:
         data = serialize_password(secret_data)
-    elif content_type in [ContentType.CC, Secret.CONTENT_CC]:
+    elif content_type in [ContentTypeStr.CC, ContentTypeEnum.CC]:
         data = serialize_cc(secret_data)
-    elif content_type in [ContentType.FILE, Secret.CONTENT_FILE]:
+    elif content_type in [ContentTypeStr.FILE, ContentTypeEnum.FILE]:
         data = serialize_file(secret_data)
     else:
         raise ValidationError(
@@ -127,7 +129,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         view_name='api.secret_detail',
     )
     content_type = serializers.ChoiceField(
-        choices=ContentType.choices,
+        choices=ContentTypeStr.choices,
         required=True
     )
     created_by = serializers.SlugRelatedField(
@@ -196,10 +198,13 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep = super(SecretSerializer, self).to_representation(instance)
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
-        rep['data_readable'] = instance.is_readable_by_user(self.context['request'].user)
         rep['hashid'] = instance.hashid
         rep['status'] = SECRET_STATUS_REPR[rep['status']]
         rep['web_url'] = instance.full_url
+        try:
+            rep['data_readable'] = instance.check_read_access(self.context['request'].user)
+        except (PermissionError, Http404):
+            rep['data_readable'] = False
         return rep
 
     def validate(self, data):
@@ -237,7 +242,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
 class SecretDetailSerializer(SecretSerializer):
     content_type = serializers.ChoiceField(
-        choices=ContentType.choices,
+        choices=ContentTypeStr.choices,
         required=False,  # content_type is unchangeable after a secret has been created
     )
     name = serializers.CharField(
