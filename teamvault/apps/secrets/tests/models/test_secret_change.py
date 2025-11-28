@@ -113,10 +113,16 @@ class SecretChangeTests(TestCase):
         self.assertEqual(target_after.description, first.description)
         self.assertEqual(target_after.name, first.name)
         self.assertEqual(target_after.parent_id, first.id)
+        self.assertEqual(target_after.scrubbed_by, admin)
+        self.assertIsNotNone(target_after.scrubbed_at)
         self.assertEqual(SecretChange.objects.filter(secret=s).count(), 3)
 
         updated_last = SecretChange.objects.get(pk=last.pk)
         self.assertEqual(updated_last.parent_id, target.pk)
+
+        rows = RevisionService.get_revision_history(s, self.owner)
+        scrub_row = next(r for r in rows if r.change_hash == target.hashid)
+        self.assertTrue(any(c['label'] == 'Scrubbed' for c in scrub_row.changes))
 
     def test_delete_change_requires_superuser(self):
         s = self.secret
@@ -146,6 +152,8 @@ class SecretChangeTests(TestCase):
         self.assertEqual(target_after.description, first.description)
         self.assertEqual(target_after.name, first.name)
         self.assertEqual(target_after.parent_id, first.id)
+        self.assertEqual(target_after.scrubbed_by, admin)
+        self.assertIsNotNone(target_after.scrubbed_at)
         updated_last = SecretChange.objects.get(pk=last.pk)
         self.assertEqual(updated_last.parent_id, target.pk)
 

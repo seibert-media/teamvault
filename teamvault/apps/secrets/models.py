@@ -660,6 +660,15 @@ class SecretChange(HashIDModel):
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='secret_changes')
     created = models.DateTimeField(auto_now_add=True)
 
+    scrubbed_at = models.DateTimeField(null=True, blank=True)
+    scrubbed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='scrubbed_secret_changes',
+    )
+
     # Linear edge: parent → this change (single chain).
     parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT, related_name='children')
 

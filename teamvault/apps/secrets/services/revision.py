@@ -35,6 +35,8 @@ class HistoryEntry:
     change_hash: str
     needs_changing: bool = False
     restored_from: str | None = None
+    scrubbed_by: str | None = None
+    scrubbed_at: datetime | None = None
 
 
 class RevisionService:
@@ -239,7 +241,7 @@ class RevisionService:
         """
         changes = list(
             SecretChange.objects.filter(secret=secret)
-            .select_related('actor', 'revision', 'parent', 'parent__revision')
+            .select_related('actor', 'scrubbed_by', 'revision', 'parent', 'parent__revision')
             .order_by('created')
         )
 
@@ -286,6 +288,8 @@ class RevisionService:
                     change_hash=ch.hashid,
                     needs_changing=(ch.status == SecretStatus.NEEDS_CHANGING),
                     restored_from=(ch.restored_from.revision.hashid if ch.restored_from_id else None),
+                    scrubbed_by=(ch.scrubbed_by.username if ch.scrubbed_by_id else None),
+                    scrubbed_at=ch.scrubbed_at,
                 )
             )
 
@@ -324,6 +328,9 @@ class RevisionService:
                 'status': change.status,
             }
 
+        replacement['scrubbed_at'] = now()
+        replacement['scrubbed_by'] = actor
+
         updated = SecretChange.objects.filter(pk=change.pk).update(**replacement)
 
         log(
@@ -333,7 +340,7 @@ class RevisionService:
                 name=secret.name,
             ),
             actor=actor,
-            category=AuditLogCategoryChoices.SECRET_CHANGED,
+            category=AuditLogCategoryChoices.SECRET_METADATA_CHANGED,
             level='warning',
             secret=secret,
             secret_revision=change.revision,
@@ -378,19 +385,8 @@ class RevisionService:
     @classmethod
     def _get_meta_diff(cls, new_obj: SecretChange, prev_obj: SecretChange | None) -> list[dict]:
         """Compare metadata snapshot between two SecretChange rows."""
-        fields = (
-            'name',
-            'description',
-            'username',
-            'url',
-            'filename',
-            'access_policy',
-            'status',
-            'needs_changing_on_leave',
-        )
-
         diffs = []
-        for field in fields:
+        for field in META_FIELDS:
             old_val = getattr(prev_obj, field, None) if prev_obj else None
             new_val = getattr(new_obj, field, None)
 
@@ -402,6 +398,16 @@ class RevisionService:
                         'new': cls._render_field_value(new_val, field),
                     }
                 )
+
+        if new_obj.scrubbed_by_id:
+            scrubbed_at = new_obj.scrubbed_at.isoformat() if new_obj.scrubbed_at else '—'
+            diffs.append(
+                {
+                    'label': 'Scrubbed',
+                    'old': '∅',
+                    'new': f"by {new_obj.scrubbed_by.username} at {scrubbed_at}",
+                }
+            )
 
         return diffs
 
