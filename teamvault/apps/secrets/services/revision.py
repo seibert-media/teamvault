@@ -20,7 +20,7 @@ from teamvault.apps.secrets.models import (
     SecretRevision,
     SecretChange,
 )
-from teamvault.apps.secrets.utils import apply_snapshot_to_secret, copy_meta_from_secret
+from teamvault.apps.secrets.utils import META_FIELDS, apply_snapshot_to_secret, copy_meta_from_secret
 
 
 @dataclass
@@ -294,34 +294,53 @@ class RevisionService:
     @classmethod
     @transaction.atomic
     def delete_change(cls, *, change: SecretChange, actor) -> int:
-        """Remove a SecretChange and relink its children to preserve chronology.
+        """Scrub metadata for a SecretChange while keeping the revision reachable.
 
-        Returns the number of child rows that were re-parented.
+        We replace the change's metadata snapshot with its parent's snapshot
+        (if available) so that the history no longer exposes the edited metadata,
+        but the payload revision and chronology remain intact. When there is no
+        parent (first change), we blank optional text fields to purge sensitive
+        content while leaving non-text fields unchanged.
+
+        Returns the number of rows updated (1 when the target change exists).
         """
         if not actor.is_superuser:
             raise PermissionDenied('Only superusers may delete secret history checkpoints')
 
         secret = change.secret
         parent = change.parent
-        relinked = SecretChange.objects.filter(parent=change).update(parent=parent)
+
+        if parent:
+            replacement = {field: getattr(parent, field) for field in META_FIELDS}
+        else:
+            replacement = {
+                'name': change.name,
+                'description': '',
+                'username': '',
+                'url': '',
+                'filename': '',
+                'access_policy': change.access_policy,
+                'needs_changing_on_leave': change.needs_changing_on_leave,
+                'status': change.status,
+            }
+
+        updated = SecretChange.objects.filter(pk=change.pk).update(**replacement)
 
         log(
-            _("{user} deleted change {change_hash} for '{name}' (relinked {relinked} children)").format(
+            _("{user} scrubbed metadata for change {change_hash} on '{name}'").format(
                 user=actor.username,
                 change_hash=change.hashid,
                 name=secret.name,
-                relinked=relinked,
             ),
             actor=actor,
             category=AuditLogCategoryChoices.SECRET_CHANGED,
             level='warning',
             secret=secret,
             secret_revision=change.revision,
-            reason=f'Deleted change {change.hashid}',
+            reason=f'Scrubbed metadata for change {change.hashid}',
         )
 
-        change.delete()
-        return relinked
+        return updated
 
 
     @staticmethod
