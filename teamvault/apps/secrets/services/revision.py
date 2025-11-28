@@ -20,7 +20,7 @@ from teamvault.apps.secrets.models import (
     SecretRevision,
     SecretChange,
 )
-from teamvault.apps.secrets.utils import apply_snapshot_to_secret, copy_meta_from_secret
+from teamvault.apps.secrets.utils import META_FIELDS, apply_snapshot_to_secret, copy_meta_from_secret
 
 
 @dataclass
@@ -35,6 +35,8 @@ class HistoryEntry:
     change_hash: str
     needs_changing: bool = False
     restored_from: str | None = None
+    scrubbed_by: str | None = None
+    scrubbed_at: datetime | None = None
 
 
 class RevisionService:
@@ -239,7 +241,7 @@ class RevisionService:
         """
         changes = list(
             SecretChange.objects.filter(secret=secret)
-            .select_related('actor', 'revision', 'parent', 'parent__revision')
+            .select_related('actor', 'scrubbed_by', 'revision', 'parent', 'parent__revision')
             .order_by('created')
         )
 
@@ -286,6 +288,8 @@ class RevisionService:
                     change_hash=ch.hashid,
                     needs_changing=(ch.status == SecretStatus.NEEDS_CHANGING),
                     restored_from=(ch.restored_from.revision.hashid if ch.restored_from_id else None),
+                    scrubbed_by=(ch.scrubbed_by.username if ch.scrubbed_by_id else None),
+                    scrubbed_at=ch.scrubbed_at,
                 )
             )
 
@@ -294,34 +298,56 @@ class RevisionService:
     @classmethod
     @transaction.atomic
     def delete_change(cls, *, change: SecretChange, actor) -> int:
-        """Remove a SecretChange and relink its children to preserve chronology.
+        """Scrub metadata for a SecretChange while keeping the revision reachable.
 
-        Returns the number of child rows that were re-parented.
+        We replace the change's metadata snapshot with its parent's snapshot
+        (if available) so that the history no longer exposes the edited metadata,
+        but the payload revision and chronology remain intact. When there is no
+        parent (first change), we blank optional text fields to purge sensitive
+        content while leaving non-text fields unchanged.
+
+        Returns the number of rows updated (1 when the target change exists).
         """
         if not actor.is_superuser:
             raise PermissionDenied('Only superusers may delete secret history checkpoints')
 
         secret = change.secret
         parent = change.parent
-        relinked = SecretChange.objects.filter(parent=change).update(parent=parent)
+
+        if parent:
+            replacement = {field: getattr(parent, field) for field in META_FIELDS}
+        else:
+            replacement = {
+                'name': change.name,
+                'description': '',
+                'username': '',
+                'url': '',
+                'filename': '',
+                'access_policy': change.access_policy,
+                'needs_changing_on_leave': change.needs_changing_on_leave,
+                'status': change.status,
+            }
+
+        replacement['scrubbed_at'] = now()
+        replacement['scrubbed_by'] = actor
+
+        updated = SecretChange.objects.filter(pk=change.pk).update(**replacement)
 
         log(
-            _("{user} deleted change {change_hash} for '{name}' (relinked {relinked} children)").format(
+            _("{user} scrubbed metadata for change {change_hash} on '{name}'").format(
                 user=actor.username,
                 change_hash=change.hashid,
                 name=secret.name,
-                relinked=relinked,
             ),
             actor=actor,
-            category=AuditLogCategoryChoices.SECRET_CHANGED,
+            category=AuditLogCategoryChoices.SECRET_METADATA_CHANGED,
             level='warning',
             secret=secret,
             secret_revision=change.revision,
-            reason=f'Deleted change {change.hashid}',
+            reason=f'Scrubbed metadata for change {change.hashid}',
         )
 
-        change.delete()
-        return relinked
+        return updated
 
 
     @staticmethod
@@ -359,19 +385,8 @@ class RevisionService:
     @classmethod
     def _get_meta_diff(cls, new_obj: SecretChange, prev_obj: SecretChange | None) -> list[dict]:
         """Compare metadata snapshot between two SecretChange rows."""
-        fields = (
-            'name',
-            'description',
-            'username',
-            'url',
-            'filename',
-            'access_policy',
-            'status',
-            'needs_changing_on_leave',
-        )
-
         diffs = []
-        for field in fields:
+        for field in META_FIELDS:
             old_val = getattr(prev_obj, field, None) if prev_obj else None
             new_val = getattr(new_obj, field, None)
 
@@ -383,6 +398,16 @@ class RevisionService:
                         'new': cls._render_field_value(new_val, field),
                     }
                 )
+
+        if new_obj.scrubbed_by_id:
+            scrubbed_at = new_obj.scrubbed_at.isoformat() if new_obj.scrubbed_at else '—'
+            diffs.append(
+                {
+                    'label': 'Scrubbed',
+                    'old': '∅',
+                    'new': f"by {new_obj.scrubbed_by.username} at {scrubbed_at}",
+                }
+            )
 
         return diffs
 

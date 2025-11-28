@@ -91,20 +91,38 @@ class SecretChangeTests(TestCase):
         with self.assertRaises(ValidationError):
             ch.save()
 
-    def test_delete_change_relinks_children(self):
+    def test_delete_change_scrubs_metadata_and_retains_revision(self):
         s = self.secret
         admin = make_user('admin', superuser=True)
-        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
+
+        # Introduce a metadata-only change with sensitive description
+        s.description = 'leaked-secret'
+        s.save()
+        payload = s.current_revision.peek_data(self.owner)
+        RevisionService.save_payload(secret=s, actor=self.owner, payload=payload)
         RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v3'})
+
         changes = list(SecretChange.objects.filter(secret=s).order_by('created'))
         first, target, last = changes[0], changes[1], changes[2]
+        self.assertEqual(target.description, 'leaked-secret')
 
-        relinked = RevisionService.delete_change(change=target, actor=admin)
+        updated = RevisionService.delete_change(change=target, actor=admin)
 
-        self.assertEqual(relinked, 1)
-        self.assertFalse(SecretChange.objects.filter(pk=target.pk).exists())
+        self.assertEqual(updated, 1)
+        target_after = SecretChange.objects.get(pk=target.pk)
+        self.assertEqual(target_after.description, first.description)
+        self.assertEqual(target_after.name, first.name)
+        self.assertEqual(target_after.parent_id, first.id)
+        self.assertEqual(target_after.scrubbed_by, admin)
+        self.assertIsNotNone(target_after.scrubbed_at)
+        self.assertEqual(SecretChange.objects.filter(secret=s).count(), 3)
+
         updated_last = SecretChange.objects.get(pk=last.pk)
-        self.assertEqual(updated_last.parent_id, first.id)
+        self.assertEqual(updated_last.parent_id, target.pk)
+
+        rows = RevisionService.get_revision_history(s, self.owner)
+        scrub_row = next(r for r in rows if r.change_hash == target.hashid)
+        self.assertTrue(any(c['label'] == 'Scrubbed' for c in scrub_row.changes))
 
     def test_delete_change_requires_superuser(self):
         s = self.secret
@@ -116,7 +134,10 @@ class SecretChangeTests(TestCase):
     def test_superuser_can_delete_change_via_view(self):
         s = self.secret
         admin = make_user('admin2', superuser=True)
-        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
+        s.description = 'meta-leak'
+        s.save()
+        payload = s.current_revision.peek_data(self.owner)
+        RevisionService.save_payload(secret=s, actor=self.owner, payload=payload)
         RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v3'})
         changes = list(SecretChange.objects.filter(secret=s).order_by('created'))
         first, target, last = changes[0], changes[1], changes[2]
@@ -127,9 +148,14 @@ class SecretChangeTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response['Location'], reverse('secrets.secret-revisions', kwargs={'hashid': s.hashid}))
-        self.assertFalse(SecretChange.objects.filter(pk=target.pk).exists())
+        target_after = SecretChange.objects.get(pk=target.pk)
+        self.assertEqual(target_after.description, first.description)
+        self.assertEqual(target_after.name, first.name)
+        self.assertEqual(target_after.parent_id, first.id)
+        self.assertEqual(target_after.scrubbed_by, admin)
+        self.assertIsNotNone(target_after.scrubbed_at)
         updated_last = SecretChange.objects.get(pk=last.pk)
-        self.assertEqual(updated_last.parent_id, first.id)
+        self.assertEqual(updated_last.parent_id, target.pk)
 
     def test_non_superuser_cannot_delete_change_via_view(self):
         s = self.secret

@@ -763,14 +763,11 @@ class SecretChangeDeleteView(View):
             raise PermissionDenied
 
         change_hash = change.hashid
-        relinked = RevisionService.delete_change(change=change, actor=request.user)
+        updated = RevisionService.delete_change(change=change, actor=request.user)
 
-        message = _("Deleted change {change}.").format(change=change_hash)
-        if relinked:
-            message += " " + _("Relinked {count} subsequent change{plural}.").format(
-                count=relinked,
-                plural=pluralize(relinked),
-            )
+        message = _("Scrubbed metadata for change {change}.").format(change=change_hash)
+        if not updated:
+            message += " " + _("No rows were modified.")
         messages.success(request, message)
         return redirect('secrets.secret-revisions', hashid=hashid)
 
