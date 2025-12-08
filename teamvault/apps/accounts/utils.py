@@ -110,3 +110,18 @@ def merge_users(user1, user2, dry_run=True):
 
         user1.delete()
         logger.info('Deleted User')
+
+
+def get_pending_secrets_for_user(user):
+    """
+      Return all secrets readable by this user that currently need changing.
+      Includes secrets created by others or shared with the user.
+      Excludes deleted ones.
+      """
+    qs = Secret.get_all_readable_by_user(user)
+    return qs.filter(
+        status=Secret.STATUS_NEEDS_CHANGING,
+        needs_changing_on_leave=True,
+    ).exclude(
+        status=Secret.STATUS_DELETED,
+    )

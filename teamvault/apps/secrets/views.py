@@ -187,7 +187,8 @@ class SecretEdit(UpdateView):
         # clear saved otp key data cache after change
         if (
             'otp_key_data' in form.changed_data
-            and form.cleaned_data.get('otp_key_data')
+            and form.cleaned_data.get(
+                'otp_key_data')
             and 'otp_key_data' in self.request.session
         ):
             del self.request.session['otp_key_data']
@@ -430,6 +431,7 @@ class SecretShareList(CreateView):
         context = {
             'secret': secret,
             'shareable': secret.check_share_access(self.request.user),
+            'share_with_self': self.request.GET.get("share_with_self") == "1",
             'shares': {
                 'groups': self.group_shares,
                 'users': self.user_shares,
@@ -475,6 +477,11 @@ class SecretShareList(CreateView):
             response.headers['HX-Refresh'] = 'true'
         else:
             trigger_client_event(response, 'refreshMetadata')
+
+        if self.request.GET.get("share_with_self") == "1":
+            form_obj.user = self.request.user
+            form_obj.group = None
+
         return response
 
     def get_form_class(self):
@@ -494,6 +501,11 @@ class SecretShareList(CreateView):
             .exclude(username__in=self.user_shares.values_list('user__username', flat=True))
             .order_by('username')
         )
+
+        if self.request.GET.get("share_with_self") == "1":
+            form_class.base_fields['user'].queryset = User.objects.filter(id=self.request.user.id)
+            form_class.base_fields['group'].queryset = Group.objects.none()
+
         return form_class
 
 
