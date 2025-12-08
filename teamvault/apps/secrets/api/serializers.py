@@ -316,3 +316,36 @@ class SharedSecretDataSerializer(serializers.ModelSerializer):
             'id',
             'granted_by'
         )
+
+
+class PendingSecretSerializer(serializers.ModelSerializer):
+    """
+    Serializer specifically for the User Offboarding flow.
+    Includes simplified status and audit timestamps.
+    """
+    hashid = serializers.CharField(read_only=True)
+    name = serializers.CharField(read_only=True)
+    type = serializers.CharField(source='get_content_type_display', read_only=True)
+    status = serializers.CharField(source='get_status_display', read_only=True)
+
+    last_shared = serializers.DateTimeField(read_only=True, format="%Y-%m-%d %H:%M:%S")
+    last_changed = serializers.DateTimeField(read_only=True, format="%Y-%m-%d %H:%M:%S")
+    last_read = serializers.DateTimeField(read_only=True, format="%Y-%m-%d %H:%M:%S")
+
+    web_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Secret
+        fields = [
+            'hashid',
+            'name',
+            'type',
+            'status',
+            'web_url',
+            'last_changed',
+            'last_read',
+            'last_shared',
+        ]
+
+    def get_web_url(self, obj):
+        return obj.full_url
