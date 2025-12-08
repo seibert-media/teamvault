@@ -28,7 +28,7 @@ types:
 
 # Run tests (once we have them)
 test:
-  echo "Tests not implemented yet"
+  uv run teamvault/manage.py test
 
 # Bring up postgres
 db:

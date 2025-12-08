@@ -187,7 +187,7 @@ def user_activate(request, username, deactivate=False):
         ).exclude(
             secret__needs_changing_on_leave=False,
         ).exclude(
-            secret__status=Secret.STATUS_NEEDS_CHANGING,
+            secret__status=SecretStatus.NEEDS_CHANGING
         ).select_related(
             'secret',
         )
@@ -198,7 +198,7 @@ def user_activate(request, username, deactivate=False):
 
         with transaction.atomic():
             for secret in secrets:
-                secret.status = Secret.STATUS_NEEDS_CHANGING
+                secret.status = SecretStatus.NEEDS_CHANGING
                 secret.save()
                 msg = _(
                     "secret '{secret}' needs changing because user '{user}' was deactivated"

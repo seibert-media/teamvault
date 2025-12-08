@@ -2,7 +2,8 @@ name: Create Build and Python Package on Release
 
 on:
   release:
-    types: [ created ]
+    types: [ published ]
+  workflow_dispatch:
 
 permissions:
   contents: write

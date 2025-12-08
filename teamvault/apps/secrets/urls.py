@@ -39,6 +39,31 @@ urlpatterns = (
         name='secrets.secret-edit',
     ),
     path(
+        'secrets/<str:hashid>/revisions',
+        views.secret_revisions,
+        name='secrets.secret-revisions',
+    ),
+    path(
+        'secrets/<str:hashid>/changes/<str:change_hashid>/delete',
+        views.secret_change_delete,
+        name='secrets.secret-change-delete',
+    ),
+    path(
+        'revisions/<str:revision_hashid>/',
+        views.secret_revision_detail,
+        name='secrets.revision-detail',
+    ),
+    path(
+        "revisions/<str:revision_hashid>/download/",
+        views.secret_revision_download,
+        name="secrets.revision-download",
+    ),
+    path(
+        '<str:secret_hashid>/revisions/<str:revision_hashid>/restore/',
+        views.restore_secret_revision,
+        name='restore_secret_revision'
+    ),
+    path(
         'secrets/<str:hashid>/metadata',
         views.secret_metadata,
         name='secrets.secret-metadata',
