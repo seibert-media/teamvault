@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TeamVault</title>
+    <link rel="icon" href="icon.svg" />
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <div id="app" class="card">
+      <div class="row header">
+        <div class="title">TeamVault</div>
+        <div class="spacer"></div>
+        <button id="openOptions" title="Open Options">⚙️</button>
+      </div>
+      <div class="row small">
+        <span id="siteTop"></span>
+      </div>
+      <div class="row status">
+        <span id="statusText" title="Checking…">⌛</span>
+        <button id="prewarmStatus" class="secondary" title="Pre-warm status">💤</button>
+        <div class="spacer"></div>
+        <button id="loginBtn" class="secondary" title="Sign in">Sign in</button>
+        <button id="grantPermBtn" class="secondary" style="display:none">Grant access</button>
+      </div>
+      <!-- prewarm indicator moved into status row -->
+      <div class="row">
+        <input type="search" id="searchInput" placeholder="Search secrets…" />
+      </div>
+      <div class="row small">
+        <label class="toggle"><input type="checkbox" id="autoSubmitToggle" /> Submit after fill</label>
+        <div class="spacer"></div>
+        <label class="toggle"><input type="checkbox" id="siteAutoSubmitToggle" /> Auto-submit (site)</label>
+        <button id="siteResetBtn" title="Clear site overrides">↺</button>
+      </div>
+      <div id="results"></div>
+    </div>
+    <script src="popup.js"></script>
+  </body>
+  </html>
