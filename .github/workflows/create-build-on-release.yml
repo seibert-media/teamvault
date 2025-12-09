@@ -54,7 +54,7 @@ jobs:
       - name: Upload Webpack Bundle to Release
         if: |
           github.event_name == 'release' ||
-          (github.event_name == 'workflow_dispatch' && inputs.dry_run == 'false')
+          (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
         uses: softprops/action-gh-release@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -80,7 +80,7 @@ jobs:
       - name: Upload wheel to the GitHub Release
         if: |
           github.event_name == 'release' ||
-          (github.event_name == 'workflow_dispatch' && inputs.dry_run == 'false')
+          (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
         uses: softprops/action-gh-release@v2
         with:
           files: ${{ steps.wheel.outputs.wheel }}
@@ -93,11 +93,14 @@ jobs:
 
       # For manual runs: test publish logic, but don't upload anything
       - name: Publish to PyPI (dry run)
-        if: github.event_name == 'workflow_dispatch' && inputs.dry_run == true
+        if: github.event_name == 'workflow_dispatch' && inputs.dry_run
         run: |
           uv publish --dry-run
 
       # For real releases: actually publish
       - name: Publish package distribution to PyPI with uv
+        if:
+          github.event_name == 'release' ||
+          (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
         run: |
           uv publish --trusted-publishing always
