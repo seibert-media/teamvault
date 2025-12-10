@@ -443,7 +443,7 @@ class SecretShareList(CreateView):
 
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
-        user_can_read_initial = secret.check_read_access(self.request.user)
+        user_can_read_initial = secret.is_readable(self.request.user)
         permission = secret.check_share_access(self.request.user)
         if not permission:
             raise PermissionDenied()
@@ -472,7 +472,7 @@ class SecretShareList(CreateView):
             }
         })
         response = self.render_to_response(context=context)
-        if user_can_read_initial != secret.check_read_access(self.request.user):
+        if user_can_read_initial != secret.is_readable(self.request.user):
             response.headers['HX-Refresh'] = "true"
         else:
             trigger_client_event(response, 'refreshMetadata')
@@ -498,7 +498,7 @@ secret_share_list = login_required(SecretShareList.as_view())
 @require_http_methods(['DELETE'])
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
-    user_can_read_initial = share_data.secret.check_read_access(request.user)
+    user_can_read_initial = share_data.secret.is_readable(request.user)
     permission = share_data.secret.check_share_access(request.user)
     if not permission:
         raise PermissionDenied()
@@ -530,7 +530,7 @@ def secret_share_delete(request, hashid, share_id):
         secret=secret,
     )
     response = HttpResponse(status=200)
-    if user_can_read_initial != secret.check_read_access(request.user):
+    if user_can_read_initial != secret.is_readable(request.user):
         response.headers['HX-Refresh'] = "true"
     else:
         trigger_client_event(response, 'refreshMetadata')
@@ -553,7 +553,7 @@ def secret_search(request):
     for secret in filtered_secrets:
         metadata = ''
         icon = "lock-open"
-        if secret.check_read_access(request.user):
+        if secret.is_readable(request.user):
             if secret.content_type == ContentType.PASSWORD:
                 icon = "user"
                 metadata = getattr(secret, 'username')

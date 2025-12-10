@@ -95,17 +95,27 @@ class PermissionCheckerTests(TestCase):
             msg='permanent share',
         )
 
-    def test_deleted_secret_is_never_visible(self):
+    def test_deleted_secret_visibility_by_role(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.ANY)
         sec.status = SecretStatus.DELETED
         sec.save()
 
+        # Non‑superusers still cannot see or read deleted secrets.
         chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
             chk,
             readable=AccessPermissionTypes.NOT_ALLOWED,
             shareable=AccessPermissionTypes.NOT_ALLOWED,
             visible=AccessPermissionTypes.NOT_ALLOWED,
+        )
+
+        # Superusers may list and read deleted secrets.
+        chk_su = PermissionChecker(self.alice, sec, sec.share_data.for_user(self.alice))
+        self._assert_perm(
+            chk_su,
+            readable=AccessPermissionTypes.SUPERUSER_ALLOWED,
+            shareable=AccessPermissionTypes.SUPERUSER_ALLOWED,
+            visible=AccessPermissionTypes.SUPERUSER_ALLOWED,
         )
 
     def test_superuser_override(self):
@@ -115,7 +125,8 @@ class PermissionCheckerTests(TestCase):
             chk,
             readable=AccessPermissionTypes.SUPERUSER_ALLOWED,
             shareable=AccessPermissionTypes.SUPERUSER_ALLOWED,
-            visible=AccessPermissionTypes.ALLOWED,  # still listed
+            # Visible secrets for superusers use the normal "allowed" flag when not deleted.
+            visible=AccessPermissionTypes.ALLOWED,
         )
 
     def test_expired_share_returns_not_allowed(self):
@@ -195,14 +206,15 @@ class PermissionCheckerTests(TestCase):
         )
 
     @override_settings(ALLOW_SUPERUSER_READS=False)
-    def test_superuser_override_disabled_denies_any_access(self):
+    def test_superuser_override_disabled_still_allows_visibility_and_sharing(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
         chk = PermissionChecker(self.alice, sec, sec.share_data.for_user(self.alice))
         self._assert_perm(
             chk,
             readable=AccessPermissionTypes.NOT_ALLOWED,
-            visible=AccessPermissionTypes.NOT_ALLOWED,
-            shareable=AccessPermissionTypes.NOT_ALLOWED,
+            # Even with ALLOW_SUPERUSER_READS=False, superusers can still see and share.
+            visible=AccessPermissionTypes.SUPERUSER_ALLOWED,
+            shareable=AccessPermissionTypes.SUPERUSER_ALLOWED,
         )
 
     def test_deleted_secret_denies_even_if_shared(self):
