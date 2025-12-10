@@ -209,6 +209,14 @@ class Secret(HashIDModel):
             shares=shares
         )
 
+    def is_readable(self, user):
+        permissions = self.permission_checker(user)
+        return permissions.is_readable()
+
+    def is_shareable(self, user):
+        permissions = self.permission_checker(user)
+        return permissions.is_shareable()
+
     def check_read_access(self, user):
         permissions = self.permission_checker(user)
         if not permissions.is_visible():
@@ -857,8 +865,10 @@ class PermissionChecker:
     def _secret_deleted(self) -> bool:
         return self.secret.status == SecretStatus.DELETED
 
-    def _superuser_override(self) -> bool:
-        return self.user.is_superuser and settings.ALLOW_SUPERUSER_READS
+    def _superuser_override(self, ignore_allow_superuser_reads: bool = False) -> bool:
+        return self.user.is_superuser and (
+            settings.ALLOW_SUPERUSER_READS or ignore_allow_superuser_reads
+        )
 
     def _access_policy(self) -> AccessPolicy:
         return self.secret.access_policy
@@ -873,15 +883,15 @@ class PermissionChecker:
         return self.shares.filter(granted_until__isnull=True).exists()
 
     def is_readable(self) -> AccessPermissionTypes:
-        if self._secret_deleted():
-            return AccessPermissionTypes.NOT_ALLOWED
+        if not self._secret_deleted():
+            if self._access_policy() == AccessPolicy.ANY or self._has_permanent_share():
+                return AccessPermissionTypes.ALLOWED
+            if self.shares.exists():
+                return AccessPermissionTypes.TEMPORARILY_ALLOWED
+
         if self._superuser_override():
             return AccessPermissionTypes.SUPERUSER_ALLOWED
 
-        if self._access_policy() == AccessPolicy.ANY or self._has_permanent_share():
-            return AccessPermissionTypes.ALLOWED
-        if self.shares.exists():
-            return AccessPermissionTypes.TEMPORARILY_ALLOWED
         return AccessPermissionTypes.NOT_ALLOWED
 
     def is_shareable(self) -> AccessPermissionTypes:
@@ -891,19 +901,18 @@ class PermissionChecker:
         # Only users with permanent read access can share
         if read_permission == AccessPermissionTypes.ALLOWED:
             return AccessPermissionTypes.ALLOWED
-        # NOTE this originally didn't check ALLOW_SUPERUSER_READS. On purpose?
-        if self._superuser_override():
+        # Or superusers
+        if self._superuser_override(ignore_allow_superuser_reads=True):
             return AccessPermissionTypes.SUPERUSER_ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
 
     def is_visible(self) -> AccessPermissionTypes:
         """Checks if the secret is visible to the user in lists."""
-        status = self.secret.status
-        if status == SecretStatus.DELETED:
-            return AccessPermissionTypes.NOT_ALLOWED
-
-        if self.is_discoverable() or self.is_readable():
+        if not self._secret_deleted() and (self.is_discoverable() or self.is_readable()):
             return AccessPermissionTypes.ALLOWED
+
+        if self._superuser_override(ignore_allow_superuser_reads=True):
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
