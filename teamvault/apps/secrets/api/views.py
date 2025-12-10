@@ -31,7 +31,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         obj = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
-        if not obj.is_visible_to_user(self.request.user):
+        if not obj.check_read_access(self.request.user):
             self.permission_denied(self.request)
         return obj
 

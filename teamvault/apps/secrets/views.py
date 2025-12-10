@@ -443,6 +443,7 @@ class SecretShareList(CreateView):
 
     def form_valid(self, form):
         secret = Secret.objects.get(hashid=self.kwargs[self.slug_url_kwarg])
+        user_can_read_initial = secret.check_read_access(self.request.user)
         permission = secret.check_share_access(self.request.user)
         if not permission:
             raise PermissionDenied()
@@ -497,6 +498,7 @@ secret_share_list = login_required(SecretShareList.as_view())
 @require_http_methods(['DELETE'])
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
+    user_can_read_initial = share_data.secret.check_read_access(request.user)
     permission = share_data.secret.check_share_access(request.user)
     if not permission:
         raise PermissionDenied()
