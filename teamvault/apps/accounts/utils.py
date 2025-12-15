@@ -6,6 +6,7 @@ import requests
 
 from teamvault.apps.accounts.models import UserProfile, UserProfile as UserProfileModel
 from teamvault.apps.audit.models import LogEntry
+from teamvault.apps.secrets.enums import SecretStatus
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 logger = logging.getLogger(__name__)
@@ -120,8 +121,8 @@ def get_pending_secrets_for_user(user):
       """
     qs = Secret.get_all_readable_by_user(user)
     return qs.filter(
-        status=Secret.STATUS_NEEDS_CHANGING,
+        status= SecretStatus.NEEDS_CHANGING,
         needs_changing_on_leave=True,
     ).exclude(
-        status=Secret.STATUS_DELETED,
+        status=SecretStatus.DELETED,
     )

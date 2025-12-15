@@ -84,7 +84,7 @@ class UserDetail(DetailView):
         page_obj = paginator.get_page(page_number)
 
         for secret in page_obj:
-            perm = secret.is_readable_by_user(self.request.user)
+            perm = secret.is_readable(self.request.user)
             secret.readable_for_admin = perm != AccessPermissionTypes.NOT_ALLOWED
 
         ctx["pending_secrets"] = page_obj

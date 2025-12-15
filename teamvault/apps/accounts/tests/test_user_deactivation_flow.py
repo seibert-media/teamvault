@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
+from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import Secret, SharedSecretData
 from teamvault.apps.accounts.utils import get_pending_secrets_for_user
 
@@ -18,24 +19,24 @@ class TestPendingSecretsQueryLogic(TestCase):
         global_needs_change = Secret.objects.create(
             name="global_needs_change",
             created_by=self.alice,
-            access_policy=Secret.ACCESS_POLICY_ANY,
-            status=Secret.STATUS_NEEDS_CHANGING,
+            access_policy=AccessPolicy.ANY,
+            status=SecretStatus.NEEDS_CHANGING,
             needs_changing_on_leave=True,
         )
 
         global_needs_change_but_not_on_leave = Secret.objects.create(
             name="global_needs_change_not_on_leave",
             created_by=self.alice,
-            access_policy=Secret.ACCESS_POLICY_ANY,
-            status=Secret.STATUS_NEEDS_CHANGING,
+            access_policy=AccessPolicy.ANY,
+            status=SecretStatus.NEEDS_CHANGING,
             needs_changing_on_leave=False,
         )
 
         shared_secret = Secret.objects.create(
             name="shared_needs_change",
             created_by=self.alice,
-            access_policy=Secret.ACCESS_POLICY_HIDDEN,
-            status=Secret.STATUS_NEEDS_CHANGING,
+            access_policy=AccessPolicy.HIDDEN,
+            status=SecretStatus.NEEDS_CHANGING,
             needs_changing_on_leave=True,
         )
         SharedSecretData.objects.create(
@@ -47,8 +48,8 @@ class TestPendingSecretsQueryLogic(TestCase):
         hidden_for_alice_only = Secret.objects.create(
             name="hidden_for_alice_only",
             created_by=self.alice,
-            access_policy=Secret.ACCESS_POLICY_HIDDEN,
-            status=Secret.STATUS_NEEDS_CHANGING,
+            access_policy=AccessPolicy.HIDDEN,
+            status=SecretStatus.NEEDS_CHANGING,
             needs_changing_on_leave=True,
         )
         SharedSecretData.objects.create(
@@ -60,8 +61,8 @@ class TestPendingSecretsQueryLogic(TestCase):
         deleted_needs_change = Secret.objects.create(
             name="deleted_needs_change",
             created_by=self.alice,
-            access_policy=Secret.ACCESS_POLICY_ANY,
-            status=Secret.STATUS_DELETED,
+            access_policy=AccessPolicy.ANY,
+            status=SecretStatus.DELETED,
             needs_changing_on_leave=True,
         )
 

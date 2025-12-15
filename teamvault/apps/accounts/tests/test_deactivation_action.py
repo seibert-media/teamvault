@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.urls import reverse
 
+from teamvault.apps.secrets.enums import SecretStatus, AccessPolicy
 from teamvault.apps.secrets.models import Secret, SecretRevision
 
 
@@ -29,9 +30,9 @@ class TestUserDeactivationSideEffects(TestCase):
         secret = Secret.objects.create(
             name=name,
             created_by=self.admin,
-            status=Secret.STATUS_OK,
+            status=SecretStatus.OK,
             needs_changing_on_leave=on_leave,
-            access_policy=Secret.ACCESS_POLICY_ANY
+            access_policy=AccessPolicy.ANY
         )
 
         revision = SecretRevision.objects.create(
@@ -55,7 +56,7 @@ class TestUserDeactivationSideEffects(TestCase):
         self.client.post(url)
 
         secret.refresh_from_db()
-        self.assertEqual(secret.status, Secret.STATUS_NEEDS_CHANGING)
+        self.assertEqual(secret.status, SecretStatus.NEEDS_CHANGING)
 
     def test_deactivation_ignores_unaccessed_secrets(self):
         secret = self._create_secret_and_simulate_access("secret", user_accessed=False, on_leave=True)
@@ -63,7 +64,7 @@ class TestUserDeactivationSideEffects(TestCase):
         url = reverse('accounts.user-deactivate', kwargs={'username': self.bob.username})
         self.client.post(url)
         secret.refresh_from_db()
-        self.assertEqual(secret.status, Secret.STATUS_OK)
+        self.assertEqual(secret.status, SecretStatus.OK)
 
     def test_deactivation_removes_group_membership(self):
         self.client.force_login(self.admin)
@@ -81,12 +82,12 @@ class TestUserDeactivationSideEffects(TestCase):
         url = reverse('accounts.user-deactivate', kwargs={'username': self.bob.username})
         self.client.post(url)
         secret.refresh_from_db()
-        self.assertEqual(secret.status, Secret.STATUS_NEEDS_CHANGING)
+        self.assertEqual(secret.status, SecretStatus.NEEDS_CHANGING)
 
         self.client.post(reverse('accounts.user-reactivate', kwargs={'username': self.bob.username}))
         secret.refresh_from_db()
 
-        self.assertEqual(secret.status, Secret.STATUS_NEEDS_CHANGING)
+        self.assertEqual(secret.status, SecretStatus.NEEDS_CHANGING)
 
     def test_deactivation_ignores_safe_secrets(self):
         """
@@ -104,4 +105,4 @@ class TestUserDeactivationSideEffects(TestCase):
         self.client.post(url)
         secret.refresh_from_db()
 
-        self.assertEqual(secret.status, Secret.STATUS_OK)
+        self.assertEqual(secret.status, SecretStatus.OK)

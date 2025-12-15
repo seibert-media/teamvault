@@ -6,6 +6,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import Secret, SharedSecretData
 
 
@@ -21,8 +22,8 @@ class TestPendingSecretsEndpoints(APITestCase):
         self.secret_needs_change = Secret.objects.create(
             name="Critical DB Password",
             created_by=self.admin_user,
-            access_policy=Secret.ACCESS_POLICY_HIDDEN,
-            status=Secret.STATUS_NEEDS_CHANGING,
+            access_policy=AccessPolicy.HIDDEN,
+            status=SecretStatus.NEEDS_CHANGING,
             needs_changing_on_leave=True,
         )
         self.share1 = SharedSecretData.objects.create(
@@ -34,8 +35,8 @@ class TestPendingSecretsEndpoints(APITestCase):
         self.secret_ok = Secret.objects.create(
             name="Guest WiFi Password",
             created_by=self.admin_user,
-            access_policy=Secret.ACCESS_POLICY_HIDDEN,
-            status=Secret.STATUS_OK,
+            access_policy=AccessPolicy.HIDDEN,
+            status=SecretStatus.OK,
             needs_changing_on_leave=True,
         )
         SharedSecretData.objects.create(
