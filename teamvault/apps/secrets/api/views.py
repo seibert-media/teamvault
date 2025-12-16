@@ -167,7 +167,7 @@ def data_get(request, hashid):
     except SecretPermissionError:
         raise PermissionDenied
     if secret_revision.secret.content_type == ContentType.PASSWORD:
-        if isinstance(data, int):
+        if not isinstance(data, dict):
             return Response({'password': data})
         return Response({'password': data["password"]})
     elif secret_revision.secret.content_type == ContentType.FILE:
