@@ -203,15 +203,10 @@ class RevisionService:
         if content_type == ContentType.PASSWORD and secret.current_revision:
             prev = secret.current_revision.peek_data(actor)
             payload.setdefault('password', prev.get('password'))
-            if 'otp_key' in prev:
-                for fld in ('otp_key', 'digits', 'algorithm'):
-                    payload.setdefault(fld, prev.get(fld))
+            for fld in ('otp_key', 'digits', 'algorithm'):
+                payload.setdefault(fld, prev.get(fld))
 
-        sha_src = (
-            payload['password']
-            if content_type == ContentType.PASSWORD and 'password' in payload
-            else dumps(payload, sort_keys=True)
-        )
+        sha_src = dumps(payload, sort_keys=True)
         sha_sum = sha256(sha_src.encode()).hexdigest()
 
         revision, created = SecretRevision.objects.get_or_create(
