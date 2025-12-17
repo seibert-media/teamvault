@@ -150,6 +150,42 @@ class SecretModelCrudTests(TestCase):
         self.assertIsInstance(got, (bytes, bytearray))
         self.assertEqual(got, raw)
 
+    def test_otp_only_update_creates_new_revision(self):
+        s: Secret = new_secret(self.owner, name="otp-add")
+        rev_before = s.current_revision
+        self.assertFalse(rev_before.otp_key_set)
+
+        changes_before = SecretChange.objects.filter(secret=s).count()
+
+        # OTP-only update: omit password, keep existing via merge logic.
+        RevisionService.save_payload(
+            secret=s,
+            actor=self.owner,
+            payload={
+                "otp_key": "JBSWY3DPEHPK3PXP",
+                "digits": "6",
+                "algorithm": "SHA1",
+            },
+        )
+
+        s.refresh_from_db()
+        rev_after = s.current_revision
+        self.assertNotEqual(rev_after.id, rev_before.id)
+        self.assertTrue(rev_after.otp_key_set)
+        self.assertEqual(rev_after.get_data(self.owner)["otp_key"], "JBSWY3DPEHPK3PXP")
+
+        # Re-saving identical OTP-only payload should be a no-op.
+        RevisionService.save_payload(
+            secret=s,
+            actor=self.owner,
+            payload={
+                "otp_key": "JBSWY3DPEHPK3PXP",
+                "digits": "6",
+                "algorithm": "SHA1",
+            },
+        )
+        self.assertEqual(SecretChange.objects.filter(secret=s).count(), changes_before + 1)
+
     def test_delete_marks_secret_and_denies_visibility_and_read(self):
         s: Secret = new_secret(self.owner, name="todelete", access_policy=AccessPolicy.ANY)
         s.status = SecretStatus.DELETED

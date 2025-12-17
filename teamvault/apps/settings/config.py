@@ -4,7 +4,7 @@ from gettext import gettext as _
 from hashlib import sha1
 from os import environ, umask
 from os.path import exists, isfile
-from random import choice
+from secrets import choice
 from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
 
