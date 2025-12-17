@@ -202,9 +202,15 @@ class RevisionService:
         # merge missing fields for PASSWORD type
         if content_type == ContentType.PASSWORD and secret.current_revision:
             prev = secret.current_revision.peek_data(actor)
-            payload.setdefault('password', prev.get('password'))
-            for fld in ('otp_key', 'digits', 'algorithm'):
-                payload.setdefault(fld, prev.get(fld))
+            if 'password' not in payload and 'password' in prev:
+                payload['password'] = prev['password']
+
+            # Preserve OTP fields only when the previous revision actually had them.
+            if 'otp_key' not in payload and 'otp_key' in prev:
+                payload['otp_key'] = prev['otp_key']
+                for fld in ('digits', 'algorithm'):
+                    if fld in prev:
+                        payload[fld] = prev[fld]
 
         sha_src = dumps(payload, sort_keys=True)
         sha_sum = sha256(sha_src.encode()).hexdigest()
