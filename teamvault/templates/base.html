@@ -19,7 +19,18 @@
     {% block head %}{% endblock %}
 </head>
 
-<body data-bs-no-jquery data-bs-theme="{% if request.COOKIES.theme == 'dark' %}dark{% else %}light{% endif %}">
+<body data-bs-no-jquery>
+<script>
+    (function () {
+        const getStoredTheme = () => localStorage.getItem('theme');
+        const getSystemTheme = () => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+        const theme = getStoredTheme() || getSystemTheme();
+
+        document.documentElement.setAttribute('data-bs-theme', theme);
+    })();
+</script>
+
 <script>
     const tooltipOptions = {container: 'body', html: true, trigger: 'hover'}
 
