@@ -8,9 +8,9 @@ from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     PermissionChecker,
-    SharedSecretData, Secret,
+    Secret,
+    SharedSecretData,
 )
-
 from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 
@@ -24,13 +24,13 @@ class PermissionCheckerTests(TestCase):
         self.group = Group.objects.create(name='foo')
 
     def _assert_perm(
-            self,
-            checker: PermissionChecker,
-            *,
-            readable,
-            shareable,
-            visible,
-            msg=None,
+        self,
+        checker: PermissionChecker,
+        *,
+        readable,
+        shareable,
+        visible,
+        msg=None,
     ):
         self.assertEqual(checker.is_readable(), readable, msg)
         self.assertEqual(checker.is_shareable(), shareable, msg)
@@ -45,7 +45,6 @@ class PermissionCheckerTests(TestCase):
             shareable=AccessPermissionTypes.ALLOWED,
             visible=AccessPermissionTypes.ALLOWED,
         )
-
 
     def test_discoverable_without_share(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.DISCOVERABLE)
@@ -136,24 +135,20 @@ class PermissionCheckerTests(TestCase):
             user=self.bob,
             granted_by=self.owner,
             grant_description='temporary',
-            granted_until=now() - timedelta(days=1)
+            granted_until=now() - timedelta(days=1),
         )
         chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
             chk,
             readable=AccessPermissionTypes.NOT_ALLOWED,
             shareable=AccessPermissionTypes.NOT_ALLOWED,
-            visible=AccessPermissionTypes.NOT_ALLOWED
+            visible=AccessPermissionTypes.NOT_ALLOWED,
         )
 
     def test_temp_share_expires_exactly_at_now_is_not_allowed(self):
         sec = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
         SharedSecretData.objects.create(
-            secret=sec,
-            user=self.bob,
-            granted_by=self.owner,
-            grant_description='temporary',
-            granted_until=now()
+            secret=sec, user=self.bob, granted_by=self.owner, grant_description='temporary', granted_until=now()
         )
         chk = PermissionChecker(self.bob, sec, sec.share_data.for_user(self.bob))
         self._assert_perm(
@@ -195,7 +190,7 @@ class PermissionCheckerTests(TestCase):
             group=self.group,
             granted_by=self.owner,
             grant_description='expired group share',
-            granted_until=now() - timedelta(days=1)
+            granted_until=now() - timedelta(days=1),
         )
         chk_dave = PermissionChecker(self.dave, sec, sec.share_data.for_user(self.dave))
         self._assert_perm(

@@ -2,7 +2,7 @@ from copy import copy
 
 from django.test import TestCase, override_settings
 
-from teamvault.apps.secrets.models import SecretRevision, SecretChange
+from teamvault.apps.secrets.models import SecretChange, SecretRevision
 from teamvault.apps.secrets.services.revision import RevisionService
 from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
@@ -19,11 +19,7 @@ class RevisionHistoryTests(TestCase):
         s = self.secret
 
         # 2nd REVISION: payload update
-        RevisionService.save_payload(
-            secret=s,
-            actor=self.owner,
-            payload={'password': 'second‑pw'}
-        )
+        RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'second‑pw'})
         self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
         # Two distinct payload revisions
         self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
@@ -35,11 +31,7 @@ class RevisionHistoryTests(TestCase):
         # feed identical payload back in → no new revision but new meta
         current_payload = s.current_revision.get_data(self.owner)
 
-        RevisionService.save_payload(
-            secret=s,
-            actor=self.owner,
-            payload=copy(current_payload)
-        )
+        RevisionService.save_payload(secret=s, actor=self.owner, payload=copy(current_payload))
 
         self.assertEqual(SecretRevision.objects.filter(secret=s).count(), 2)
         # Three SecretChange rows (2 payload + 1 metadata-only snapshot)
