@@ -1,7 +1,8 @@
 from base64 import b64encode
 from contextlib import suppress
 
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.db import models
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
@@ -11,6 +12,8 @@ from rest_framework.reverse import reverse
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 from ..models import Secret, SecretRevision, SharedSecretData
+
+User = get_user_model()
 
 
 class ContentTypeStr(models.TextChoices):

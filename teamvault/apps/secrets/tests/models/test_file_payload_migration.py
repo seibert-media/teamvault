@@ -3,12 +3,14 @@ from json import loads
 
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import override_settings
 from django_test_migrations.contrib.unittest_case import MigratorTestCase
 
 from teamvault.apps.secrets.enums import ContentType
+
+User = get_user_model()
 
 STATIC_TEST_KEY = b'WKGGUS52yN68AtcgOKKKqDzccS3hOy32ShZWKwDWe3Q='
 

@@ -1,7 +1,8 @@
 from datetime import date
 
 from django import forms
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.forms.widgets import RadioSelect
 from django.utils.translation import gettext_lazy as _
@@ -10,6 +11,8 @@ from teamvault.apps.secrets.enums import AccessPolicy
 from .models import Secret, SharedSecretData
 from .utils import extract_url_and_params
 from .validators import is_valid_otp_secret
+
+User = get_user_model()
 
 GENERIC_FIELDS_HEADER = ['name']
 GENERIC_FIELDS_FOOTER = [
