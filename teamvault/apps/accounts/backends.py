@@ -108,7 +108,9 @@ def social_auth_link_user_via_ldap_entryuuid(backend, details: dict[str, Any], u
     if not entry_uuid:
         uid = getattr(user, User.USERNAME_FIELD)
         refreshed = ldap_backend.populate_user(uid)
-        return {'user': refreshed or user}
+        if not refreshed:
+            raise AuthForbidden(backend)
+        return {'user': refreshed}
 
     results = search_by_entry_uuid(entry_uuid)
     if results:
@@ -116,6 +118,8 @@ def social_auth_link_user_via_ldap_entryuuid(backend, details: dict[str, Any], u
         uid = _get_attr(attrs, username_attr)
         if uid:
             refreshed = ldap_backend.populate_user(uid)
-            return {'user': refreshed or user}
+            if not refreshed:
+                raise AuthForbidden(backend)
+            return {'user': refreshed}
 
     raise AuthForbidden(backend)
