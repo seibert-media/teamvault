@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>TeamVault Options</title>
+    <link rel="icon" href="icon.svg" />
+    <style>
+      :root { color-scheme: light dark; --tv-accent:#f8592c; --bg:#101114; --fg:#eaeaf0; --panel:#14161b; --border:rgba(255,255,255,0.08); }
+      @media (prefers-color-scheme: light) { :root { --bg:#ffffff; --fg:#111318; --panel:#f4f6f8; --border: rgba(0,0,0,0.12);} }
+      body.force-dark { --bg:#101114; --fg:#eaeaf0; --panel:#14161b; --border:rgba(255,255,255,0.08); }
+      body.force-light { --bg:#ffffff; --fg:#111318; --panel:#f4f6f8; --border: rgba(0,0,0,0.12); }
+      body { background: var(--bg); color: var(--fg); font: 14px/1.5 system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 0; }
+      header { padding: 14px 16px; background: linear-gradient(180deg, rgba(248,89,44,0.12), transparent 70%); border-bottom: 1px solid var(--border); }
+      header h2 { margin: 0; font-size: 16px; letter-spacing: .2px; }
+      main { padding: 16px; max-width: 800px; }
+      section { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px; margin-bottom: 14px; }
+      .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+      label { min-width: 160px; }
+      input[type="url"], select { width: 480px; max-width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: color-mix(in srgb, var(--panel) 90%, #fff); color: var(--fg); }
+      select { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--fg) 50%), linear-gradient(135deg, var(--fg) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 12px) 50%; background-size: 6px 6px, 6px 6px; background-repeat: no-repeat; }
+      select:focus, input[type="url"]:focus { outline: none; border-color: color-mix(in srgb, var(--tv-accent) 40%, transparent); box-shadow: 0 0 0 2px rgba(248,89,44,0.2); }
+      option { background: var(--panel); color: var(--fg); }
+      button { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: var(--fg); cursor: pointer; }
+      button.primary { background: var(--tv-accent); color: #fff; border-color: color-mix(in srgb, var(--tv-accent) 70%, #000); }
+      .status { opacity: 0.9; }
+      .hint { font-size: 12px; opacity: 0.8; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h2>TeamVault Extension Settings</h2>
+    </header>
+    <main>
+      <section>
+        <div class="row">
+          <label for="baseUrl">TeamVault Base URL</label>
+          <input type="url" id="baseUrl" placeholder="https://vault.example.com" />
+          <button class="primary" id="saveBtn">Save</button>
+        </div>
+        <div class="row">
+          <label>Authentication</label>
+          <button id="loginBtn">Sign in</button>
+          <button id="checkBtn">Check authentication</button>
+          <span id="status" class="status"></span>
+        </div>
+        <div class="row">
+          <label>Permissions</label>
+          <button id="grantBtn">Grant site permission</button>
+          <span id="permStatus" class="status"></span>
+        </div>
+      </section>
+      <section>
+        <div class="row">
+          <label for="inlineToggle">Inline autofill button</label>
+          <select id="inlineToggle">
+            <option value="on">Enabled</option>
+            <option value="off">Disabled</option>
+          </select>
+          <span class="hint">Shows a “TV” button on login forms for one‑click fill.</span>
+        </div>
+        <div class="row">
+          <label for="prewarmToggle">Pre-warm suggestions</label>
+          <select id="prewarmToggle">
+            <option value="off">Off (default)</option>
+            <option value="on">On</option>
+          </select>
+          <span class="hint">When enabled, the extension fetches site matches in the background on tab changes.</span>
+        </div>
+        <div class="row">
+          <label for="themeSelect">Theme</label>
+          <select id="themeSelect">
+            <option value="auto">Auto (system)</option>
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="preferPinned">Prefer pinned (search)</label>
+          <select id="preferPinned">
+            <option value="off">Off</option>
+            <option value="on">On</option>
+          </select>
+          <span class="hint">If enabled, the pinned secret appears first even when searching.</span>
+        </div>
+        <div class="row">
+          <label for="allowHttpDev">Allow HTTP (dev)</label>
+          <select id="allowHttpDev">
+            <option value="off">Off (default)</option>
+            <option value="on">On</option>
+          </select>
+          <span class="hint">Permits non-HTTPS Base URLs and host permissions. Keep off unless developing locally.</span>
+        </div>
+      </section>
+      <section>
+        <div class="row">
+          <label>Per-site preferences</label>
+          <div id="siteHost" class="status"></div>
+          <button id="siteRefresh">Refresh site</button>
+        </div>
+        <div class="row">
+          <label>Pre-warm status</label>
+          <div id="sitePrewarmStatus" class="status"></div>
+        </div>
+        <div class="row">
+          <label for="siteAutoSubmit">Auto-submit on this site</label>
+          <select id="siteAutoSubmit">
+            <option value="unset">Use global</option>
+            <option value="on">Enabled</option>
+            <option value="off">Disabled</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="siteInline">Inline button on this site</label>
+          <select id="siteInline">
+            <option value="unset">Use global</option>
+            <option value="on">Enabled</option>
+            <option value="off">Disabled</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="sitePrewarm">Pre-warm on this site</label>
+          <select id="sitePrewarm">
+            <option value="unset">Use global</option>
+            <option value="on">Enabled</option>
+            <option value="off">Disabled</option>
+          </select>
+        </div>
+        <div class="row">
+          <label></label>
+          <button id="siteSave" class="primary">Save for this site</button>
+          <button id="siteClear">Clear site override</button>
+          <span class="hint">Targets the active tab's site.</span>
+        </div>
+      </section>
+    </main>
+    <script src="options.js"></script>
+  </body>
+  </html>
