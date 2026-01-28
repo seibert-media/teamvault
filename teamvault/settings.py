@@ -1,4 +1,4 @@
-from os.path import dirname, join, realpath
+from pathlib import Path
 
 from huey import SqliteHuey
 
@@ -8,15 +8,13 @@ from teamvault.apps.settings.config import (
     configure_hashid,
     configure_huey,
     configure_logging,
-    configure_password_generator,
     configure_session,
     configure_time_zone,
     get_config,
-    get_from_config,
 )
 
 CONFIG = get_config()
-PROJECT_ROOT = realpath(dirname(__file__))
+PROJECT_ROOT = Path(__file__).resolve().parent
 
 # Django
 
@@ -26,15 +24,11 @@ AUTHENTICATION_BACKENDS = [
 
 DATABASES = configure_database(CONFIG)
 
-DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
 
-FILE_UPLOAD_HANDLERS = (
-    "teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler",
-)
+FILE_UPLOAD_HANDLERS = ('teamvault.apps.secrets.utils.CappedMemoryFileUploadHandler',)
 
-FIXTURE_DIRS = (
-    join(PROJECT_ROOT, "fixtures"),
-)
+FIXTURE_DIRS = (str(PROJECT_ROOT / 'fixtures'),)
 
 INSTALLED_APPS = [
     'django.contrib.auth',
@@ -54,11 +48,11 @@ INSTALLED_APPS = [
     'webpack_loader',
 ]
 
-LANGUAGE_CODE = "en-us"
+LANGUAGE_CODE = 'en-us'
 
-LOCALE_PATHS = (PROJECT_ROOT + "/locale",)
+LOCALE_PATHS = (str(PROJECT_ROOT / 'locale'),)
 
-LOGIN_REDIRECT_URL = "/"
+LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = 'accounts.login'
 LOGOUT_URL = 'accounts.logout'
 
@@ -77,29 +71,26 @@ MIDDLEWARE = [
     'teamvault.middleware.htmx_message_middleware',
 ]
 
-ROOT_URLCONF = "teamvault.urls"
+ROOT_URLCONF = 'teamvault.urls'
 
 SECRET_KEY = configure_django_secret_key(CONFIG)
 
-SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
-SESSION_COOKIE_AGE, SESSION_EXPIRE_AT_BROWSER_CLOSE, SESSION_COOKIE_SECURE = \
-    configure_session(CONFIG)
+SESSION_COOKIE_AGE, SESSION_EXPIRE_AT_BROWSER_CLOSE, SESSION_COOKIE_SECURE = configure_session(CONFIG)
 
-STATIC_ROOT = join(PROJECT_ROOT, "static_collected")
+STATIC_ROOT = str(PROJECT_ROOT / 'static_collected')
 
 # remember this is hardcoded in the error page templates (e.g. 500.html)
-STATIC_URL = "/static/"
+STATIC_URL = '/static/'
 
-STATICFILES_DIRS = (
-    join(PROJECT_ROOT, "static"),
-)
+STATICFILES_DIRS = (str(PROJECT_ROOT / 'static'),)
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [join(PROJECT_ROOT, "templates"), ],
+        'DIRS': [str(PROJECT_ROOT / 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -131,12 +122,9 @@ HASHID_MIN_LENGTH, HASHID_SALT = configure_hashid(CONFIG)
 
 # Django REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_MODEL_SERIALIZER_CLASS':
-        'rest_framework.serializers.HyperlinkedModelSerializer',
+    'DEFAULT_MODEL_SERIALIZER_CLASS': 'rest_framework.serializers.HyperlinkedModelSerializer',
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    'DEFAULT_PERMISSION_CLASSES': ('rest_framework.permissions.IsAuthenticated',),
     'PAGE_SIZE': 25,
 }
 

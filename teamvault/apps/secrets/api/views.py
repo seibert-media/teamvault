@@ -3,16 +3,15 @@ from base64 import b64encode
 from django.conf import settings
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
-from rest_framework import generics
-from rest_framework import status
+from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
-from teamvault.apps.secrets.exceptions import PermissionError as SecretPermissionError
 from rest_framework.response import Response
 
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
+from teamvault.apps.secrets.exceptions import PermissionError as SecretPermissionError
 from teamvault.apps.secrets.services.revision import RevisionService
 from .serializers import SecretDetailSerializer, SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
 from ..models import AccessPermissionTypes, Secret, SecretRevision, SharedSecretData
@@ -23,7 +22,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
     model = Secret
     serializer_class = SecretDetailSerializer
 
-    def destroy(self, request, *args, **kwargs):
+    def destroy(self, request, *args, **kwargs):  # noqa: ARG002
         obj = self.get_object()
         obj.status = SecretStatus.DELETED
         obj.save()
@@ -38,11 +37,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         instance = serializer.save()
         if hasattr(instance, '_data'):
-            RevisionService.save_payload(
-                secret=instance,
-                actor=self.request.user,
-                payload=instance._data
-            )
+            RevisionService.save_payload(secret=instance, actor=self.request.user, payload=instance._data)
             del instance._data
 
 
@@ -110,7 +105,7 @@ class SecretShare(generics.ListCreateAPIView):
                 shared_entity_type=obj.shared_entity_type,
                 name=obj.shared_entity_name,
                 user=self.request.user.username,
-                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently')
+                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently'),
             ),
             actor=self.request.user,
             category=(
@@ -164,12 +159,12 @@ def data_get(request, hashid):
     secret_revision.secret.check_read_access(request.user)
     try:
         data = secret_revision.get_data(request.user)
-    except SecretPermissionError:
-        raise PermissionDenied
+    except SecretPermissionError as exc:
+        raise PermissionDenied from exc
     if secret_revision.secret.content_type == ContentType.PASSWORD:
         if not isinstance(data, dict):
             return Response({'password': data})
-        return Response({'password': data["password"]})
+        return Response({'password': data['password']})
     elif secret_revision.secret.content_type == ContentType.FILE:
         return Response({'file': b64encode(data).decode('ascii')})
     elif secret_revision.secret.content_type == ContentType.CC:
@@ -178,13 +173,15 @@ def data_get(request, hashid):
 
 @api_view(['GET'])
 def generate_password_view(*_args, **_kwargs):
-    return Response(generate_password(
-        settings.PASSWORD_LENGTH,
-        settings.PASSWORD_DIGITS,
-        settings.PASSWORD_UPPER,
-        settings.PASSWORD_LOWER,
-        settings.PASSWORD_SPECIAL
-    ))
+    return Response(
+        generate_password(
+            settings.PASSWORD_LENGTH,
+            settings.PASSWORD_DIGITS,
+            settings.PASSWORD_UPPER,
+            settings.PASSWORD_LOWER,
+            settings.PASSWORD_SPECIAL,
+        )
+    )
 
 
 @api_view(['GET'])

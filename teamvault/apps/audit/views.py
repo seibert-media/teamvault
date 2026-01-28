@@ -13,16 +13,13 @@ class LogEntryList(ListView, FilterMixin):
     filter_class = AuditLogFilter
     context_object_name = 'log_entries'
     paginate_by = 25
-    template_name = "audit/log.html"
+    template_name = 'audit/log.html'
 
     def get_queryset(self):
         queryset = LogEntry.objects.all()
-        if "search" in self.request.GET:
+        if 'search' in self.request.GET:
             query = self.request.GET['search']
-            queryset = queryset.filter(
-                Q(actor__icontains=query) |
-                Q(message__icontains=query)
-            )
+            queryset = queryset.filter(Q(actor__icontains=query) | Q(message__icontains=query))
 
         return self.get_filtered_queryset(queryset)
 

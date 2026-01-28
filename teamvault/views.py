@@ -2,11 +2,11 @@ from django.shortcuts import render
 from django.views.generic.base import ContextMixin
 
 
-def handler404(request, exception, **kwargs):
+def handler404(request, exception, **_kwargs):  # noqa: ARG001
     if request.user.is_authenticated:
-        return render(request, "404_loggedin.html", status=404)
+        return render(request, '404_loggedin.html', status=404)
     else:
-        return render(request, "404_anon.html", status=404)
+        return render(request, '404_anon.html', status=404)
 
 
 class FilterMixin(ContextMixin):
@@ -25,7 +25,7 @@ class FilterMixin(ContextMixin):
         return self.get_filter(queryset=queryset).qs
 
     @staticmethod
-    def manipulate_filter_form(bound_data, filter_form):
+    def manipulate_filter_form(bound_data, filter_form):  # noqa: ARG004
         """
         Can be overwritten in subclasses to add custom behaviour for a single view
         Has to return a filter_form

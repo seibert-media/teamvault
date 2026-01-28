@@ -1,4 +1,5 @@
-from base64 import b64decode, b64encode
+from base64 import b64encode
+from contextlib import suppress
 
 from django.contrib.auth.models import Group, User
 from django.db import models
@@ -7,8 +8,8 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 from rest_framework.reverse import reverse
-from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 
+from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 from ..models import Secret, SecretRevision, SharedSecretData
 
 
@@ -19,23 +20,23 @@ class ContentTypeStr(models.TextChoices):
 
 
 ACCESS_POLICY_REPR = {
-    AccessPolicy.ANY: "any",
-    AccessPolicy.HIDDEN: "hidden",
-    AccessPolicy.DISCOVERABLE: "discoverable",
+    AccessPolicy.ANY: 'any',
+    AccessPolicy.HIDDEN: 'hidden',
+    AccessPolicy.DISCOVERABLE: 'discoverable',
 }
 REPR_ACCESS_POLICY = {v: k for k, v in ACCESS_POLICY_REPR.items()}
 
 CONTENT_TYPE_REPR = {
-    ContentTypeEnum.CC: "cc",
-    ContentTypeEnum.FILE: "file",
-    ContentTypeEnum.PASSWORD: "password",
+    ContentTypeEnum.CC: 'cc',
+    ContentTypeEnum.FILE: 'file',
+    ContentTypeEnum.PASSWORD: 'password',
 }
 REPR_CONTENT_TYPE = {v: k for k, v in CONTENT_TYPE_REPR.items()}
 
 SECRET_STATUS_REPR = {
-    SecretStatus.DELETED: "deleted",
-    SecretStatus.NEEDS_CHANGING: "needs_changing",
-    SecretStatus.OK: "ok",
+    SecretStatus.DELETED: 'deleted',
+    SecretStatus.NEEDS_CHANGING: 'needs_changing',
+    SecretStatus.OK: 'ok',
 }
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
@@ -44,10 +45,7 @@ STANDARD_FIELDS = {'access_policy', 'name', 'description', 'username', 'url'}
 
 
 def serialize_password(secret_data):
-    return {
-        'password': secret_data['password'],
-        'otp_key_data': secret_data.get('otp_key_data', '')
-    }
+    return {'password': secret_data['password'], 'otp_key_data': secret_data.get('otp_key_data', '')}
 
 
 def serialize_cc(secret_data):
@@ -58,25 +56,23 @@ def serialize_cc(secret_data):
             'expiration_year': secret_data['expiration_year'],
             'number': secret_data['number'],
             'security_code': secret_data['security_code'],
-            'password': secret_data['password']
+            'password': secret_data['password'],
         }
-    except KeyError as e:
-        raise serializers.ValidationError(_(f'Missing required credit card field {e}'))
+    except KeyError as exc:
+        field = exc.args[0]
+        raise serializers.ValidationError(_('Missing required credit card field %(field)s') % {'field': field}) from exc
 
 
 def serialize_file(secret_data):
-    return {
-        'filename': secret_data['filename'],
-        'file_content': b64encode(secret_data['file_content']).decode()
-    }
+    return {'filename': secret_data['filename'], 'file_content': b64encode(secret_data['file_content']).decode()}
 
 
 def _extract_data(secret_data, content_type: ContentTypeStr | int):
-    if content_type in [ContentTypeStr.PASSWORD, ContentTypeEnum.PASSWORD]:
+    if content_type in {ContentTypeStr.PASSWORD, ContentTypeEnum.PASSWORD}:
         data = serialize_password(secret_data)
-    elif content_type in [ContentTypeStr.CC, ContentTypeEnum.CC]:
+    elif content_type in {ContentTypeStr.CC, ContentTypeEnum.CC}:
         data = serialize_cc(secret_data)
-    elif content_type in [ContentTypeStr.FILE, ContentTypeEnum.FILE]:
+    elif content_type in {ContentTypeStr.FILE, ContentTypeEnum.FILE}:
         data = serialize_file(secret_data)
     else:
         raise ValidationError(
@@ -102,7 +98,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
     )
 
     def to_representation(self, instance):
-        rep = super(SecretRevisionSerializer, self).to_representation(instance)
+        rep = super().to_representation(instance)
         rep['data_url'] = reverse(
             'api.secret-revision_data',
             kwargs={'hashid': instance.hashid},
@@ -118,9 +114,7 @@ class SecretRevisionSerializer(serializers.HyperlinkedModelSerializer):
             'data_url',
             'set_by',
         )
-        read_only_fields = (
-            'created',
-        )
+        read_only_fields = ('created',)
 
 
 class SecretSerializer(serializers.HyperlinkedModelSerializer):
@@ -128,10 +122,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         lookup_field='hashid',
         view_name='api.secret_detail',
     )
-    content_type = serializers.ChoiceField(
-        choices=ContentTypeStr.choices,
-        required=True
-    )
+    content_type = serializers.ChoiceField(choices=ContentTypeStr.choices, required=True)
     created_by = serializers.SlugRelatedField(
         default=serializers.CurrentUserDefault(),
         read_only=True,
@@ -159,13 +150,13 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
     def create(self, validated_data):
         try:
             content_type = validated_data.pop('content_type')
-        except KeyError:
-            raise serializers.ValidationError(_('Missing required field content type'))
+        except KeyError as exc:
+            raise serializers.ValidationError(_('Missing required field content type')) from exc
 
         try:
             secret_data = validated_data.pop('secret_data')
-        except KeyError:
-            raise serializers.ValidationError(_('Missing required field secret_data'))
+        except KeyError as exc:
+            raise serializers.ValidationError(_('Missing required field secret_data')) from exc
 
         data = _extract_data(secret_data, content_type)
         if not data:
@@ -180,22 +171,16 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         return instance
 
     def to_internal_value(self, data):
-        try:
+        with suppress(KeyError):
             data['access_policy'] = REPR_ACCESS_POLICY[data.get('access_policy', None)]
-        except KeyError:
-            # Validation will catch it
-            pass
 
-        try:
+        with suppress(KeyError):
             data['status'] = SECRET_REPR_STATUS[data.get('status', None)]
-        except KeyError:
-            # Validation will catch it
-            pass
 
-        return super(SecretSerializer, self).to_internal_value(data)
+        return super().to_internal_value(data)
 
     def to_representation(self, instance: Secret):
-        rep = super(SecretSerializer, self).to_representation(instance)
+        rep = super().to_representation(instance)
         rep['access_policy'] = ACCESS_POLICY_REPR[rep['access_policy']]
         rep['content_type'] = CONTENT_TYPE_REPR[rep['content_type']]
         rep['hashid'] = instance.hashid
@@ -207,10 +192,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             rep['data_readable'] = False
         return rep
 
-    def validate(self, data):
-        if 'file' in data or 'filename' in data:
-            if not ('file' in data and 'filename' in data):
-                raise serializers.ValidationError(_('Must include both file and filename'))
+    @staticmethod
+    def validate(data):
+        if ('file' in data) != ('filename' in data):
+            raise serializers.ValidationError(_('Must include both file and filename'))
         return data
 
     class Meta:
@@ -249,7 +234,8 @@ class SecretDetailSerializer(SecretSerializer):
         required=False,
     )
 
-    def update(self, instance: Secret, validated_data):
+    @staticmethod
+    def update(instance: Secret, validated_data):
         secret_data = validated_data.get('secret_data')
         if secret_data:
             data = _extract_data(secret_data, instance.content_type)
@@ -307,17 +293,17 @@ class SharedSecretDataSerializer(serializers.ModelSerializer):
 
         if SharedSecretData.objects.filter(secret=secret, **{entity_type: entity_name}).exists():
             raise ValidationError(
-                _(f'Secret {secret} was already shared with {entity_type} {entity_name}.').format(
-                    secret=secret, entity_type=entity_type, entity_name=entity_name
-                ),
-                code='unique'
+                _('Secret %(secret)s was already shared with %(entity_type)s %(entity_name)s.')
+                % {
+                    'secret': secret,
+                    'entity_type': entity_type,
+                    'entity_name': entity_name,
+                },
+                code='unique',
             )
         return data
 
     class Meta:
         model = SharedSecretData
         fields = ['id', 'grant_description', 'granted_on', 'granted_until', 'group', 'user', 'granted_by', 'secret']
-        read_only_fields = (
-            'id',
-            'granted_by'
-        )
+        read_only_fields = ('id', 'granted_by')

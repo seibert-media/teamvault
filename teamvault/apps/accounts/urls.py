@@ -14,12 +14,12 @@ from .views import (
 urlpatterns = (
     path(
         'login/',
-        LoginView.as_view(template_name="accounts/login.html"),
+        LoginView.as_view(template_name='accounts/login.html'),
         name='accounts.login',
     ),
     path(
         'logout/',
-        LogoutView.as_view(template_name="accounts/logout.html"),
+        LogoutView.as_view(template_name='accounts/logout.html'),
         name='accounts.logout',
     ),
     path(
@@ -37,7 +37,6 @@ urlpatterns = (
         user_detail_from_request,
         name='accounts.user-detail-from-request',
     ),
-
     path(
         'users/search/',
         search_user,

@@ -44,24 +44,18 @@ class RestoreRevisionTests(TestCase):
             payload=payload,
         )
         # cache helpful change handles
-        self.ch_rev1 = (
-            SecretChange.objects.filter(secret=self.secret, revision=self.rev1)
-            .latest('created')
-        )
-        self.ch_rev2_latest = (
-            SecretChange.objects.filter(secret=self.secret, revision=self.rev2)
-            .latest('created')
-        )
+        self.ch_rev1 = SecretChange.objects.filter(secret=self.secret, revision=self.rev1).latest('created')
+        self.ch_rev2_latest = SecretChange.objects.filter(secret=self.secret, revision=self.rev2).latest('created')
 
         self.client = Client()
 
     def _login(self, user):
         self.assertTrue(self.client.login(username=user.username, password='pw'))
 
-    def _restore_url(self, secret, revision, change_hash):
+    @staticmethod
+    def _restore_url(secret, revision, change_hash):
         return (
-            reverse(RESTORE_URL_NAME, args=(secret.hashid, revision.hashid))
-            + '?' + urlencode({'change': change_hash})
+            reverse(RESTORE_URL_NAME, args=(secret.hashid, revision.hashid)) + '?' + urlencode({'change': change_hash})
         )
 
     def test_superuser_can_restore_payload(self):
@@ -93,10 +87,7 @@ class RestoreRevisionTests(TestCase):
         self.secret.save(update_fields=['status'])
         payload = copy(self.rev2.get_data(self.owner))
         RevisionService.save_payload(secret=self.secret, actor=self.owner, payload=payload)
-        ch_nc = (
-            SecretChange.objects.filter(secret=self.secret, revision=self.rev2)
-            .latest('created')
-        )
+        ch_nc = SecretChange.objects.filter(secret=self.secret, revision=self.rev2).latest('created')
         resp = self.client.post(self._restore_url(self.secret, self.rev2, ch_nc.hashid))
         self.assertEqual(resp.status_code, 302)
         self.secret.refresh_from_db()

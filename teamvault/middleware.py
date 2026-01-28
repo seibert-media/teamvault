@@ -1,6 +1,11 @@
+from http import HTTPStatus
+from typing import TYPE_CHECKING
+
 from django.contrib import messages
-from django.contrib.messages.storage.base import BaseStorage, Message
 from django_htmx.http import trigger_client_event
+
+if TYPE_CHECKING:
+    from django.contrib.messages.storage.base import BaseStorage, Message
 
 
 def htmx_message_middleware(get_response):
@@ -12,11 +17,11 @@ def htmx_message_middleware(get_response):
         response = get_response(request)
 
         # Ignore non-HTMX requests
-        if "HX-Request" not in request.headers:
+        if 'HX-Request' not in request.headers:
             return response
 
         # HTMX will not read HX headers in redirects but the subsequent GET response.
-        if 300 <= response.status_code < 400:
+        if HTTPStatus.MULTIPLE_CHOICES <= response.status_code < HTTPStatus.BAD_REQUEST:
             return response
 
         storage: BaseStorage = messages.get_messages(request)

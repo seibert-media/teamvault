@@ -1,9 +1,10 @@
 import base64
+import typing as t
+from dataclasses import dataclass
 from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
 from operator import itemgetter
-from dataclasses import dataclass
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -20,10 +21,8 @@ from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from hashids import Hashids
 from pyotp import TOTP
-import typing as t
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
-
 from .exceptions import PermissionError
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
@@ -89,7 +88,7 @@ def log_secret_read(
 
 
 class HashIDModel(models.Model):
-    hashid = models.CharField(
+    hashid = models.CharField(  # noqa: DJ001
         max_length=24,
         null=True,
         unique=True,
@@ -102,7 +101,7 @@ class HashIDModel(models.Model):
         if not self.pk:
             # need to save once to get a primary key, then once again to
             # save the hashid
-            super(HashIDModel, self).save(*args, **kwargs)
+            super().save(*args, **kwargs)
         if not self.hashid:
             hasher = Hashids(
                 min_length=settings.HASHID_MIN_LENGTH,
@@ -112,11 +111,17 @@ class HashIDModel(models.Model):
         # we cannot force insert anymore because we might already have
         # created the object
         kwargs['force_insert'] = False
-        return super(HashIDModel, self).save(*args, **kwargs)
+        return super().save(*args, **kwargs)
 
 
 class Secret(HashIDModel):
     HASHID_NAMESPACE = 'Secret'
+
+    if t.TYPE_CHECKING:
+        from django.db.models.manager import RelatedManager
+
+        # Django reverse relation from SharedSecretData.secret (related_name="share_data").
+        share_data: 'RelatedManager[SharedSecretData]'
 
     access_policy = models.PositiveSmallIntegerField(
         choices=AccessPolicy,
@@ -139,12 +144,12 @@ class Secret(HashIDModel):
         null=True,
         related_name='_password_current_revision',
     )
-    description = models.TextField(
+    description = models.TextField(  # noqa: DJ001
         blank=True,
         null=True,
         help_text=_('Further information on the secret.'),
     )
-    filename = models.CharField(
+    filename = models.CharField(  # noqa: DJ001
         blank=True,
         max_length=255,
         null=True,
@@ -175,7 +180,7 @@ class Secret(HashIDModel):
         choices=SecretStatus,
         default=SecretStatus.OK,
     )
-    url = models.CharField(
+    url = models.CharField(  # noqa: DJ001
         blank=True,
         max_length=255,
         null=True,
@@ -184,7 +189,7 @@ class Secret(HashIDModel):
         # liberal validation
         validators=[validate_url],
     )
-    username = models.CharField(
+    username = models.CharField(  # noqa: DJ001
         blank=True,
         max_length=255,
         null=True,
@@ -199,15 +204,18 @@ class Secret(HashIDModel):
         return self.name
 
     def __repr__(self):
-        return "<Secret '{name}' ({id})>".format(id=self.hashid, name=self.name)
+        return f"<Secret '{self.name}' ({self.hashid})>"
+
+    def get_absolute_url(self):
+        return reverse('secrets.secret-detail', args=[str(self.hashid)])
+
+    @property
+    def full_url(self):
+        return settings.BASE_URL.rstrip('/') + self.get_absolute_url()
 
     def permission_checker(self, user):
         shares = self.share_data.for_user(user)
-        return PermissionChecker(
-            user=user,
-            secret=self,
-            shares=shares
-        )
+        return PermissionChecker(user=user, secret=self, shares=shares)
 
     def is_readable(self, user):
         permissions = self.permission_checker(user)
@@ -236,13 +244,6 @@ class Secret(HashIDModel):
             raise PermissionDenied()
         return permissions.is_shareable()
 
-    @property
-    def full_url(self):
-        return settings.BASE_URL.rstrip('/') + self.get_absolute_url()
-
-    def get_absolute_url(self):
-        return reverse('secrets.secret-detail', args=[str(self.hashid)])
-
     def get_data(self, user):
         if not self.current_revision:
             raise Http404
@@ -269,7 +270,7 @@ class Secret(HashIDModel):
                 plaintext_data = base64.b64decode(plaintext_data['file_content'])
         except JSONDecodeError:
             if self.content_type == ContentType.PASSWORD:
-                plaintext_data = dict(password=plaintext_data)
+                plaintext_data = {'password': plaintext_data}
 
         return plaintext_data
 
@@ -293,12 +294,10 @@ class Secret(HashIDModel):
         if user.is_superuser and settings.ALLOW_SUPERUSER_READS:
             return cls.objects.all()
 
-        allowed_shares = (
-            SharedSecretData.objects.for_user(user)
-            .values('secret__pk')
-        )
+        allowed_shares = SharedSecretData.objects.for_user(user).values('secret__pk')
         return (
-            cls.objects.filter(Q(access_policy=AccessPolicy.ANY) | Q(pk__in=allowed_shares))
+            cls.objects
+            .filter(Q(access_policy=AccessPolicy.ANY) | Q(pk__in=allowed_shares))
             .exclude(status=SecretStatus.DELETED)
             .distinct()
         )
@@ -313,7 +312,8 @@ class Secret(HashIDModel):
 
         allowed_shares = SharedSecretData.objects.for_user(user).values('secret__pk')
         return (
-            queryset.filter(
+            queryset
+            .filter(
                 Q(
                     access_policy__in=(
                         AccessPolicy.ANY,
@@ -330,7 +330,8 @@ class Secret(HashIDModel):
     def get_most_used_for_user(cls, user, limit=5):
         since = now() - timedelta(days=90)
         accessed_secrets = (
-            LogEntry.objects.filter(
+            LogEntry.objects
+            .filter(
                 actor=user,
                 secret__isnull=False,
                 time__gte=since,
@@ -347,7 +348,8 @@ class Secret(HashIDModel):
     @classmethod
     def get_most_recently_used_for_user(cls, user, limit=5):
         log_entries = (
-            LogEntry.objects.filter(actor=user)
+            LogEntry.objects
+            .filter(actor=user)
             .values('secret')
             .annotate(latest_time=Max('time'))
             .order_by('-latest_time')[:limit]
@@ -468,6 +470,9 @@ class SecretRevision(HashIDModel):
         # employee leaves, password 3 is correctly assumed known to
         # the employee.
         unique_together = (('plaintext_data_sha256', 'secret'),)
+
+    def __repr__(self):
+        return f"<SecretRevision '{self.secret.name}' ({self.hashid})>"
 
     @classmethod
     def _create_from_secret(
@@ -609,7 +614,7 @@ class SecretRevision(HashIDModel):
                 plaintext_data = base64.b64decode(plaintext_data['file_content'])
         except JSONDecodeError:
             if self.secret.content_type == ContentType.PASSWORD:
-                plaintext_data = dict(password=plaintext_data)
+                plaintext_data = {'password': plaintext_data}
 
         return plaintext_data
 
@@ -638,9 +643,6 @@ class SecretRevision(HashIDModel):
             if self.secret.content_type == ContentType.PASSWORD:
                 return {'password': s}
         return s
-
-    def __repr__(self):
-        return "<SecretRevision '{name}' ({id})>".format(id=self.hashid, name=self.secret.name)
 
     @property
     def is_current_revision(self):
@@ -682,10 +684,26 @@ class SecretChange(HashIDModel):
 
     # Snapshot of metadata at the moment of change
     name = models.CharField(max_length=92)
-    description = models.TextField(blank=True, null=True)
-    username = models.CharField(max_length=255, blank=True, null=True)
-    url = models.CharField(max_length=255, blank=True, null=True, validators=[validate_url])
-    filename = models.CharField(max_length=255, blank=True, null=True)
+    description = models.TextField(  # noqa: DJ001
+        blank=True,
+        null=True,
+    )
+    username = models.CharField(  # noqa: DJ001
+        max_length=255,
+        blank=True,
+        null=True,
+    )
+    url = models.CharField(  # noqa: DJ001
+        max_length=255,
+        blank=True,
+        null=True,
+        validators=[validate_url],
+    )
+    filename = models.CharField(  # noqa: DJ001
+        max_length=255,
+        blank=True,
+        null=True,
+    )
     access_policy = models.PositiveSmallIntegerField(choices=AccessPolicy)
     needs_changing_on_leave = models.BooleanField(default=True)
     status = models.PositiveSmallIntegerField(choices=SecretStatus, default=SecretStatus.OK)
@@ -712,14 +730,8 @@ class SecretChange(HashIDModel):
             ),
         ]
 
-    def clean(self):
-        # 1) revision must belong to secret
-        if self.revision_id and self.secret_id and self.revision.secret_id != self.secret_id:
-            raise ValidationError('revision.secret != secret')
-
-        # 3) restored_from (if any) must be same secret
-        if self.restored_from_id and self.restored_from.secret_id != self.secret_id:
-            raise ValidationError('restored_from.secret != secret')
+    def __str__(self):
+        return f'Change {self.id} for {self.secret_id} at {self.created.isoformat()}'
 
     def save(self, *args, **kwargs):
         # Soft immutability: no updates after insert
@@ -729,8 +741,14 @@ class SecretChange(HashIDModel):
         self.full_clean(exclude=['hashid'])
         return super().save(*args, **kwargs)
 
-    def __str__(self):
-        return f'Change {self.id} for {self.secret_id} at {self.created.isoformat()}'
+    def clean(self):
+        # 1) revision must belong to secret
+        if self.revision_id and self.secret_id and self.revision.secret_id != self.secret_id:
+            raise ValidationError('revision.secret != secret')
+
+        # 3) restored_from (if any) must be same secret
+        if self.restored_from_id and self.restored_from.secret_id != self.secret_id:
+            raise ValidationError('restored_from.secret != secret')
 
 
 class SecretShareQuerySet(models.QuerySet):
@@ -757,8 +775,6 @@ class SecretShareQuerySet(models.QuerySet):
 
 
 class SharedSecretData(models.Model):
-    objects = SecretShareQuerySet.as_manager()
-
     group = models.ForeignKey(
         Group,
         on_delete=models.CASCADE,
@@ -779,7 +795,7 @@ class SharedSecretData(models.Model):
         related_name='share_data',
     )
 
-    grant_description = models.TextField(null=True)
+    grant_description = models.TextField(null=True)  # noqa: DJ001
 
     granted_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -799,9 +815,25 @@ class SharedSecretData(models.Model):
         null=True,
     )
 
+    objects = SecretShareQuerySet.as_manager()
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(
+                check=(
+                    (Q(group__isnull=False) & Q(user__isnull=True)) | (Q(group__isnull=True) & Q(user__isnull=False))
+                ),
+                name='only_one_set',
+            ),
+        ]
+        unique_together = [('group', 'secret'), ('user', 'secret')]
+
+    def __str__(self):
+        return f'SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})'
+
     @property
     def shared_entity(self):
-        return self.group if self.group else self.user
+        return self.group or self.user
 
     @property
     def shared_entity_name(self):
@@ -829,23 +861,9 @@ class SharedSecretData(models.Model):
                 return 'danger'
         return 'warning'
 
-    def __str__(self):
-        return f'SharedSecretData object ({self.secret.name}: {self.user.username if self.user else self.group.name})'
-
-    class Meta:
-        constraints = [
-            models.CheckConstraint(
-                check=(
-                    (Q(group__isnull=False) & Q(user__isnull=True)) | (Q(group__isnull=True) & Q(user__isnull=False))
-                ),
-                name='only_one_set',
-            ),
-        ]
-        unique_together = [('group', 'secret'), ('user', 'secret')]
-
 
 @receiver(post_save, sender=Secret)
-def update_search_index(sender, **kwargs):
+def update_search_index(sender, **kwargs):  # noqa: ARG001
     Secret.objects.filter(id=kwargs['instance'].id).update(
         search_index=(
             SearchVector('name', weight='A')
@@ -866,9 +884,7 @@ class PermissionChecker:
         return self.secret.status == SecretStatus.DELETED
 
     def _superuser_override(self, ignore_allow_superuser_reads: bool = False) -> bool:
-        return self.user.is_superuser and (
-            settings.ALLOW_SUPERUSER_READS or ignore_allow_superuser_reads
-        )
+        return self.user.is_superuser and (settings.ALLOW_SUPERUSER_READS or ignore_allow_superuser_reads)
 
     def _access_policy(self) -> AccessPolicy:
         return self.secret.access_policy

@@ -5,41 +5,53 @@ from hashlib import sha256
 
 from cryptography.fernet import Fernet
 from django.conf import settings
+from django.contrib.auth.models import Group, User
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from django.contrib.auth.models import User, Group
-from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
+from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 
 class Command(BaseCommand):
     help = 'Create fake users and secrets'
 
-    def handle(self, *args, **kwargs):
+    def handle(self, *args, **kwargs):  # noqa: ARG002
         from faker import Faker
 
         fake = Faker()
-        if not hasattr(settings, 'TEAMVAULT_SECRET_KEY'):
-            self.stderr.write(self.style.ERROR('TEAMVAULT_SECRET_KEY is not set in settings.'))
+        fernet = self._get_fernet()
+        if fernet is None:
             return
+
+        groups = self._create_groups(fake)
+        users = self._create_users(fake, groups)
+        self._create_secrets(fake, fernet, users, groups)
+
+    def _get_fernet(self):
+        secret_key = getattr(settings, 'TEAMVAULT_SECRET_KEY', None)
+        if not secret_key:
+            self.stderr.write(self.style.ERROR('TEAMVAULT_SECRET_KEY is not set in settings.'))
+            return None
 
         try:
-            fernet = Fernet(settings.TEAMVAULT_SECRET_KEY)
-        except Exception as e:
-            self.stderr.write(self.style.ERROR(f'Invalid TEAMVAULT_SECRET_KEY: {e}'))
-            return
+            return Fernet(secret_key)
+        except Exception as exc:
+            self.stderr.write(self.style.ERROR(f'Invalid TEAMVAULT_SECRET_KEY: {exc}'))
+            return None
 
+    def _create_groups(self, fake, count=5):
         groups = []
-        for _ in range(5):
+        for _ in range(count):
             group_name = fake.unique.word().capitalize()
-            group, created = Group.objects.get_or_create(name=group_name)
+            group, _created = Group.objects.get_or_create(name=group_name)
             groups.append(group)
         self.stdout.write(self.style.SUCCESS(f'Created {len(groups)} groups.'))
+        return groups
 
-        # Create 50 fake users
+    def _create_users(self, fake, groups, count=50):
         users = []
-        for _ in range(50):
+        for _ in range(count):
             try:
                 username = fake.unique.user_name()
                 email = fake.unique.email()
@@ -51,11 +63,12 @@ class Command(BaseCommand):
                     user.groups.set(user_groups)
                 user.save()
                 users.append(user)
-            except Exception as e:
-                self.stderr.write(self.style.ERROR(f'Error creating user: {e}'))
-        self.stdout.write(self.style.SUCCESS('Created 50 fake users.'))
+            except Exception as exc:
+                self.stderr.write(self.style.ERROR(f'Error creating user: {exc}'))
+        self.stdout.write(self.style.SUCCESS(f'Created {count} fake users.'))
+        return users
 
-        # Create secrets for each user
+    def _create_secrets(self, fake, fernet, users, groups):
         for user in users:
             for _ in range(10):
                 try:
@@ -81,13 +94,11 @@ class Command(BaseCommand):
                             secret=secret,
                             grant_description='Shared via fake data script',
                             granted_by=user,
-                            granted_until=timezone.now() + timedelta(days=30)
+                            granted_until=timezone.now() + timedelta(days=30),
                         )
                     # Create a SecretRevision
                     plaintext_password = fake.password(length=12)
-                    plaintext_data = {
-                        'password': plaintext_password
-                    }
+                    plaintext_data = {'password': plaintext_password}
                     plaintext_data_json = json.dumps(plaintext_data)
                     plaintext_data_sha256 = sha256(plaintext_data_json.encode('utf-8')).hexdigest()
                     encrypted_data = fernet.encrypt(plaintext_data_json.encode('utf-8'))
@@ -103,6 +114,6 @@ class Command(BaseCommand):
                     secret.last_changed = timezone.now()
                     secret.last_read = timezone.now()
                     secret.save()
-                except Exception as e:
-                    self.stderr.write(self.style.ERROR(f'Error creating secret for user {user.username}: {e}'))
+                except Exception as exc:
+                    self.stderr.write(self.style.ERROR(f'Error creating secret for user {user.username}: {exc}'))
         self.stdout.write(self.style.SUCCESS('Created secrets and secret revisions for all users.'))

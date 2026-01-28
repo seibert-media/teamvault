@@ -1,4 +1,4 @@
-from django.contrib.auth.models import User, Group
+from django.contrib.auth.models import Group, User
 from django.db import IntegrityError
 from django.test import TestCase
 
@@ -7,25 +7,20 @@ from teamvault.apps.secrets.models import Secret, SharedSecretData
 
 class SecretConsistencyTestCase(TestCase):
     def setUp(self):
-        User.objects.create(username='testuser')
-        Group.objects.create(name='testgroup')
+        self.user = User.objects.create(username='testuser')
+        self.group = Group.objects.create(name='testgroup')
 
     def test_secret_unique_together(self):
-        user = User.objects.get(username='testuser')
-        group = Group.objects.get(name='testgroup')
-
-        secret = Secret.objects.create(name="testsecret", created_by=user)
-        secret.shared_users.add(user, through_defaults={})
-        secret.shared_groups.add(group, through_defaults={})
+        secret = Secret.objects.create(name='testsecret', created_by=self.user)
+        secret.shared_users.add(self.user, through_defaults={})
+        secret.shared_groups.add(self.group, through_defaults={})
 
         with self.assertRaises(IntegrityError):
-            SharedSecretData.objects.create(secret=secret, user=user)
-            SharedSecretData.objects.create(secret=secret, group=group)
+            SharedSecretData.objects.create(secret=secret, user=self.user)
+            SharedSecretData.objects.create(secret=secret, group=self.group)
 
     def test_shared_secret_data_only_one_constraint(self):
-        user = User.objects.get(username='testuser')
-        group = Group.objects.get(name='testgroup')
-        secret = Secret.objects.create(name="testsecret", created_by=user)
+        secret = Secret.objects.create(name='testsecret', created_by=self.user)
 
         with self.assertRaises(IntegrityError):
-            SharedSecretData.objects.create(secret=secret, group=group, user=user)
+            SharedSecretData.objects.create(secret=secret, group=self.group, user=self.user)

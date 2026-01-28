@@ -29,11 +29,13 @@ class SchemaEditorStub:
 class SecretHistoryBackfillTests(TestCase):
     maxDiff = None
 
-    def _call_migration(self):
+    @staticmethod
+    def _call_migration():
         SecretChange.objects.all().delete()
         migration_module.backfill_secret_changes(AppRegistryStub(), SchemaEditorStub())
 
-    def _make_secret_with_revisions(self):
+    @staticmethod
+    def _make_secret_with_revisions():
         owner = make_user('owner')
         secret = Secret.objects.create(
             name='Legacy Secret',

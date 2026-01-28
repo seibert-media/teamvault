@@ -17,7 +17,6 @@ class UserProfile(models.Model):
         related_name='+',
     )
     hide_deleted_secrets = models.BooleanField(
-        default=True,
-        help_text=_('Hides deleted secrets per default. Enable them in filters to see them again.')
+        default=True, help_text=_('Hides deleted secrets per default. Enable them in filters to see them again.')
     )
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
