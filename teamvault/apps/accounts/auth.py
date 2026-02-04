@@ -4,8 +4,6 @@ from django.conf import settings
 from django_auth_ldap.backend import LDAPBackend, _LDAPUser
 from django_auth_ldap.config import LDAPSearch
 
-from teamvault.apps.accounts.backends import UUIDLinkingLDAPBackend
-
 logger = logging.getLogger(__name__)
 
 
@@ -33,11 +31,3 @@ def find_ldap_username_for_social_auth(details, *_args, **kwargs):
         return {'username': uid}
     logger.info('No LDAP username found for social auth user %s', social_auth_mail_value)
     return {}
-
-
-def populate_from_ldap(*_args, **kwargs):
-    user = kwargs['user']
-    if hasattr(user, 'username'):
-        UUIDLinkingLDAPBackend().populate_user(user.username)
-    else:
-        UUIDLinkingLDAPBackend().populate_user(user)
