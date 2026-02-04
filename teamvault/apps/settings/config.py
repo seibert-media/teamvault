@@ -154,6 +154,7 @@ def configure_google_auth(config, settings):
 
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config.get('auth_google', 'oauth2_key')
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config.get('auth_google', 'oauth2_secret')
+    settings.SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
 
     # LDAP compatibility settings
     # When LDAP is enabled, social auth user creation is handled via entry_uuid linking.
