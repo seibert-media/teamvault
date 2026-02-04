@@ -1,23 +1,10 @@
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
-from django_auth_ldap.backend import LDAPBackend, _LDAPUser
 from django_auth_ldap.config import LDAPSearch
+from teamvault.apps.accounts.backends import _get_attr, _get_ldap_connection
 
 User = get_user_model()
-
-
-def _get_attr(attrs, key):
-    if key in attrs:
-        values = attrs[key]
-    elif isinstance(key, str) and key.encode() in attrs:
-        values = attrs[key.encode()]
-    else:
-        return None
-    if not values:
-        return None
-    value = values[0]
-    return value.decode() if isinstance(value, bytes) else value
 
 
 class Command(BaseCommand):
@@ -40,7 +27,7 @@ class Command(BaseCommand):
             [entry_uuid_attr],
         )
 
-        connection = _LDAPUser(LDAPBackend(), username='').connection
+        connection = _get_ldap_connection()
 
         users = User.objects.filter(entry_uuid='')
         self.stdout.write(f'Checking {users.count()} users without entry_uuid...')
