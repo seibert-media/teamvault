@@ -721,11 +721,11 @@ class SecretChange(HashIDModel):
         ]
         constraints = [
             models.CheckConstraint(
-                check=~models.Q(restored_from=models.F('id')),
+                condition=~models.Q(restored_from=models.F('id')),
                 name='secretchange_no_self_restore',
             ),
             models.CheckConstraint(
-                check=~models.Q(parent=models.F('id')),
+                condition=~models.Q(parent=models.F('id')),
                 name='secretchange_no_self_parent',
             ),
         ]
@@ -820,7 +820,7 @@ class SharedSecretData(models.Model):
     class Meta:
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     (Q(group__isnull=False) & Q(user__isnull=True)) | (Q(group__isnull=True) & Q(user__isnull=False))
                 ),
                 name='only_one_set',

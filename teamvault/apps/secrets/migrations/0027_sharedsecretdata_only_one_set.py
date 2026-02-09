@@ -12,7 +12,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="sharedsecretdata",
             constraint=models.CheckConstraint(
-                check=models.Q(
+                condition=models.Q(
                     models.Q(("group__isnull", False), ("user__isnull", True)),
                     models.Q(("group__isnull", True), ("user__isnull", False)),
                     _connector="OR",
