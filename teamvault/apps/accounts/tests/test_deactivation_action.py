@@ -1,9 +1,9 @@
-from django.test.testcases import TestCase
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.test.testcases import TestCase
 from django.urls import reverse
 
-from teamvault.apps.secrets.enums import SecretStatus, AccessPolicy
+from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import Secret, SecretRevision
 
 

@@ -28,6 +28,7 @@ from .models import AccessPermissionTypes, Secret, SecretChange, SecretRevision,
 from .services.revision import RevisionService
 from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
+from ..accounts.utils import get_pending_secrets_for_user
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 from ...views import FilterMixin
@@ -187,8 +188,7 @@ class SecretEdit(UpdateView):
         # clear saved otp key data cache after change
         if (
             'otp_key_data' in form.changed_data
-            and form.cleaned_data.get(
-                'otp_key_data')
+            and form.cleaned_data.get('otp_key_data')
             and 'otp_key_data' in self.request.session
         ):
             del self.request.session['otp_key_data']
@@ -431,7 +431,7 @@ class SecretShareList(CreateView):
         context = {
             'secret': secret,
             'shareable': secret.check_share_access(self.request.user),
-            'share_with_self': self.request.GET.get("share_with_self") == "1",
+            'share_with_self': self.request.GET.get('share_with_self') == '1',
             'shares': {
                 'groups': self.group_shares,
                 'users': self.user_shares,
@@ -478,7 +478,7 @@ class SecretShareList(CreateView):
         else:
             trigger_client_event(response, 'refreshMetadata')
 
-        if self.request.GET.get("share_with_self") == "1":
+        if self.request.GET.get('share_with_self') == '1':
             form_obj.user = self.request.user
             form_obj.group = None
 
@@ -489,20 +489,18 @@ class SecretShareList(CreateView):
 
         # Exclude groups and users which the secret was already shared with
         form_class.base_fields['group'].queryset = (
-            Group.objects
-            .all()
+            Group.objects.all()
             .exclude(name__in=self.group_shares.values_list('group__name', flat=True))
             .order_by('name')
         )
         form_class.base_fields['user'].queryset = (
-            User.objects
-            .filter(is_active=True)
+            User.objects.filter(is_active=True)
             .order_by('username')
             .exclude(username__in=self.user_shares.values_list('user__username', flat=True))
             .order_by('username')
         )
 
-        if self.request.GET.get("share_with_self") == "1":
+        if self.request.GET.get('share_with_self') == '1':
             form_class.base_fields['user'].queryset = User.objects.filter(id=self.request.user.id)
             form_class.base_fields['group'].queryset = Group.objects.none()
 
@@ -687,8 +685,7 @@ class SecretRevisionDetailView(TemplateView):
                 setattr(revision_for_display.secret, field, getattr(shown_change, field))
 
         restore_event = (
-            SecretChange.objects
-            .select_related('restored_from__revision')
+            SecretChange.objects.select_related('restored_from__revision')
             .filter(secret=revision.secret, revision=revision, restored_from__isnull=False)
             .order_by('-created')
             .first()

@@ -93,4 +93,5 @@ urlpatterns = (
         views.secret_search,
         name='secrets.secret-search',
     ),
+
 )

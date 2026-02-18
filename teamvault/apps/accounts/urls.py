@@ -1,17 +1,18 @@
 from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
+from teamvault.apps.secrets.api.views import UserPendingSecretsList
 from .views import (
     get_user_avatar_partial,
     search_user,
     user_activate,
     user_detail,
     user_detail_from_request,
+    user_pending_secrets_csv,
     user_settings,
     users,
-    user_pending_secrets_csv,
+    user_pending_secrets,
 )
-from teamvault.apps.secrets.api.views import UserPendingSecretsList
 
 urlpatterns = (
     path(
@@ -48,6 +49,11 @@ urlpatterns = (
         'users/<str:username>/',
         user_detail,
         name='accounts.user-detail',
+    ),
+    path(
+        'users/<str:username>/pending-secrets/',
+        user_pending_secrets,
+        name='accounts.user-pending-secrets',
     ),
     path(
         'users/<str:username>/pending-secrets/csv/',

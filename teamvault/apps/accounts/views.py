@@ -1,7 +1,10 @@
 import csv
+from functools import cached_property
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
+from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Max, Q
 from django.http import (
@@ -15,7 +18,6 @@ from django.urls import reverse, reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, UpdateView
-from django.core.paginator import Paginator
 
 from teamvault.apps.secrets.enums import SecretStatus
 from .forms import UserProfileForm
@@ -23,7 +25,7 @@ from .models import UserProfile as UserProfileModel
 from .utils import get_pending_secrets_for_user
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ..secrets.models import SecretRevision, AccessPermissionTypes
+from ..secrets.models import AccessPermissionTypes, SecretRevision, Secret
 
 
 class UserProfile(UpdateView):
@@ -87,17 +89,55 @@ class UserDetail(DetailView):
             perm = secret.is_readable(self.request.user)
             secret.readable_for_admin = perm != AccessPermissionTypes.NOT_ALLOWED
 
-        ctx["pending_secrets"] = page_obj
-        ctx["page_obj"] = page_obj
-        ctx["paginator"] = paginator
-        ctx["is_paginated"] = page_obj.has_other_pages()
-        ctx["show_pending_modal"] = self.request.GET.get("show_pending") == "1"
-        ctx["current_page_size"] = page_size
+        ctx['pending_secrets'] = page_obj
+        ctx['page_obj'] = page_obj
+        ctx['paginator'] = paginator
+        ctx['is_paginated'] = page_obj.has_other_pages()
+        ctx['show_pending_modal'] = self.request.GET.get('show_pending') == '1'
+        ctx['current_page_size'] = page_size
 
         return ctx
 
 
 user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())
+
+
+class UserPendingSecretsView(ListView):
+    paginate_by = 10
+    context_object_name = 'pending_secrets'
+
+    @cached_property
+    def object(self):
+        return get_object_or_404(User, username=self.kwargs['username'])
+
+    @cached_property
+    def readable_secrets(self):
+        return list(Secret.get_all_readable_by_user(self.request.user).values_list('pk', flat=True))
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['readable_secrets'] = list(Secret.get_all_readable_by_user(self.request.user).values_list('pk', flat=True))
+        ctx['user'] = self.object
+        return ctx
+
+    def get_queryset(self):
+        pending_qs = get_pending_secrets_for_user(self.object)
+
+        query = self.request.GET.get('q')
+        if query:
+            pending_qs = pending_qs.filter(name__icontains=query)
+
+        return pending_qs
+
+    def get_template_names(self):
+        if self.request.headers.get('HX-Request') == 'true':
+            template_name = 'accounts/user_pending_secrets.html#user-pending-secrets-content'
+        else:
+            template_name = 'accounts/user_pending_secrets.html'
+        return [template_name]
+
+
+user_pending_secrets = user_passes_test(lambda u: u.is_superuser)(UserPendingSecretsView.as_view())
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -124,7 +164,7 @@ def user_pending_secrets_csv(request, username):
     pending_qs = pending_qs.annotate(last_shared=Max('share_data__granted_on'))
 
     log(
-        _("{actor} exported pending secrets CSV for {user}").format(
+        _('{actor} exported pending secrets CSV for {user}').format(
             actor=request.user.username,
             user=user_obj.username,
         ),
@@ -139,23 +179,14 @@ def user_pending_secrets_csv(request, username):
     )
 
     writer = csv.writer(response)
-    writer.writerow([
-        'Name',
-        'HashID',
-        'Type',
-        'URL',
-        'Status',
-        'Last Changed',
-        'Last Read',
-        'Last Shared'
-    ])
+    writer.writerow(['Name', 'HashID', 'Type', 'URL', 'Status', 'Last Changed', 'Last Read', 'Last Shared'])
 
     for secret in pending_qs:
         full_url = request.build_absolute_uri(secret.get_absolute_url())
 
-        last_shared = secret.last_shared.isoformat() if secret.last_shared else ""
-        last_changed = secret.last_changed.isoformat() if secret.last_changed else ""
-        last_read = secret.last_read.isoformat() if secret.last_read else ""
+        last_shared = secret.last_shared.isoformat() if secret.last_shared else ''
+        last_changed = secret.last_changed.isoformat() if secret.last_changed else ''
+        last_read = secret.last_read.isoformat() if secret.last_read else ''
 
         writer.writerow([
             secret.name,
@@ -165,7 +196,7 @@ def user_pending_secrets_csv(request, username):
             secret.get_status_display(),
             last_changed,
             last_read,
-            last_shared
+            last_shared,
         ])
 
     return response
@@ -184,8 +215,7 @@ def user_activate(request, username, deactivate=False):
     if deactivate:
         user.groups.clear()
         accessed_revs = (
-            SecretRevision.objects
-            .filter(
+            SecretRevision.objects.filter(
                 accessed_by=user,
             )
             .exclude(
@@ -231,7 +261,7 @@ def user_activate(request, username, deactivate=False):
 
         pending = get_pending_secrets_for_user(user)
         if pending.exists():
-            detail_url = f"{detail_url}?show_pending=1"
+            detail_url = f'{detail_url}?show_pending=1'
 
     else:
         log(

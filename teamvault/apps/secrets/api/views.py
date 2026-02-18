@@ -1,26 +1,31 @@
 from base64 import b64encode
 
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from teamvault.apps.accounts.utils import get_pending_secrets_for_user
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
 from teamvault.apps.secrets.exceptions import PermissionError as SecretPermissionError
 from teamvault.apps.secrets.services.revision import RevisionService
-from .serializers import SecretDetailSerializer, SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
+from .serializers import (
+    PendingSecretSerializer,
+    SecretDetailSerializer,
+    SecretRevisionSerializer,
+    SecretSerializer,
+    SharedSecretDataSerializer,
+)
 from ..models import AccessPermissionTypes, Secret, SecretRevision, SharedSecretData
 from ..utils import generate_password
-from teamvault.apps.accounts.utils import get_pending_secrets_for_user
-from .serializers import PendingSecretSerializer
-from django.db.models import Max
-from rest_framework.permissions import IsAdminUser
-from django.contrib.auth.models import User
 
 
 class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
