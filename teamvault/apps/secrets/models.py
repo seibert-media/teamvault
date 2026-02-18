@@ -280,7 +280,7 @@ class Secret(HashIDModel):
             data = request.session[cached_otp_session_key]
         else:
             data = self.get_data(request.user)
-            request.session['otp_key_data'] = {
+            request.session[cached_otp_session_key] = {
                 'otp_key': data['otp_key'],
                 'digits': int(data.get('digits', 6)),
             }
