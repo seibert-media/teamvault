@@ -1,19 +1,29 @@
 from base64 import b64encode
 
 from django.conf import settings
+from django.contrib.auth.models import User
+from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
+from teamvault.apps.accounts.utils import get_pending_secrets_for_user
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
 from teamvault.apps.secrets.exceptions import PermissionError as SecretPermissionError
 from teamvault.apps.secrets.services.revision import RevisionService
-from .serializers import SecretDetailSerializer, SecretRevisionSerializer, SecretSerializer, SharedSecretDataSerializer
+from .serializers import (
+    PendingSecretSerializer,
+    SecretDetailSerializer,
+    SecretRevisionSerializer,
+    SecretSerializer,
+    SharedSecretDataSerializer,
+)
 from ..models import AccessPermissionTypes, Secret, SecretRevision, SharedSecretData
 from ..utils import generate_password
 
@@ -191,3 +201,27 @@ def otp_get(request, hashid):
     secret.check_read_access(request.user)
     otp = secret.get_otp(request)
     return Response(otp)
+
+
+class UserPendingSecretsList(generics.ListAPIView):
+    """
+    Returns a list of secrets that need changing for a specific user.
+    Used for offboarding automation.
+    """
+
+    serializer_class = PendingSecretSerializer
+    permission_classes = [IsAdminUser]
+
+    def get_queryset(self):
+        username = self.kwargs['username']
+        user = get_object_or_404(User, username=username)
+
+        qs = get_pending_secrets_for_user(user)
+        # Annotate for the serializer
+        qs = qs.annotate(last_shared=Max('share_data__granted_on'))
+
+        query = self.request.query_params.get('q', None)
+        if query:
+            qs = qs.filter(name__icontains=query)
+
+        return qs

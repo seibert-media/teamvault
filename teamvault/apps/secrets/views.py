@@ -30,7 +30,7 @@ from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ...views import FilterMixin
+from ...views import FilterMixin, PageSizeMixin
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
@@ -368,7 +368,7 @@ def secret_metadata(request, hashid):
     return render(request, context=context, template_name='secrets/detail_content/meta.html')
 
 
-class SecretList(ListView, FilterMixin):
+class SecretList(PageSizeMixin, ListView, FilterMixin):
     context_object_name = 'secrets'
     filter = None
     filter_class = SecretFilter
@@ -430,6 +430,7 @@ class SecretShareList(CreateView):
         context = {
             'secret': secret,
             'shareable': secret.check_share_access(self.request.user),
+            'share_with_self': self.request.GET.get('share_with_self') == '1',
             'shares': {
                 'groups': self.group_shares,
                 'users': self.user_shares,
@@ -472,9 +473,17 @@ class SecretShareList(CreateView):
         })
         response = self.render_to_response(context=context)
         if user_can_read_initial != secret.is_readable(self.request.user):
-            response.headers['HX-Refresh'] = 'true'
+            if self.request.GET.get('share_with_self') == '1':
+                trigger_client_event(response, 'pendingSecretsRefresh')
+            else:
+                response.headers['HX-Refresh'] = 'true'
         else:
             trigger_client_event(response, 'refreshMetadata')
+
+        if self.request.GET.get('share_with_self') == '1':
+            form_obj.user = self.request.user
+            form_obj.group = None
+
         return response
 
     def get_form_class(self):
@@ -494,6 +503,11 @@ class SecretShareList(CreateView):
             .exclude(username__in=self.user_shares.values_list('user__username', flat=True))
             .order_by('username')
         )
+
+        if self.request.GET.get('share_with_self') == '1':
+            form_class.base_fields['user'].queryset = User.objects.filter(id=self.request.user.id)
+            form_class.base_fields['group'].queryset = Group.objects.none()
+
         return form_class
 
 
