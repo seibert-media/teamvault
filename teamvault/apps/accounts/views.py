@@ -231,7 +231,8 @@ def user_activate(request, username, deactivate=False):
     if deactivate:
         user.groups.clear()
         accessed_revs = (
-            SecretRevision.objects.filter(
+            SecretRevision.objects
+            .filter(
                 accessed_by=user,
             )
             .exclude(

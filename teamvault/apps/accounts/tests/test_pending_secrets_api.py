@@ -13,14 +13,12 @@ from teamvault.apps.secrets.models import Secret, SharedSecretData
 class TestPendingSecretsEndpoints(APITestCase):
     def setUp(self):
         self.admin_user = User.objects.create_user(
-            username="admin_alice", password="password", is_superuser=True, is_staff=True
+            username='admin_alice', password='password', is_superuser=True, is_staff=True
         )
-        self.target_user = User.objects.create_user(
-            username="target_bob", password="password", is_active=True
-        )
+        self.target_user = User.objects.create_user(username='target_bob', password='password', is_active=True)
 
         self.secret_needs_change = Secret.objects.create(
-            name="Critical DB Password",
+            name='Critical DB Password',
             created_by=self.admin_user,
             access_policy=AccessPolicy.HIDDEN,
             status=SecretStatus.NEEDS_CHANGING,
@@ -33,7 +31,7 @@ class TestPendingSecretsEndpoints(APITestCase):
         )
 
         self.secret_ok = Secret.objects.create(
-            name="Guest WiFi Password",
+            name='Guest WiFi Password',
             created_by=self.admin_user,
             access_policy=AccessPolicy.HIDDEN,
             status=SecretStatus.OK,
@@ -70,9 +68,9 @@ class TestPendingSecretsEndpoints(APITestCase):
         entry = results[0]
 
         # Verify Fields
-        self.assertEqual(entry['name'], "Critical DB Password")
+        self.assertEqual(entry['name'], 'Critical DB Password')
         self.assertEqual(entry['hashid'], self.secret_needs_change.hashid)
-        self.assertEqual(entry['status'], "needs changing")
+        self.assertEqual(entry['status'], 'needs changing')
         self.assertIn('http', entry['web_url'])  # Ensure it's a full URL
         self.assertIsNotNone(entry['last_shared'])
         self.assertIsNotNone(entry['last_changed'])
@@ -85,8 +83,9 @@ class TestPendingSecretsEndpoints(APITestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response['Content-Type'], 'text/csv')
-        self.assertIn(f'attachment; filename="{self.target_user.username}_pending_secrets.csv"',
-                      response['Content-Disposition'])
+        self.assertIn(
+            f'attachment; filename="{self.target_user.username}_pending_secrets.csv"', response['Content-Disposition']
+        )
 
         content = response.content.decode('utf-8')
         csv_reader = csv.reader(io.StringIO(content))
@@ -98,9 +97,9 @@ class TestPendingSecretsEndpoints(APITestCase):
         self.assertEqual(len(rows), 2)
         data_row = rows[1]
 
-        self.assertEqual(data_row[0], "Critical DB Password")
+        self.assertEqual(data_row[0], 'Critical DB Password')
         self.assertEqual(data_row[1], self.secret_needs_change.hashid)
-        self.assertEqual(data_row[4], "needs changing")
+        self.assertEqual(data_row[4], 'needs changing')
         self.assertTrue(len(data_row[7]) > 0)
 
     def test_search_filtering(self):
@@ -128,12 +127,12 @@ class TestPendingSecretsEndpoints(APITestCase):
         content = response.content.decode('utf-8')
         rows = list(csv.reader(io.StringIO(content)))
 
-        self.assertEqual(len(rows), 1, "CSV should only contain header when search finds nothing")
+        self.assertEqual(len(rows), 1, 'CSV should only contain header when search finds nothing')
 
         # 2b. Search for existing (CSV)
         response = self.client.get(csv_url, {'q': 'Critical'})
         content = response.content.decode('utf-8')
         rows = list(csv.reader(io.StringIO(content)))
 
-        self.assertEqual(len(rows), 2, "CSV should contain header + 1 row when search matches")
-        self.assertEqual(rows[1][0], "Critical DB Password")
+        self.assertEqual(len(rows), 2, 'CSV should contain header + 1 row when search matches')
+        self.assertEqual(rows[1][0], 'Critical DB Password')

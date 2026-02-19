@@ -491,12 +491,14 @@ class SecretShareList(CreateView):
 
         # Exclude groups and users which the secret was already shared with
         form_class.base_fields['group'].queryset = (
-            Group.objects.all()
+            Group.objects
+            .all()
             .exclude(name__in=self.group_shares.values_list('group__name', flat=True))
             .order_by('name')
         )
         form_class.base_fields['user'].queryset = (
-            User.objects.filter(is_active=True)
+            User.objects
+            .filter(is_active=True)
             .order_by('username')
             .exclude(username__in=self.user_shares.values_list('user__username', flat=True))
             .order_by('username')
@@ -687,7 +689,8 @@ class SecretRevisionDetailView(TemplateView):
                 setattr(revision_for_display.secret, field, getattr(shown_change, field))
 
         restore_event = (
-            SecretChange.objects.select_related('restored_from__revision')
+            SecretChange.objects
+            .select_related('restored_from__revision')
             .filter(secret=revision.secret, revision=revision, restored_from__isnull=False)
             .order_by('-created')
             .first()

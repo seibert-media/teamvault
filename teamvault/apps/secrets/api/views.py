@@ -208,6 +208,7 @@ class UserPendingSecretsList(generics.ListAPIView):
     Returns a list of secrets that need changing for a specific user.
     Used for offboarding automation.
     """
+
     serializer_class = PendingSecretSerializer
     permission_classes = [IsAdminUser]
 
