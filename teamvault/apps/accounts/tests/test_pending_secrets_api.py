@@ -51,13 +51,13 @@ class TestPendingSecretsEndpoints(APITestCase):
     def test_api_permission_denied_for_non_admin(self):
         """Standard users should not be able to access the API."""
         self.client.force_authenticate(user=self.target_user)
-        url = reverse('accounts.api.user-pending-secrets', kwargs={'username': self.target_user.username})
+        url = reverse('api.user-pending-secrets', kwargs={'username': self.target_user.username})
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_json_payload_contains_required_fields(self):
         self.client.force_authenticate(user=self.admin_user)
-        url = reverse('accounts.api.user-pending-secrets', kwargs={'username': self.target_user.username})
+        url = reverse('api.user-pending-secrets', kwargs={'username': self.target_user.username})
 
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
@@ -109,7 +109,7 @@ class TestPendingSecretsEndpoints(APITestCase):
         self.client.force_authenticate(user=self.admin_user)
 
         # 1a. Search for non-existent (JSON)
-        api_url = reverse('accounts.api.user-pending-secrets', kwargs={'username': self.target_user.username})
+        api_url = reverse('api.user-pending-secrets', kwargs={'username': self.target_user.username})
         response = self.client.get(api_url, {'q': 'Banana'})
         results = response.json()['results'] if 'results' in response.json() else response.json()
         self.assertEqual(len(results), 0, "JSON API should return 0 results for 'Banana'")

@@ -1,7 +1,6 @@
 from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
-from teamvault.apps.secrets.api.views import UserPendingSecretsList
 from .views import (
     get_user_avatar_partial,
     search_user,
@@ -59,11 +58,6 @@ urlpatterns = (
         'users/<str:username>/pending-secrets/csv/',
         user_pending_secrets_csv,
         name='accounts.user-pending-secrets-csv',
-    ),
-    path(
-        'users/<str:username>/pending-secrets/api/',
-        UserPendingSecretsList.as_view(),
-        name='accounts.api.user-pending-secrets',
     ),
     path(
         'users/<str:username>/reactivate',
