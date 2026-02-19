@@ -338,5 +338,6 @@ class PendingSecretSerializer(serializers.ModelSerializer):
             'last_shared',
         ]
 
-    def get_web_url(self, obj):
+    @staticmethod
+    def get_web_url(obj):
         return obj.full_url

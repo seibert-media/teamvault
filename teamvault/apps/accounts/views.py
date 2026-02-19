@@ -78,7 +78,7 @@ class UserDetail(DetailView):
             pending_qs = pending_qs.filter(name__icontains=query)
 
         page_size = self.request.GET.get('page_size', '10')
-        if page_size not in ['10', '25', '50', '100']:
+        if page_size not in {'10', '25', '50', '100'}:
             page_size = '10'
         page_size = int(page_size)
 

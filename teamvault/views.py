@@ -9,7 +9,7 @@ class PageSizeMixin:
 
     page_size_choices = PAGE_SIZE_CHOICES
 
-    def get_paginate_by(self, queryset):
+    def get_paginate_by(self, queryset):  # noqa: ARG002
         try:
             size = int(self.request.GET.get('page_size', self.paginate_by))
         except (ValueError, TypeError):

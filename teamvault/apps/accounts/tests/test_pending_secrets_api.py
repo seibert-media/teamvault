@@ -64,10 +64,7 @@ class TestPendingSecretsEndpoints(APITestCase):
 
         data = response.json()
 
-        if 'results' in data:
-            results = data['results']
-        else:
-            results = data
+        results = data.get('results', data)
 
         self.assertEqual(len(results), 1)
         entry = results[0]
