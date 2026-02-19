@@ -1,6 +1,28 @@
 from django.shortcuts import render
 from django.views.generic.base import ContextMixin
 
+PAGE_SIZE_CHOICES = [10, 25, 50, 100]
+
+
+class PageSizeMixin:
+    """Mixin for ListView that supports dynamic page_size via GET param."""
+
+    page_size_choices = PAGE_SIZE_CHOICES
+
+    def get_paginate_by(self, queryset):
+        try:
+            size = int(self.request.GET.get('page_size', self.paginate_by))
+        except (ValueError, TypeError):
+            size = self.paginate_by
+        if size not in self.page_size_choices:
+            size = self.paginate_by
+        return size
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['page_sizes'] = self.page_size_choices
+        return ctx
+
 
 def handler404(request, exception, **_kwargs):  # noqa: ARG001
     if request.user.is_authenticated:

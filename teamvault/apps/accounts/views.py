@@ -20,12 +20,13 @@ from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, UpdateView
 
 from teamvault.apps.secrets.enums import SecretStatus
+from teamvault.views import PageSizeMixin
 from .forms import UserProfileForm
 from .models import UserProfile as UserProfileModel
 from .utils import get_pending_secrets_for_user
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ..secrets.models import AccessPermissionTypes, SecretRevision, Secret
+from ..secrets.models import AccessPermissionTypes, Secret, SecretRevision
 
 
 class UserProfile(UpdateView):
@@ -46,7 +47,7 @@ class UserProfile(UpdateView):
 user_settings = login_required(UserProfile.as_view())
 
 
-class UserList(ListView):
+class UserList(PageSizeMixin, ListView):
     context_object_name = 'users'
     model = User
     paginate_by = 25
@@ -102,39 +103,54 @@ class UserDetail(DetailView):
 user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())
 
 
-class UserPendingSecretsView(ListView):
+class UserPendingSecretsView(PageSizeMixin, ListView):
     paginate_by = 10
     context_object_name = 'pending_secrets'
+    template_name = 'accounts/user_pending_secrets.html'
 
     @cached_property
-    def object(self):
+    def user_object(self):
         return get_object_or_404(User, username=self.kwargs['username'])
 
-    @cached_property
-    def readable_secrets(self):
-        return list(Secret.get_all_readable_by_user(self.request.user).values_list('pk', flat=True))
+    def get_queryset(self):
+        qs = get_pending_secrets_for_user(self.user_object)
+        query = self.request.GET.get('q')
+
+        if query:
+            qs = qs.filter(name__icontains=query)
+        return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['readable_secrets'] = list(Secret.get_all_readable_by_user(self.request.user).values_list('pk', flat=True))
-        ctx['user'] = self.object
+        page_secrets = ctx['pending_secrets']
+        secret_ids = [s.id for s in page_secrets]
+
+        readable_secret_ids = set(
+            Secret.get_all_readable_by_user(self.request.user).filter(id__in=secret_ids).values_list('id', flat=True)
+        )
+
+        for secret in page_secrets:
+            secret.readable_for_admin = secret.id in readable_secret_ids
+
+        ctx['is_htmx'] = self.request.headers.get('HX-Request') == 'true'
+        ctx['deactivated_user'] = self.user_object
+        ctx['user'] = self.user_object
+
         return ctx
-
-    def get_queryset(self):
-        pending_qs = get_pending_secrets_for_user(self.object)
-
-        query = self.request.GET.get('q')
-        if query:
-            pending_qs = pending_qs.filter(name__icontains=query)
-
-        return pending_qs
 
     def get_template_names(self):
         if self.request.headers.get('HX-Request') == 'true':
-            template_name = 'accounts/user_pending_secrets.html#user-pending-secrets-content'
-        else:
-            template_name = 'accounts/user_pending_secrets.html'
-        return [template_name]
+            # If searching or paginating, returning only the table content
+            if (
+                self.request.GET.get('q') is not None
+                or self.request.GET.get('page')
+                or self.request.GET.get('page_size')
+            ):
+                return [f'{self.template_name}#user-pending-secrets-content']
+            # Otherwise (initial load via HTMX), return the full container
+            return [f'{self.template_name}#user-pending-secrets-container']
+
+        return [self.template_name]
 
 
 user_pending_secrets = user_passes_test(lambda u: u.is_superuser)(UserPendingSecretsView.as_view())

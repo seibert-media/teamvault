@@ -1,50 +1,70 @@
 {% load smart_pagination %}
-{% if is_paginated %}
+{% load i18n %}
+{% if is_paginated or page_sizes %}
     <div class="row mt-3">
-        <div class="col">
-            <ul class="pagination">
-                {% if page_obj.has_previous %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url|default:"" }}{% querystring request page=page_obj.previous_page_number %}"
-                           aria-label="Previous">
-                            <i class="fa fa-chevron-left" aria-hidden="true"></i>
-                        </a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#">
-                            <i class="fa fa-chevron-left"></i>
-                        </a>
-                    </li>
-                {% endif %}
-                {% for page in paginator.page_range|smart_pages:page_obj.number %}
-                    {% if page_obj.number == page %}
-                        <li class="active">
-                            <span class="page-link">{{ page }}</span>
+        <div class="col d-flex align-items-center justify-content-between">
+            {% if page_sizes %}
+                <div class="me-3">
+                    <select name="page_size" class="form-select form-select-sm" style="width: auto;" {% if target %}
+                            hx-get="{{ url|default:'' }}" hx-include="[name='q']" hx-trigger="change"
+                            hx-target="{{ target }}"
+                            hx-swap="innerHTML" hx-push-url="false" {% else %}
+                            onchange="var p=new URLSearchParams(window.location.search);p.set('page_size',this.value);p.delete('page');window.location.search=p.toString();"
+                    {% endif %}>
+                        {% for size in page_sizes %}
+                            <option value="{{ size }}"
+                                    {% if paginator.per_page == size %}selected{% endif %}>{{ size }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            {% endif %}
+            {% if is_paginated %}
+                <ul class="pagination mb-0">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="{{ url|default:"" }}{% querystring request page=page_obj.previous_page_number %}"
+                               aria-label="Previous">
+                                <i class="fa fa-chevron-left" aria-hidden="true"></i>
+                            </a>
                         </li>
                     {% else %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url|default:"" }}{% querystring request page=page %}">
-                                {{ page }}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">
+                                <i class="fa fa-chevron-left"></i>
                             </a>
                         </li>
                     {% endif %}
-                {% endfor %}
-                {% if page_obj.has_next %}
-                    <li class="page-item">
-                        <a class="page-link" href="{{ url|default:"" }}{% querystring request page=page_obj.next_page_number %}"
-                           aria-label="Next">
-                            <i class="fa fa-chevron-right" aria-hidden="true"></i>
-                        </a>
-                    </li>
-                {% else %}
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#">
-                            <i class="fa fa-chevron-right"></i>
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
+                    {% for page in paginator.page_range|smart_pages:page_obj.number %}
+                        {% if page_obj.number == page %}
+                            <li class="active">
+                                <span class="page-link">{{ page }}</span>
+                            </li>
+                        {% else %}
+                            <li class="page-item">
+                                <a class="page-link" href="{{ url|default:"" }}{% querystring request page=page %}">
+                                    {{ page }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link"
+                               href="{{ url|default:"" }}{% querystring request page=page_obj.next_page_number %}"
+                               aria-label="Next">
+                                <i class="fa fa-chevron-right" aria-hidden="true"></i>
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">
+                                <i class="fa fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            {% endif %}
         </div>
     </div>
 {% endif %}

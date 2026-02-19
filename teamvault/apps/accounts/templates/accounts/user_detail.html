@@ -1,6 +1,5 @@
 {% extends "base.html" %}
 {% load i18n %}
-{% load smart_pagination %}
 
 {% block title %}{% trans "Manage user" %}{% endblock %}
 
@@ -69,12 +68,32 @@
                 </div>
             </div>
         </div>
-        {% include "accounts/user_pending_secrets.html#user-pending-secrets-container" %}
+
+        {% if not user.is_active %}
+            <div id="secrets-load-container" class="mt-4"
+                 hx-get="{% url 'accounts.user-pending-secrets' user.username %}"
+                 hx-trigger="load" hx-swap="outerHTML">
+                <div class="text-center p-5 card">
+                    <div class="card-body">
+                        <i class="fa fa-spinner fa-spin fa-2x text-muted mb-2"></i>
+                        <p>{% trans "Loading secrets and checking permissions..." %}</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <div class="modal fade" id="universal-share-modal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl">
+            <div id="modal-content-target" class="modal-content">
+            </div>
+        </div>
     </div>
 
     {% if user.is_active %}
         <div class="modal fade" id="modal-deactivate" tabindex="-1" role="dialog"
-             aria-labelledby="modal-deactivate-label" aria-hidden="true">
+             aria-labelledby="modal-deactivate-label"
+             aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -83,7 +102,7 @@
                                 aria-label="Close"></button>
                     </div>
                     <form role="form" method="POST"
-                          action="{% url "accounts.user-deactivate" username=user.username %}">
+                          action="{% url 'accounts.user-deactivate' username=user.username %}">
                         {% csrf_token %}
                         <div class="modal-body">
                             <div class="alert alert-warning">
@@ -93,7 +112,8 @@
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-danger"><i
-                                    class="fa fa-lock fa-fw"></i> {% trans "Deactivate" %}</button>
+                                    class="fa fa-lock fa-fw"></i> {% trans "Deactivate" %}
+                            </button>
                         </div>
                     </form>
                 </div>
@@ -101,7 +121,8 @@
         </div>
     {% else %}
         <div class="modal fade" id="modal-reactivate" tabindex="-1" role="dialog"
-             aria-labelledby="modal-reactivate-label" aria-hidden="true">
+             aria-labelledby="modal-reactivate-label"
+             aria-hidden="true">
             <div class="modal-dialog">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -110,40 +131,20 @@
                                 aria-label="Close"></button>
                     </div>
                     <form role="form" method="POST"
-                          action="{% url "accounts.user-reactivate" username=user.username %}">
+                          action="{% url 'accounts.user-reactivate' username=user.username %}">
                         {% csrf_token %}
                         <div class="modal-body">
                             <div class="alert alert-info">{% trans "Do you really wish to reactivate this user?" %}</div>
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-success"><i
-                                    class="fa fa-lock-open fa-fw"></i> {% trans "Reactivate" %}</button>
+                                    class="fa fa-lock-open fa-fw"></i> {% trans "Reactivate" %}
+                            </button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-    {% endif %}
-
-    {% if not user.is_active and pending_secrets %}
-        {% for secret in pending_secrets %}
-            {% if not secret.readable_for_admin %}
-                <div class="modal fade" id="share-secret-{{ secret.hashid }}" tabindex="-1"
-                     aria-labelledby="share-secret-{{ secret.hashid }}-label" aria-hidden="true">
-                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-xl modal-fullscreen-md-down">
-                        <div class="modal-content"
-                             hx-get="
-
-
-
-                                     {% url "secrets.secret-share" secret.hashid %}{% querystring request share_with_self=1 %}
-                             hx-trigger=" load, refreshShareData from:body
-                        ">
-                    </div>
-                </div>
-                </div>
-            {% endif %}
-        {% endfor %}
     {% endif %}
 
 {% endblock %}

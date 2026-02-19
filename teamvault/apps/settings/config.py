@@ -3,7 +3,6 @@ from base64 import b64decode, b64encode
 from configparser import ConfigParser
 from gettext import gettext as _
 from hashlib import sha1
-from operator import truediv
 from os import environ, umask
 from secrets import choice
 from string import ascii_letters, digits, punctuation
@@ -41,6 +40,7 @@ def configure_database(config):
         },
     }
     return DATABASES
+
 
 def configure_debugging(config, settings):
     enabled = get_from_config(config, 'teamvault', 'insecure_debug_mode', 'no')

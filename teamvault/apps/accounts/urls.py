@@ -8,10 +8,10 @@ from .views import (
     user_activate,
     user_detail,
     user_detail_from_request,
+    user_pending_secrets,
     user_pending_secrets_csv,
     user_settings,
     users,
-    user_pending_secrets,
 )
 
 urlpatterns = (

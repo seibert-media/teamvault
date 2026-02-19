@@ -28,10 +28,9 @@ from .models import AccessPermissionTypes, Secret, SecretChange, SecretRevision,
 from .services.revision import RevisionService
 from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
-from ..accounts.utils import get_pending_secrets_for_user
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ...views import FilterMixin
+from ...views import FilterMixin, PageSizeMixin
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,
@@ -369,7 +368,7 @@ def secret_metadata(request, hashid):
     return render(request, context=context, template_name='secrets/detail_content/meta.html')
 
 
-class SecretList(ListView, FilterMixin):
+class SecretList(PageSizeMixin, ListView, FilterMixin):
     context_object_name = 'secrets'
     filter = None
     filter_class = SecretFilter
@@ -474,7 +473,10 @@ class SecretShareList(CreateView):
         })
         response = self.render_to_response(context=context)
         if user_can_read_initial != secret.is_readable(self.request.user):
-            response.headers['HX-Refresh'] = 'true'
+            if self.request.GET.get('share_with_self') == '1':
+                trigger_client_event(response, 'pendingSecretsRefresh')
+            else:
+                response.headers['HX-Refresh'] = 'true'
         else:
             trigger_client_event(response, 'refreshMetadata')
 
