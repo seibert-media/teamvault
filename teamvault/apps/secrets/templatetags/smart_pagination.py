@@ -3,24 +3,6 @@ from django import template
 register = template.Library()
 
 
-@register.simple_tag()
-def querystring(request, **kwargs):
-    """
-    Append or update params in a querystring.
-    """
-    querydict = request.GET.copy()
-    for k, v in kwargs.items():
-        if v is not None:
-            querydict[k] = str(v)
-        elif k in querydict:
-            querydict.pop(k)
-    qs = querydict.urlencode(safe='/')
-    if qs:
-        return '?' + qs
-    else:
-        return ''
-
-
 @register.filter
 def smart_pages(all_pages, current_page):
     all_pages = list(all_pages)
