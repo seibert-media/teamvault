@@ -1,6 +1,6 @@
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Q
 from django.http import (
@@ -20,6 +20,8 @@ from .models import UserProfile as UserProfileModel
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 from ..secrets.models import SecretRevision
+
+User = get_user_model()
 
 
 class UserProfile(UpdateView):

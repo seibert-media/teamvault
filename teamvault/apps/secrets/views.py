@@ -5,8 +5,9 @@ from urllib.parse import quote, urlencode
 
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.models import Group
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -31,6 +32,8 @@ from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 from ...views import FilterMixin
+
+User = get_user_model()
 
 CONTENT_TYPE_FORMS = {
     'cc': CCForm,

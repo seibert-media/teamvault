@@ -110,20 +110,37 @@ def configure_google_auth(config, settings):
         'social_core.pipeline.social_auth.auth_allowed',
         # Checks if the current social-account is already associated in the site.
         'social_core.pipeline.social_auth.social_user',
-        # Associates the current social details with another user account with
-        # a similar email address.
-        'social_core.pipeline.social_auth.associate_by_email',
-        # Create a user account if we haven't found one yet.
-        # Also see comment below for LDAP compatibility
-        'social_core.pipeline.user.create_user',
-        # Create the record that associates the social account with the user.
-        'social_core.pipeline.social_auth.associate_user',
-        # Populate the extra_data field in the social record with the values
-        # specified by settings (and the default ones like access_token, etc).
-        'social_core.pipeline.social_auth.load_extra_data',
-        # Update the user record with any changed info from the auth service.
-        'social_core.pipeline.user.user_details',
     ]
+
+    if config.has_section('auth_ldap'):
+        settings.SOCIAL_AUTH_PIPELINE.append(
+            'teamvault.apps.accounts.backends.social_auth_link_user_via_ldap_entryuuid'
+        )
+        settings.SOCIAL_AUTH_PIPELINE.extend([
+            'social_core.pipeline.user.get_username',
+            # Create the record that associates the social account with the user.
+            'social_core.pipeline.social_auth.associate_user',
+            # Populate the extra_data field in the social record with the values
+            # specified by settings (and the default ones like access_token, etc).
+            'social_core.pipeline.social_auth.load_extra_data',
+            # Update the user record with any changed info from the auth service.
+            'social_core.pipeline.user.user_details',
+        ])
+    else:
+        settings.SOCIAL_AUTH_PIPELINE.extend([
+            # Associates the current social details with another user account with
+            # a similar email address.
+            'social_core.pipeline.social_auth.associate_by_email',
+            # Create a user account if we haven't found one yet.
+            'social_core.pipeline.user.create_user',
+            # Create the record that associates the social account with the user.
+            'social_core.pipeline.social_auth.associate_user',
+            # Populate the extra_data field in the social record with the values
+            # specified by settings (and the default ones like access_token, etc).
+            'social_core.pipeline.social_auth.load_extra_data',
+            # Update the user record with any changed info from the auth service.
+            'social_core.pipeline.user.user_details',
+        ])
 
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_WHITELISTED_DOMAINS = [
         domain.strip() for domain in config.get('auth_google', 'allowed_domains').split(',')
@@ -137,21 +154,10 @@ def configure_google_auth(config, settings):
 
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = config.get('auth_google', 'oauth2_key')
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = config.get('auth_google', 'oauth2_secret')
+    settings.SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
 
     # LDAP compatibility settings
-    if config.has_section('auth_ldap'):
-        settings.SOCIAL_AUTH_PIPELINE.append('teamvault.apps.accounts.auth.populate_from_ldap')
-
-        if get_from_config(config, 'auth_google', 'use_ldap_usernames', False):
-            # Social Auth tries to create users with usernames by stripping the domain part of their email address.
-            # This behaviour clashes when these usernames differ from the ones in a configured LDAP directory.
-            # We cannot use "SOCIAL_AUTH_CLEAN_USERNAME_FUNCTION" here, because Social Auth only provides the username
-            # of our chosen storage provider and not the full email address.
-            settings.SOCIAL_AUTH_PIPELINE.insert(
-                # Username fix has to happen before "social_core.pipeline.user.create_user".
-                settings.SOCIAL_AUTH_PIPELINE.index('social_core.pipeline.user.create_user'),
-                'teamvault.apps.accounts.auth.find_ldap_username_for_social_auth',
-            )
+    # When LDAP is enabled, social auth user creation is handled via entry_uuid linking.
 
 
 def configure_huey(config):
@@ -222,16 +228,20 @@ def configure_ldap_auth(config, settings):
 
     settings.AUTHENTICATION_BACKENDS.insert(
         0,
-        'django_auth_ldap.backend.LDAPBackend',
+        'teamvault.apps.accounts.backends.UUIDLinkingLDAPBackend',
     )
     settings.AUTH_LDAP_SERVER_URI = config.get('auth_ldap', 'server_uri')
     settings.AUTH_LDAP_BIND_DN = config.get('auth_ldap', 'bind_dn')
     settings.AUTH_LDAP_BIND_PASSWORD = config.get('auth_ldap', 'password')
 
+    settings.AUTH_LDAP_USERNAME_ATTR = get_from_config(config, 'auth_ldap', 'attr_username', 'uid')
+    entry_uuid_attr = get_from_config(config, 'auth_ldap', 'attr_entry_uuid', 'entryUUID')
+
     settings.AUTH_LDAP_USER_SEARCH = LDAPSearch(
         config.get('auth_ldap', 'user_base_dn'),
         SCOPE_SUBTREE,
         get_from_config(config, 'auth_ldap', 'user_search_filter', '(cn=%(user)s)'),
+        ['*', settings.AUTH_LDAP_USERNAME_ATTR, entry_uuid_attr],
     )
     settings.AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
         config.get('auth_ldap', 'group_base_dn'),
@@ -246,6 +256,7 @@ def configure_ldap_auth(config, settings):
         'email': get_from_config(config, 'auth_ldap', 'attr_email', 'mail'),
         'first_name': get_from_config(config, 'auth_ldap', 'attr_first_name', 'givenName'),
         'last_name': get_from_config(config, 'auth_ldap', 'attr_last_name', 'sn'),
+        'entry_uuid': entry_uuid_attr,
     }
     settings.AUTH_LDAP_USER_FLAGS_BY_GROUP = {
         'is_staff': config.get('auth_ldap', 'admin_group'),
@@ -445,6 +456,8 @@ salt = {hashid_salt}
 #password = ******************
 #user_base_dn = ou=users,dc=example,dc=com
 ##user_search_filter = (cn=%%(user)s)
+#attr_username = uid
+#attr_entry_uuid = entryUUID
 #group_base_dn = ou=groups,dc=example,dc=com
 ##group_search_filter = (objectClass=group)
 ##require_group = cn=employees,ou=groups,dc=example,dc=com
