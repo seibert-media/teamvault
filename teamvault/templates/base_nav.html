@@ -88,40 +88,70 @@
 
             <!-- Theme toggle -->
             <div class="col-12 col-lg-auto my-2 me-lg-4 mb-lg-2 d-flex justify-content-center align-items-center">
-                <button class="btn btn-outline-primary bg-transparent btn-sm border-0 d-flex"
+                <button class="btn btn-outline-primary bg-transparent btn-sm border-0 d-flex align-items-center"
                         role="button"
                         onclick="toggleTheme()"
                         aria-expanded="false"
                         title="{% trans "Change Theme" %}">
                     <i class="fa fa-fw fa-xl text-white lh-1" id="theme-icon"></i>
+                    <span class="fa-stack" id="theme-icon-auto" style="display:none; font-size: 0.75em;">
+                        <i class="fas fa-certificate fa-stack-2x" style="color: #ffffff;"></i>
+                        <strong class="fa-stack-1x fa-inverse" style="color: #2e1a47; font-family: sans-serif;">A</strong>
+                    </span>
                 </button>
             </div>
 
             <script>
                 document.addEventListener('DOMContentLoaded', () => {
-                    const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                    updateThemeIcon(currentTheme);
+                    const storedTheme = localStorage.getItem('theme');
+                    const isAuto = !storedTheme || storedTheme === 'auto';
+                    if (isAuto) {
+                        updateThemeIcon(true);
+                    } else {
+                        updateThemeIcon(false, storedTheme);
+                    }
                 });
 
-                function toggleTheme() {
-                    const currentTheme = document.documentElement.getAttribute('data-bs-theme');
-                    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-                    document.documentElement.setAttribute('data-bs-theme', newTheme);
-                    localStorage.setItem('theme', newTheme);
-
-                    updateThemeIcon(newTheme);
+                function getSystemTheme() {
+                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
                 }
 
-                function updateThemeIcon(theme) {
-                    const icon = document.getElementById('theme-icon');
-                    if (!icon) return;
+                function toggleTheme() {
+                    const storedTheme = localStorage.getItem('theme');
 
-                    icon.classList.remove('fa-sun', 'fa-moon');
-                    if (theme === 'dark') {
-                        icon.classList.add('fa-moon');
+                    let newStoredTheme;
+                    if (!storedTheme || storedTheme === 'auto') {
+                        newStoredTheme = 'light';
+                    } else if (storedTheme === 'light') {
+                        newStoredTheme = 'dark';
                     } else {
-                        icon.classList.add('fa-sun');
+                        newStoredTheme = 'auto';
+                    }
+
+                    if (newStoredTheme === 'auto') {
+                        localStorage.removeItem('theme');
+                        document.documentElement.setAttribute('data-bs-theme', getSystemTheme());
+                        updateThemeIcon(true);
+                    } else {
+                        localStorage.setItem('theme', newStoredTheme);
+                        document.documentElement.setAttribute('data-bs-theme', newStoredTheme);
+                        updateThemeIcon(false, newStoredTheme);
+                    }
+                }
+
+                function updateThemeIcon(isAuto, theme) {
+                    const icon = document.getElementById('theme-icon');
+                    const autoIcon = document.getElementById('theme-icon-auto');
+                    if (!icon || !autoIcon) return;
+
+                    if (isAuto) {
+                        icon.style.display = 'none';
+                        autoIcon.style.display = '';
+                    } else {
+                        autoIcon.style.display = 'none';
+                        icon.style.display = '';
+                        icon.classList.remove('fa-sun', 'fa-moon');
+                        icon.classList.add(theme === 'dark' ? 'fa-moon' : 'fa-sun');
                     }
                 }
             </script>
