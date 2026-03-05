@@ -59,11 +59,4 @@ We use [huey](https://huey.readthedocs.io/en/latest/) to run background jobs. Th
     teamvault run_huey
 
 ## Release process
-1. Bump the version in ```teamvault/__version__.py``` and ```pyproject.toml```
-2. Update CHANGELOG.md with the new version and current date
-3. Make a release commit with the changes made above
-4. Push the commit
-5. Run ```./build.sh``` to create a new package
-6. Sign and push the artifacts to PyPI via ```uv publish```
-7. Test that the package can be installed: ```uv run --isolated --no-cache --prerelease allow --with teamvault --no-project -- teamvault --version```
-8. Add a new GitHub release
+Run the github action for release a release with a specific version number.
