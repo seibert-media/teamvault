@@ -4,6 +4,7 @@ import sys
 from argparse import REMAINDER, ArgumentParser
 from gettext import gettext as _
 from hashlib import sha1
+from importlib import metadata
 from os import environ
 from shutil import rmtree
 from subprocess import Popen
@@ -11,7 +12,6 @@ from subprocess import Popen
 import django
 from django.core.management import execute_from_command_line, get_commands
 
-from teamvault.__version__ import __version__
 from teamvault.apps.settings.config import UnconfiguredSettingsError, create_default_config
 
 
@@ -20,7 +20,7 @@ def build_parser():
     parser.add_argument(
         '--version',
         action='version',
-        version=__version__,
+        version=metadata.version('teamvault'),
     )
     subparsers = parser.add_subparsers(
         title=_('subcommands'),
