@@ -3,6 +3,7 @@ from contextlib import suppress
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.http import Http404
 from django.utils.translation import gettext_lazy as _
@@ -190,8 +191,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         rep['status'] = SECRET_STATUS_REPR[rep['status']]
         rep['web_url'] = instance.full_url
         try:
+            # TODO: fix N+1 here via annotating the queryset
             rep['data_readable'] = instance.check_read_access(self.context['request'].user)
-        except (PermissionError, Http404):
+        except (PermissionDenied, Http404):
             rep['data_readable'] = False
         return rep
 
