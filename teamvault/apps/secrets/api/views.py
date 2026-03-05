@@ -163,7 +163,7 @@ def data_get(request, hashid):
         raise PermissionDenied from exc
     if secret_revision.secret.content_type == ContentType.PASSWORD:
         if not isinstance(data, dict):
-            return Response({'password': data})
+            return Response({'password': str(data)})
         return Response({'password': data['password']})
     elif secret_revision.secret.content_type == ContentType.FILE:
         return Response({'file': b64encode(data).decode('ascii')})
