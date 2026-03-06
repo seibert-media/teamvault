@@ -59,4 +59,4 @@ We use [huey](https://huey.readthedocs.io/en/latest/) to run background jobs. Th
     teamvault run_huey
 
 ## Release process
-Run the github action for release a release with a specific version number.
+Run the github action to cut a release with a specific version number.
