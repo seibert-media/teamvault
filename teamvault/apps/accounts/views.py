@@ -4,7 +4,6 @@ from functools import cached_property
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
-from django.core.paginator import Paginator
 from django.db import transaction
 from django.db.models import Max, Q
 from django.http import (
@@ -26,7 +25,7 @@ from .models import UserProfile as UserProfileModel
 from .utils import get_pending_secrets_for_user
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ..secrets.models import AccessPermissionTypes, Secret, SecretRevision
+from ..secrets.models import Secret, SecretRevision
 
 
 class UserProfile(UpdateView):
@@ -66,38 +65,6 @@ class UserDetail(DetailView):
     slug_field = 'username'
     slug_url_kwarg = 'username'
     template_name = 'accounts/user_detail.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        user_obj = self.object
-
-        pending_qs = get_pending_secrets_for_user(user_obj)
-
-        query = self.request.GET.get('q')
-        if query:
-            pending_qs = pending_qs.filter(name__icontains=query)
-
-        page_size = self.request.GET.get('page_size', '10')
-        if page_size not in {'10', '25', '50', '100'}:
-            page_size = '10'
-        page_size = int(page_size)
-
-        paginator = Paginator(pending_qs, page_size)
-        page_number = self.request.GET.get('page')
-        page_obj = paginator.get_page(page_number)
-
-        for secret in page_obj:
-            perm = secret.is_readable(self.request.user)
-            secret.readable_for_admin = perm != AccessPermissionTypes.NOT_ALLOWED
-
-        ctx['pending_secrets'] = page_obj
-        ctx['page_obj'] = page_obj
-        ctx['paginator'] = paginator
-        ctx['is_paginated'] = page_obj.has_other_pages()
-        ctx['show_pending_modal'] = self.request.GET.get('show_pending') == '1'
-        ctx['current_page_size'] = page_size
-
-        return ctx
 
 
 user_detail = user_passes_test(lambda u: u.is_superuser)(UserDetail.as_view())

@@ -117,12 +117,9 @@ def get_pending_secrets_for_user(user):
     """
     Return all secrets readable by this user that currently need changing.
     Includes secrets created by others or shared with the user.
-    Excludes deleted ones.
     """
     qs = Secret.get_all_readable_by_user(user)
     return qs.filter(
         status=SecretStatus.NEEDS_CHANGING,
         needs_changing_on_leave=True,
-    ).exclude(
-        status=SecretStatus.DELETED,
     )

@@ -480,10 +480,6 @@ class SecretShareList(CreateView):
         else:
             trigger_client_event(response, 'refreshMetadata')
 
-        if self.request.GET.get('share_with_self') == '1':
-            form_obj.user = self.request.user
-            form_obj.group = None
-
         return response
 
     def get_form_class(self):
