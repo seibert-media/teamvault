@@ -21,9 +21,18 @@ jobs:
       id-token: write
 
     steps:
+      - name: Generate GitHub App Token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
           fetch-depth: 0
 
       - name: Set up bun
@@ -69,8 +78,8 @@ jobs:
       - name: Commit and Tag Release
         if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ secrets.RELEASE_BOT_APP_ID }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
           git add pyproject.toml uv.lock
           git commit -m "Release v${{ github.event.inputs.version }}"
           git tag -a "v${{ github.event.inputs.version }}" -m "Version ${{ github.event.inputs.version }}"
