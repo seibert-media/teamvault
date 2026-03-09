@@ -1,6 +1,12 @@
-from django.contrib.auth.models import Group, User
+from django.conf import settings
+from django.contrib.auth.models import AbstractUser, Group
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+
+
+class User(AbstractUser):
+    # TODO: Merge this with UserProfile model
+    entry_uuid = models.CharField(max_length=36, default='', blank=True)
 
 
 class UserProfile(models.Model):
@@ -19,4 +25,4 @@ class UserProfile(models.Model):
     hide_deleted_secrets = models.BooleanField(
         default=True, help_text=_('Hides deleted secrets per default. Enable them in filters to see them again.')
     )
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='profile')

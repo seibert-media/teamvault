@@ -69,6 +69,7 @@ class SecretSerializerRepresentationTests(TestCase):
     @classmethod
     def setUpTestData(cls):
         cls.owner = make_user('owner')
+        cls.user_without_read_access = make_user('user_without_read_access')
         # Helper writes an initial revision and grants owner read access
         cls.secret = new_secret(cls.owner, name='repr-pw', access_policy=AccessPolicy.DISCOVERABLE)
         cls.factory = APIRequestFactory()
@@ -94,6 +95,23 @@ class SecretSerializerRepresentationTests(TestCase):
 
         # readable flag is actually an enum value here, not strict bool
         self.assertEqual(rep['data_readable'], AccessPermissionTypes.ALLOWED)
+
+    def test_secret_search_by_owner(self):
+        req = self.factory.get('/api/secrets/', query_params={'search': 'repr-pw'})
+        req.user = self.owner
+        ser = SecretSerializer(instance=[self.secret], context={'request': req}, many=True)
+        rep = ser.data
+        self.assertEqual(len(rep), 1)
+        self.assertEqual(rep[0]['name'], 'repr-pw')
+
+    def test_secret_search_without_owner(self):
+        """Secrets should also be searchable by other users if the secret is discoverable"""
+        req = self.factory.get('/api/secrets/', query_params={'search': 'repr-pw'})
+        req.user = self.user_without_read_access
+        ser = SecretSerializer(instance=[self.secret], context={'request': req}, many=True)
+        rep = ser.data
+        self.assertEqual(len(rep), 1)
+        self.assertEqual(rep[0]['name'], 'repr-pw')
 
 
 @override_settings(**COMMON_OVERRIDES)

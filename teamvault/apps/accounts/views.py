@@ -2,8 +2,8 @@ import csv
 from functools import cached_property
 
 from django.contrib import messages
+from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User
 from django.db import transaction
 from django.db.models import Max, Q
 from django.http import (
@@ -26,6 +26,8 @@ from .utils import get_pending_secrets_for_user
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
 from ..secrets.models import Secret, SecretRevision
+
+User = get_user_model()
 
 
 class UserProfile(UpdateView):

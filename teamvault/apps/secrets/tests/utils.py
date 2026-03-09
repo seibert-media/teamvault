@@ -1,5 +1,5 @@
 from cryptography.fernet import Fernet
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from teamvault.apps.secrets.models import (
@@ -16,6 +16,8 @@ COMMON_OVERRIDES = {
     'BASE_URL': 'https://test.example',
     'ALLOW_SUPERUSER_READS': True,
 }
+
+User = get_user_model()
 
 
 def make_user(username: str, superuser=False):

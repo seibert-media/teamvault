@@ -8,7 +8,8 @@ from operator import itemgetter
 
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import Group, User
+from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
@@ -26,6 +27,8 @@ from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from .exceptions import PermissionError
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
+
+User = get_user_model()
 
 
 class AccessPermissionTypes(models.IntegerChoices):
@@ -280,7 +283,7 @@ class Secret(HashIDModel):
             data = request.session[cached_otp_session_key]
         else:
             data = self.get_data(request.user)
-            request.session['otp_key_data'] = {
+            request.session[cached_otp_session_key] = {
                 'otp_key': data['otp_key'],
                 'digits': int(data.get('digits', 6)),
             }

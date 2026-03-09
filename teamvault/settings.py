@@ -22,6 +22,8 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
+AUTH_USER_MODEL = 'accounts.User'
+
 DATABASES = configure_database(CONFIG)
 
 DEFAULT_AUTO_FIELD = 'django.db.models.AutoField'
