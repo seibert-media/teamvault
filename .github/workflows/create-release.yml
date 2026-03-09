@@ -53,14 +53,6 @@ jobs:
           BUNDLE_ZIP: ${{ github.workspace }}/teamvault/static/bundled.zip
         working-directory: ${{ github.workspace }}/teamvault/static
 
-      - name: Upload Webpack Bundle to Release
-        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: ${{ github.workspace }}/teamvault/static/bundled.zip
-
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
@@ -93,8 +85,9 @@ jobs:
         with:
           tag_name: v${{ github.event.inputs.version }}
           name: Release v${{ github.event.inputs.version }}
-          # Include all files generated in the dist/ directory
-          files: dist/*
+          files: |
+            dist/*
+            ${{ github.workspace }}/teamvault/static/bundled.zip
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
