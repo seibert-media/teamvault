@@ -15,6 +15,15 @@ COMMON_OVERRIDES = {
     'HASHID_SALT': 'test‑salt',
     'BASE_URL': 'https://test.example',
     'ALLOW_SUPERUSER_READS': True,
+    'WEBPACK_LOADER': {
+        'DEFAULT': {
+            'CACHE': False,
+            'BUNDLE_DIR_NAME': 'bundled/',
+            'STATS_FILE': '',
+            'IGNORE_NOT_FOUND': True,
+            'LOADER_CLASS': 'webpack_loader.loader.WebpackLoader',
+        }
+    },
 }
 
 User = get_user_model()
