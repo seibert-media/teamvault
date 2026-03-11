@@ -18,14 +18,12 @@ class SecretConsistencyTestCase(TestCase):
         secret.shared_users.add(self.user, through_defaults={})
         secret.shared_groups.add(self.group, through_defaults={})
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                SharedSecretData.objects.create(secret=secret, user=self.user)
-                SharedSecretData.objects.create(secret=secret, group=self.group)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            SharedSecretData.objects.create(secret=secret, user=self.user)
+            SharedSecretData.objects.create(secret=secret, group=self.group)
 
     def test_shared_secret_data_only_one_constraint(self):
         secret = Secret.objects.create(name='testsecret', created_by=self.user)
 
-        with self.assertRaises(IntegrityError):
-            with transaction.atomic():
-                SharedSecretData.objects.create(secret=secret, group=self.group, user=self.user)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            SharedSecretData.objects.create(secret=secret, group=self.group, user=self.user)
