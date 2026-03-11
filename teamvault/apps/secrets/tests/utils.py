@@ -15,14 +15,6 @@ COMMON_OVERRIDES = {
     'HASHID_SALT': 'test‑salt',
     'BASE_URL': 'https://test.example',
     'ALLOW_SUPERUSER_READS': True,
-    'WEBPACK_LOADER': {
-        'DEFAULT': {
-            'CACHE': False,
-            'BUNDLE_DIR_NAME': 'bundled/',
-            'STATS_FILE': '',
-            'LOADER_CLASS': 'webpack_loader.loaders.FakeWebpackLoader',
-        }
-    },
 }
 
 User = get_user_model()
@@ -41,7 +33,7 @@ def make_user(username: str, superuser=False):
 def new_secret(owner: User, **kwargs) -> Secret:
     """Creates a password secret with minimal required data."""
     secret = Secret.objects.create(
-        name=kwargs.get('name', 'Test Secret'),
+        name=kwargs.get('name', 'Test Secret'),
         created_by=owner,
         content_type=ContentType.PASSWORD,
         access_policy=kwargs.get('access_policy', AccessPolicy.DISCOVERABLE),
