@@ -4,9 +4,7 @@ from pathlib import Path
 def configure_webpack(settings):
     stats_file = Path(settings.PROJECT_ROOT) / 'webpack-stats.json'
     loader_class = (
-        'webpack_loader.loaders.WebpackLoader'
-        if stats_file.exists()
-        else 'webpack_loader.loaders.FakeWebpackLoader'
+        'webpack_loader.loaders.WebpackLoader' if stats_file.exists() else 'webpack_loader.loaders.FakeWebpackLoader'
     )
     settings.WEBPACK_LOADER = {
         'DEFAULT': {
