@@ -20,8 +20,7 @@ COMMON_OVERRIDES = {
             'CACHE': False,
             'BUNDLE_DIR_NAME': 'bundled/',
             'STATS_FILE': '',
-            'IGNORE_NOT_FOUND': True,
-            'LOADER_CLASS': 'webpack_loader.loader.WebpackLoader',
+            'LOADER_CLASS': 'webpack_loader.loaders.FakeWebpackLoader',
         }
     },
 }
