@@ -1,8 +1,6 @@
-name: Create Build and Python Package on Release
+name: Release
 
 on:
-  release:
-    types: [ published ]
   workflow_dispatch:
     inputs:
       dry_run:
@@ -10,19 +8,32 @@ on:
         required: false
         type: boolean
         default: true
-
-permissions:
-  contents: write
-  id-token: write
+      version:
+        description: 'New version (e.g., 0.2.0)'
+        required: true
 
 jobs:
-  build-and-publish:
+  release:
     runs-on: ubuntu-latest
     environment: pypi
+    permissions:
+      contents: write
+      id-token: write
 
     steps:
+      - name: Generate GitHub App Token
+        uses: actions/create-github-app-token@v2
+        id: app-token
+        with:
+          app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.RELEASE_BOT_PRIVATE_KEY }}
+
       - name: Checkout Repo
         uses: actions/checkout@v4
+        with:
+          token: ${{ steps.app-token.outputs.token }}
+          persist-credentials: false
+          fetch-depth: 0
 
       - name: Set up bun
         id: bun
@@ -51,39 +62,42 @@ jobs:
           BUNDLE_ZIP: ${{ github.workspace }}/teamvault/static/bundled.zip
         working-directory: ${{ github.workspace }}/teamvault/static
 
-      - name: Upload Webpack Bundle to Release
-        if: |
-          github.event_name == 'release' ||
-          (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
-        uses: softprops/action-gh-release@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          files: ${{ github.workspace }}/teamvault/static/bundled.zip
-
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v7
 
-      - name: Build wheel
-        id: wheel
+      - name: Update version
         run: |
-          uv build --no-sources
-          WHEEL_PATH=$(realpath dist/*.whl)
-          echo "wheel=$WHEEL_PATH" >> "$GITHUB_OUTPUT"
-          echo "wheel_name=$(basename "$WHEEL_PATH")" >> "$GITHUB_OUTPUT"
+          # If the input is a bump type, uv handles it automatically. If not, it sets the specific version
+          uv version ${{ github.event.inputs.version }}
 
-      - name: Upload wheel to the GitHub Release
-        if: |
-          github.event_name == 'release' ||
-          (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
+      - name: Commit and Tag Release
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
+        run: |
+          git config --global user.name '${{ steps.app-token.outputs.app-slug }}[bot]'
+          git config --global user.email '${{ secrets.RELEASE_BOT_APP_ID }}+${{ steps.app-token.outputs.app-slug }}[bot]@users.noreply.github.com'
+          git add pyproject.toml uv.lock
+          git commit -m "Release v${{ github.event.inputs.version }}"
+          git tag -a "v${{ github.event.inputs.version }}" -m "Version ${{ github.event.inputs.version }}"
+          git push origin main --tags
+
+      - name: Build Distributions
+        run: uv build
+
+      - name: Create GitHub Release
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ steps.wheel.outputs.wheel }}
+          tag_name: v${{ github.event.inputs.version }}
+          name: Release v${{ github.event.inputs.version }}
+          files: |
+            dist/*
+            ${{ github.workspace }}/teamvault/static/bundled.zip
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -99,8 +113,6 @@ jobs:
 
       # For real releases: actually publish
       - name: Publish package distribution to PyPI with uv
-        if:
-          github.event_name == 'release' ||
-          (github.event_name == 'workflow_dispatch' && !inputs.dry_run)
+        if: github.event_name == 'workflow_dispatch' && !inputs.dry_run
         run: |
           uv publish --trusted-publishing always
