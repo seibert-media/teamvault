@@ -1,25 +1,28 @@
-from base64 import b64encode, b64decode
+from base64 import b64decode, b64encode
 from json import loads
 
 from cryptography.fernet import Fernet
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import override_settings
 from django_test_migrations.contrib.unittest_case import MigratorTestCase
 
 from teamvault.apps.secrets.enums import ContentType
 
-STATIC_TEST_KEY = b"WKGGUS52yN68AtcgOKKKqDzccS3hOy32ShZWKwDWe3Q="
+User = get_user_model()
+
+STATIC_TEST_KEY = b'WKGGUS52yN68AtcgOKKKqDzccS3hOy32ShZWKwDWe3Q='
 
 
 @override_settings(TEAMVAULT_SECRET_KEY=STATIC_TEST_KEY)
 class Secret0039MigrationTest(MigratorTestCase):
     """
-        Ensure file migration works as expected.
-        After migration we want all files to be safed as encrypted dict,
-        where the content is b64 encoded
+    Ensure file migration works as expected.
+    After migration we want all files to be safed as encrypted dict,
+    where the content is b64 encoded
     """
+
     apps = ['accounts', 'audit', 'settings']
     migrate_from = ('secrets', '0038_secretrevision_last_read_secretchange')
     migrate_to = ('secrets', '0039_migrate_old_file_saves_into_new_format')

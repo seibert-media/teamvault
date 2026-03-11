@@ -1,12 +1,13 @@
 import base64
 import secrets
 import string
-from urllib.parse import urlparse, parse_qs
+from urllib.parse import parse_qs, urlparse
 
-from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 from django.core.exceptions import ValidationError
-from teamvault.apps.secrets.enums import ContentType
+from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
 
+from teamvault.apps.secrets.enums import ContentType
+from teamvault.apps.secrets.models import Secret, SecretChange
 
 META_FIELDS = (
     'name',
@@ -28,7 +29,7 @@ def extract_url_and_params(data):
     return data_as_url, data_params
 
 
-def copy_meta_from_secret(secret: 'Secret') -> dict:
+def copy_meta_from_secret(secret: Secret) -> dict:
     return {
         'name': secret.name,
         'description': secret.description,
@@ -41,7 +42,7 @@ def copy_meta_from_secret(secret: 'Secret') -> dict:
     }
 
 
-def apply_snapshot_to_secret(secret: 'Secret', change: 'SecretChange') -> list[str]:
+def apply_snapshot_to_secret(secret: Secret, change: SecretChange) -> list[str]:
     """Apply metadata snapshot fields from a SecretChange onto a Secret.
     Returns the list of fields that changed.
     """
@@ -115,4 +116,4 @@ class CappedMemoryFileUploadHandler(MemoryFileUploadHandler):
             # which leads to more form errors than we prefer
             # raise StopUpload(connection_reset=True)
             raise SkipFile()
-        super(CappedMemoryFileUploadHandler, self).receive_data_chunk(raw_data, start)
+        super().receive_data_chunk(raw_data, start)

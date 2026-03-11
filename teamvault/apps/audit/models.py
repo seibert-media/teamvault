@@ -48,7 +48,7 @@ class LogEntry(models.Model):
         related_name='logged_actions',
     )
     message = models.TextField()
-    reason = models.TextField(
+    reason = models.TextField(  # noqa: DJ001
         blank=True,
         null=True,
     )
@@ -82,7 +82,6 @@ class LogEntry(models.Model):
             models.Index(fields=['category'], name='logentry_category_idx'),
             models.Index(fields=['time'], name='logentry_time_idx'),
             models.Index(fields=['category', 'time'], name='logentry_category_time_idx'),
-
             models.Index(fields=['actor'], name='logentry_actor_idx'),
             models.Index(fields=['group'], name='logentry_group_idx'),
             models.Index(fields=['secret'], name='logentry_secret_idx'),

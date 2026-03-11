@@ -1,15 +1,15 @@
 import enum
 
 import django_filters
-from django.contrib.auth import get_user_model
 from django import forms
+from django.contrib.auth import get_user_model
 from django.db.models import IntegerChoices
 from django.utils.html import format_html
 from django.utils.safestring import mark_safe
 from django.utils.translation import gettext_lazy as _
 
-from teamvault.apps.secrets.models import Secret
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
+from teamvault.apps.secrets.models import Secret
 
 User = get_user_model()
 
@@ -21,16 +21,16 @@ def add_tooltip(label, tooltip_message):
         ' data-bs-toggle="tooltip" data-bs-placement="top" title="{}">'
         '</i>',
         label,
-        tooltip_message
+        tooltip_message,
     )
 
 
 class Icons(enum.Enum):
-    CREDIT_CARD = "fa-credit-card text-secondary"
-    DELETED_DANGER = "fa-trash text-danger"
-    FILE = "fa-file text-secondary"
-    KEY = "fa-key text-secondary"
-    REFRESH_DANGER = "fa-refresh text-danger"
+    CREDIT_CARD = 'fa-credit-card text-secondary'
+    DELETED_DANGER = 'fa-trash text-danger'
+    FILE = 'fa-file text-secondary'
+    KEY = 'fa-key text-secondary'
+    REFRESH_DANGER = 'fa-refresh text-danger'
 
     @property
     def html(self):
@@ -50,19 +50,19 @@ class StatusChoices(IntegerChoices):
     #  Preferably migrate occurances of Secret.STATUS_CHOICES to this class
     OK = SecretStatus.OK, mark_safe(Icons.KEY.html + _('Regular'))
     NEEDS_CHANGING = SecretStatus.NEEDS_CHANGING, mark_safe(Icons.REFRESH_DANGER.html + _('Needs Changing'))
-    DELETED = SecretStatus.DELETED, mark_safe(Icons.DELETED_DANGER.html) + f"{add_tooltip( _('Deleted'),_('Hide deleted secrets per default by changing your settings.'))}"
+    DELETED = (
+        SecretStatus.DELETED,
+        mark_safe(Icons.DELETED_DANGER.html)
+        + add_tooltip(_('Deleted'), _('Hide deleted secrets per default by changing your settings.')),
+    )
 
 
 class SecretFilter(django_filters.FilterSet):
     content_type = django_filters.MultipleChoiceFilter(
-        choices=ContentTypeChoice,
-        widget=forms.CheckboxSelectMultiple,
-        label=_('Type')
+        choices=ContentTypeChoice, widget=forms.CheckboxSelectMultiple, label=_('Type')
     )
     status = django_filters.MultipleChoiceFilter(
-        choices=StatusChoices,
-        widget=forms.CheckboxSelectMultiple,
-        label=_('Status')
+        choices=StatusChoices, widget=forms.CheckboxSelectMultiple, label=_('Status')
     )
     created_by = django_filters.ModelChoiceFilter(
         queryset=User.objects.all().order_by('username'),

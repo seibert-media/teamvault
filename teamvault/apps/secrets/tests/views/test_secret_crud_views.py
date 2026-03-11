@@ -7,33 +7,33 @@ from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 
 def _detail_url(secret: Secret) -> str:
-    return reverse("secrets.secret-detail", kwargs={"hashid": secret.hashid})
+    return reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid})
 
 
 def _delete_url(secret: Secret) -> str:
-    return reverse("secrets.secret-delete", kwargs={"hashid": secret.hashid})
+    return reverse('secrets.secret-delete', kwargs={'hashid': secret.hashid})
 
 
 def _restore_url(secret: Secret) -> str:
-    return reverse("secrets.secret-restore", kwargs={"hashid": secret.hashid})
+    return reverse('secrets.secret-restore', kwargs={'hashid': secret.hashid})
 
 
 def _share_url(secret: Secret) -> str:
-    return reverse("secrets.secret-share", kwargs={"hashid": secret.hashid})
+    return reverse('secrets.secret-share', kwargs={'hashid': secret.hashid})
 
 
 def _edit_url(secret: Secret) -> str:
-    return reverse("secrets.secret-edit", kwargs={"hashid": secret.hashid})
+    return reverse('secrets.secret-edit', kwargs={'hashid': secret.hashid})
 
 
 @override_settings(**COMMON_OVERRIDES)
 class SecretCrudViewTests(TestCase):
     @classmethod
     def setUpTestData(cls):
-        cls.owner = make_user("owner")
-        cls.bob = make_user("bob")
-        cls.su = make_user("root", superuser=True)
-        cls.secret: Secret = new_secret(cls.owner, name="view-crud")
+        cls.owner = make_user('owner')
+        cls.bob = make_user('bob')
+        cls.su = make_user('root', superuser=True)
+        cls.secret: Secret = new_secret(cls.owner, name='view-crud')
 
     def test_detail_visible_for_owner(self):
         self.client.force_login(self.owner)
@@ -124,10 +124,9 @@ class SecretCrudViewTests(TestCase):
         resp_su = self.client.get(_detail_url(self.secret))
         self.assertEqual(resp_su.status_code, 200)
 
-
     def test_access_policy_any_makes_detail_readable_for_everyone(self):
         self.secret.access_policy = AccessPolicy.ANY
-        self.secret.save(update_fields=["access_policy"])
+        self.secret.save(update_fields=['access_policy'])
 
         self.client.force_login(self.bob)
         resp = self.client.get(_detail_url(self.secret))

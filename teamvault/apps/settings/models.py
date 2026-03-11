@@ -21,8 +21,8 @@ class Setting(models.Model):
         except cls.DoesNotExist:
             try:
                 return kwargs['default']
-            except KeyError:
-                raise KeyError(_("value for '{}' not set").format(key))
+            except KeyError as exc:
+                raise KeyError(_("value for '%(key)s' not set") % {'key': key}) from exc
 
     @classmethod
     def set(cls, key, value):

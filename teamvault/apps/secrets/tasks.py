@@ -1,18 +1,15 @@
+import logging
 from datetime import timedelta
 
-import logging
-
-from ..audit.auditlog import log
-from ..audit.models import LogEntry, AuditLogCategoryChoices
-from ..secrets.models import SharedSecretData
-
 from django.conf import settings
-from django.contrib.auth.models import Group
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from huey import crontab
 from huey.contrib.djhuey import periodic_task
 
+from ..audit.auditlog import log
+from ..audit.models import AuditLogCategoryChoices, LogEntry
+from ..secrets.models import SharedSecretData
 
 huey_log = logging.getLogger('huey')
 
@@ -21,10 +18,12 @@ huey_log = logging.getLogger('huey')
 def prune_expired_shares():
     for share in SharedSecretData.objects.with_expiry_state().filter(is_expired=True):
         huey_log.info(
-            _("Removing expired share of '{secret}' ({secret_id}) for {share_type} '{who}', was valid until {until}").format(
+            _(
+                "Removing expired share of '{secret}' ({secret_id}) for {share_type} '{who}', was valid until {until}"
+            ).format(
                 secret=share.secret,
                 secret_id=share.secret.hashid,
-                share_type=_("user") if share.user else _("group"),
+                share_type=_('user') if share.user else _('group'),
                 until=share.granted_until,
                 who=share.user or share.group,
             ),
@@ -63,12 +62,9 @@ def revoke_unused_shares():
 
         if do_revoke:
             log(
-                _(
-                    "Share for {share_type} '{who}' automatically revoked, "
-                    "not used since {grace_period}"
-                ).format(
+                _("Share for {share_type} '{who}' automatically revoked, not used since {grace_period}").format(
                     grace_period=grace_period,
-                    share_type=_("user") if share.user else _("group"),
+                    share_type=_('user') if share.user else _('group'),
                     who=share.user or share.group,
                 ),
                 category=AuditLogCategoryChoices.SHARE_AUTOMATICALLY_REVOKED,

@@ -1,5 +1,5 @@
 from cryptography.fernet import Fernet
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from teamvault.apps.secrets.models import (
@@ -16,6 +16,8 @@ COMMON_OVERRIDES = {
     'BASE_URL': 'https://test.example',
     'ALLOW_SUPERUSER_READS': True,
 }
+
+User = get_user_model()
 
 
 def make_user(username: str, superuser=False):
@@ -37,15 +39,7 @@ def new_secret(owner: User, **kwargs) -> Secret:
         access_policy=kwargs.get('access_policy', AccessPolicy.DISCOVERABLE),
         status=SecretStatus.OK,
     )
-    RevisionService.save_payload(
-        secret=secret,
-        actor=owner,
-        payload={'password': 'initial‑pw'},
-        skip_acl=True
-    )
+    RevisionService.save_payload(secret=secret, actor=owner, payload={'password': 'initial‑pw'}, skip_acl=True)
     # Give the owner permanent share so they can delegate
     SharedSecretData.objects.create(secret=secret, user=owner)
     return secret
-
-
-

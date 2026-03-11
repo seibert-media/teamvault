@@ -53,11 +53,12 @@ class SecretChangeTests(TestCase):
         s = self.secret
         # Add a second payload
         RevisionService.save_payload(secret=s, actor=self.owner, payload={'password': 'v2'})
-        rev1_change = SecretChange.objects.filter(secret=s, revision=s.secretrevision_set.order_by('created').first()).latest('created')
+        rev1_change = SecretChange.objects.filter(
+            secret=s, revision=s.secretrevision_set.order_by('created').first()
+        ).latest('created')
         head_before = SecretChange.objects.filter(secret=s).latest('created')
 
         # Restore to first revision
-        rev1 = s.secretrevision_set.order_by('created').first()
         RevisionService.restore_to_change(secret=s, actor=self.owner, change=rev1_change)
 
         head_after = SecretChange.objects.filter(secret=s).latest('created')
@@ -80,8 +81,6 @@ class SecretChangeTests(TestCase):
                 actor=self.owner,
                 **copy_meta_from_secret(s2),
             ).save()
-
-    
 
     def test_change_is_immutable(self):
         s = self.secret

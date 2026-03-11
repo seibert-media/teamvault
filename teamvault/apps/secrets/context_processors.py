@@ -1,5 +1,5 @@
-from teamvault.__version__ import __version__
+from importlib import metadata
 
 
-def version(request):
-    return {'version': __version__}
+def version(_request):
+    return {'version': metadata.version('teamvault')}

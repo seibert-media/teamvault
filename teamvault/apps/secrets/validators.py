@@ -6,5 +6,5 @@ from pyotp import TOTP
 def is_valid_otp_secret(value):
     try:
         TOTP(value).byte_secret()
-    except Exception:
-        raise ValidationError(_('OTP key has wrong format. Please enter a valid OTP key.'))
+    except Exception as exc:
+        raise ValidationError(_('OTP key has wrong format. Please enter a valid OTP key.')) from exc

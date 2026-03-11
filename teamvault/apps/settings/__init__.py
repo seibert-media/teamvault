@@ -4,9 +4,11 @@ from django.apps import AppConfig
 class SettingsConfig(AppConfig):
     name = 'teamvault.apps.settings'
 
-    def ready(self):
+    def ready(self):  # noqa: PLR6301
         from django.conf import settings
+
         from . import config, webpack
+
         parsed_config = config.get_config()
         config.configure_base_url(parsed_config, settings)
         config.configure_debugging(parsed_config, settings)
