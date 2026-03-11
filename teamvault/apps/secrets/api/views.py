@@ -1,7 +1,7 @@
 from base64 import b64encode
 
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
@@ -214,7 +214,7 @@ class UserPendingSecretsList(generics.ListAPIView):
 
     def get_queryset(self):
         username = self.kwargs['username']
-        user = get_object_or_404(User, username=username)
+        user = get_object_or_404(get_user_model(), username=username)
 
         qs = get_pending_secrets_for_user(user)
         # Annotate for the serializer

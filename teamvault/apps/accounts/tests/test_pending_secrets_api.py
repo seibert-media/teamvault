@@ -1,13 +1,15 @@
 import csv
 import io
 
-from django.contrib.auth.models import User
+from django.contrib.auth import get_user_model
 from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
 from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import Secret, SharedSecretData
+
+User = get_user_model()
 
 
 class TestPendingSecretsEndpoints(APITestCase):
