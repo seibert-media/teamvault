@@ -16,12 +16,13 @@ from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 @override_settings(**COMMON_OVERRIDES)
 class PermissionCheckerTests(TestCase):
-    def setUp(self):
-        self.alice = make_user('alice', superuser=True)
-        self.bob = make_user('bob')
-        self.dave = make_user('dave')
-        self.owner = make_user('owner')
-        self.group = Group.objects.create(name='foo')
+    @classmethod
+    def setUpTestData(cls):
+        cls.alice = make_user('alice', superuser=True)
+        cls.bob = make_user('bob')
+        cls.dave = make_user('dave')
+        cls.owner = make_user('owner')
+        cls.group = Group.objects.create(name='foo')
 
     def _assert_perm(
         self,

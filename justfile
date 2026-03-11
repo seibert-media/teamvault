@@ -28,7 +28,7 @@ types:
 
 # Run tests (once we have them)
 test:
-  uv run teamvault/manage.py test
+  uv run teamvault/manage.py test --parallel
 
 # Bring up postgres
 db:
