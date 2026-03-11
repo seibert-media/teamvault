@@ -1,6 +1,6 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.test import TestCase
 
 from teamvault.apps.secrets.models import Secret, SharedSecretData
@@ -19,11 +19,13 @@ class SecretConsistencyTestCase(TestCase):
         secret.shared_groups.add(self.group, through_defaults={})
 
         with self.assertRaises(IntegrityError):
-            SharedSecretData.objects.create(secret=secret, user=self.user)
-            SharedSecretData.objects.create(secret=secret, group=self.group)
+            with transaction.atomic():
+                SharedSecretData.objects.create(secret=secret, user=self.user)
+                SharedSecretData.objects.create(secret=secret, group=self.group)
 
     def test_shared_secret_data_only_one_constraint(self):
         secret = Secret.objects.create(name='testsecret', created_by=self.user)
 
         with self.assertRaises(IntegrityError):
-            SharedSecretData.objects.create(secret=secret, group=self.group, user=self.user)
+            with transaction.atomic():
+                SharedSecretData.objects.create(secret=secret, group=self.group, user=self.user)
