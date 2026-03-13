@@ -41,7 +41,7 @@ jobs:
       fail-fast: false
       matrix:
         # based on django version in dependencies - minus 3.10 & 3.11 because of typing support
-        python-version: [ "3.12", "3.13", "3.14"]
+        python-version: ["3.12", "3.13", "3.14"]
 
     env:
       TEAMVAULT_CONFIG_FILE: ${{ github.workspace }}/teamvault.cfg
