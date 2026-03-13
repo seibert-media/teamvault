@@ -85,6 +85,11 @@ jobs:
           git tag -a "v${{ github.event.inputs.version }}" -m "Version ${{ github.event.inputs.version }}"
           git push origin main --tags
 
+      - name: Install system dependencies for python-ldap
+        uses: awalsh128/cache-apt-pkgs-action@latest
+        with:
+          packages: libldap2-dev libsasl2-dev
+
       - name: Build Distributions
         run: uv build
 
