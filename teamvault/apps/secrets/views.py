@@ -462,8 +462,8 @@ class SecretShareList(CreateView):
         )
 
         # Clear cache
-        delattr(self, 'group_shares')
-        delattr(self, 'user_shares')
+        del self.group_shares
+        del self.user_shares
 
         context = self.get_context_data()
         context.update({
