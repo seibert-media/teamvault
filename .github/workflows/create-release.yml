@@ -32,7 +32,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.app-token.outputs.token }}
-          persist-credentials: false
           fetch-depth: 0
 
       - name: Install system dependencies for python-ldap
