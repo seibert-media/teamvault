@@ -6,6 +6,7 @@ from .views import (
     SecretRevisionDetail,
     SecretShare,
     SecretShareDetail,
+    UserPendingSecretsList,
     data_get,
     generate_password_view,
     otp_get,
@@ -16,6 +17,11 @@ urlpatterns = (
         'secrets/',
         SecretList.as_view(),
         name='api.secret_list',
+    ),
+    path(
+        'users/<str:username>/pending-secrets/',
+        UserPendingSecretsList.as_view(),
+        name='api.user-pending-secrets',
     ),
     path(
         'secrets/<str:hashid>/',
