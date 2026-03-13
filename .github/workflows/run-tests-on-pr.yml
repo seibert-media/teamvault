@@ -4,6 +4,37 @@ on:
   pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set Up uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up just
+        uses: extractions/setup-just@v3
+
+      - name: Run Ruff format check
+        run: just check-format
+
+      - name: Run Ruff
+        run: just check-lint
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build frontend
+        run: bun run build
+
   tests:
     runs-on: ubuntu-latest
     strategy:
@@ -31,7 +62,6 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-    
 
     steps:
       - name: Install system build deps
@@ -46,20 +76,6 @@ jobs:
           postgresql-contrib
 
       - uses: actions/checkout@v4
-
-      - name: Set up bun
-        id: bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Restore bun cache
-        uses: actions/cache@v4
-        with:
-          path: /home/runner/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ steps.setup-bun.outputs.bun-version }}-${{ hashFiles('bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -88,36 +104,16 @@ jobs:
 
       - name: Install dependencies
         working-directory: ${{ github.workspace }}
-        run: |
-          uv sync && uv pip install -e .
-
-      - name: Run Ruff format check
-        working-directory: ${{ github.workspace }}
-        run: |
-          just check-format
-
-      - name: Run Ruff
-        working-directory: ${{ github.workspace }}
-        run: |
-          just check-lint
+        run: uv sync
 
       - name: Activate venv for later steps
         shell: bash
-        run: |
-          echo "${{ github.workspace }}/.venv/bin" >> "$GITHUB_PATH"
-
-      - name: Build frontend assets
-        working-directory: ${{ github.workspace }}
-        run: |
-          bun install
-          bun run build
+        run: echo "${{ github.workspace }}/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Set Up TeamVault Config File
         working-directory: ${{ github.workspace }}
-        run: |
-          teamvault setup
+        run: teamvault setup
 
       - name: Run Tests
         working-directory: ${{ github.workspace }}
-        run: |
-          just test
+        run: just test
