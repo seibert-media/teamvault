@@ -8,11 +8,6 @@ import $ from 'jquery'
 import {TempusDominus} from '@eonasdan/tempus-dominus'
 import TomSelect from 'tom-select';
 
-import {initZxcvbn} from '../zxcvbn.ts'
-
-import * as teamvault from '../utils'
-import * as otp from '../otp'
-
 // Modules
 import {initThemeEarly} from '../modules/theme'
 import {initThemeToggle} from '../modules/theme-toggle'
@@ -23,39 +18,18 @@ import {initSearch} from '../modules/search'
 // Theme must run before DOM is ready to prevent flash
 initThemeEarly()
 
-window.otp = otp
-window.teamvault = teamvault
-
-// Bootstrap
+// Globals needed by inline scripts and HTMX-loaded content
 window.bootstrap = bootstrap
-
-// HTMX
 window.htmx = require('htmx.org')
-
-// jQuery
 window.$ = $
 window.jQuery = $
+window.TempusDominus = TempusDominus
+window.TomSelect = TomSelect
 
-//js qr scanner
-window.qrScanner = require("jsqr")
-
-// Bigtext
+// Bigtext (jQuery plugin, used by secret-detail-password.js via $.bigtext)
 require('bigtext');
 
-// Card
-window.Card = require('card')
-
-// ClipboardJS — keep global for now, used by secret detail inline scripts
-import ClipboardJS from "clipboard";
-window.ClipboardJS = ClipboardJS
-
-// Tempus Dominus — keep global for HTMX-loaded share modal
-window.TempusDominus = TempusDominus
-
-// zxcvbn
-window.zxcvbn = initZxcvbn()
-
-// Select2
+// Select2 (jQuery plugin, used by inline scripts in templates)
 require('select2');
 $.fn.select2.defaults.set("theme", "bootstrap-5")
 $.fn.select2.defaults.set("width", "100%")  // https://github.com/select2/select2/issues/3278
@@ -70,9 +44,6 @@ $.fn.select2.amd.require(['select2/selection/search'], function (Search) {
     this.handleSearch();
   };
 }, null, true);
-
-// tom-select
-window.TomSelect = TomSelect
 
 // Initialize modules on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {
