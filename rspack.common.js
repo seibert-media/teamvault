@@ -1,50 +1,62 @@
 const path = require('path');
 const BundleTracker = require('webpack-bundle-tracker');
-const MiniCssExtractPlugin = require("mini-css-extract-plugin");
 
+/** @type {import('@rspack/core').Configuration} */
 module.exports = {
   context: __dirname,
   entry: './teamvault/static/js/index.js',
   output: {
     path: path.resolve('./teamvault/static/bundled/'),
-    filename: "[name]-[fullhash].js",
-    chunkFilename: "[name]-[fullhash].js"
+    filename: '[name]-[fullhash].js',
+    chunkFilename: '[name]-[fullhash].js',
+    cssFilename: '[name]-[fullhash].css',
+    cssChunkFilename: '[name]-[fullhash].css',
   },
   plugins: [
-    new BundleTracker({path: __dirname + '/teamvault', filename: 'webpack-stats.json'}),
+    new BundleTracker({
+      path: path.resolve(__dirname, 'teamvault'),
+      filename: 'webpack-stats.json',
+    }),
   ],
   resolve: {
-    extensions: ['*', '.js']
+    extensions: ['*', '.js', '.ts'],
+  },
+  experiments: {
+    css: true,
   },
   module: {
     rules: [
       {
         test: /\.(js|jsx|ts|tsx)$/i,
         exclude: /node_modules/,
-        loader: 'babel-loader',
+        loader: 'builtin:swc-loader',
+        options: {
+          jsc: {
+            parser: {
+              syntax: 'typescript',
+            },
+          },
+        },
       },
       {
         test: /\.css$/i,
-        use: ['style-loader', 'css-loader'],
+        type: 'css',
       },
       {
         test: /\.s[ac]ss$/i,
         use: [
-          "style-loader",
-          "css-loader",
           {
-            loader: "sass-loader",
+            loader: 'sass-loader',
             options: {
               sassOptions: {
-                api: "modern-compiler",  // Future default - only use with sass-embedded
+                api: 'modern-compiler',
                 quietDeps: true,
-                silenceDeprecations: [
-                  "import",
-                ],
+                silenceDeprecations: ['import'],
               },
             },
           },
         ],
+        type: 'css',
       },
       {
         test: /\.(eot|svg|ttf|woff|woff2|png|jpg|gif)$/i,
@@ -52,4 +64,4 @@ module.exports = {
       },
     ],
   },
-}
+};

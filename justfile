@@ -39,17 +39,17 @@ db:
 db_ready:
   until pg_isready -h localhost -p 5432 -U teamvault; do sleep 0.2; done
 
-# Run webpack (bun)
-webpack:
+# Run frontend dev server (bun + rspack)
+frontend:
   bun run serve
 
 # Start DB and then teamvault
 teamvault: db db_ready
   uv run teamvault run
 
-# Run teamvault and webpack together
+# Run teamvault and frontend together
 [parallel]
-run: webpack teamvault
+run: frontend teamvault
 
 # Run our install steps
 install: db db_ready 
