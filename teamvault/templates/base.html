@@ -14,7 +14,8 @@
     <link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
     <link rel="icon" type="image/x-icon" href="{% static 'rest_framework/docs/img/favicon.ico' %}">
 
-    {% render_bundle 'main' %}
+    {% render_bundle 'vendor' %}
+    {% render_bundle 'base' %}
 
     {% block head %}{% endblock %}
 </head>

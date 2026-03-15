@@ -1,7 +1,7 @@
 // Import vendor tom select css
 import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 // Import our custom CSS
-import '../scss/base.scss'
+import '../../scss/base.scss'
 
 import * as bootstrap from 'bootstrap' // TODO: Specify which plugins we really need
 import $ from 'jquery'
@@ -13,10 +13,10 @@ import DOMPurify from 'dompurify';
 import {TempusDominus} from '@eonasdan/tempus-dominus'
 import TomSelect from 'tom-select';
 
-import {initZxcvbn} from './zxcvbn.ts'
+import {initZxcvbn} from '../zxcvbn.ts'
 
-import * as teamvault from './utils'
-import * as otp from './otp'
+import * as teamvault from '../utils'
+import * as otp from '../otp'
 
 window.otp = otp
 window.teamvault = teamvault
