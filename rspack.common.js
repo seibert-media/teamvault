@@ -6,6 +6,7 @@ module.exports = {
   context: __dirname,
   entry: {
     base: './teamvault/static/js/entries/base.js',
+    'secret-detail': './teamvault/static/js/entries/secret-detail.js',
   },
   output: {
     path: path.resolve('./teamvault/static/bundled/'),
