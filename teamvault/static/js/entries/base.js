@@ -3,13 +3,8 @@ import 'tom-select/dist/css/tom-select.bootstrap5.min.css';
 // Import our custom CSS
 import '../../scss/base.scss'
 
-import * as bootstrap from 'bootstrap' // TODO: Specify which plugins we really need
+import * as bootstrap from 'bootstrap'
 import $ from 'jquery'
-import {Notyf} from 'notyf';
-import 'notyf/notyf.min.css'
-import autoCompleteJS from '@tarekraafat/autocomplete.js';
-import ClipboardJS from "clipboard";
-import DOMPurify from 'dompurify';
 import {TempusDominus} from '@eonasdan/tempus-dominus'
 import TomSelect from 'tom-select';
 
@@ -17,6 +12,16 @@ import {initZxcvbn} from '../zxcvbn.ts'
 
 import * as teamvault from '../utils'
 import * as otp from '../otp'
+
+// Modules
+import {initThemeEarly} from '../modules/theme'
+import {initThemeToggle} from '../modules/theme-toggle'
+import {initTooltips} from '../modules/tooltips'
+import {initNotifications} from '../modules/notifications'
+import {initSearch} from '../modules/search'
+
+// Theme must run before DOM is ready to prevent flash
+initThemeEarly()
 
 window.otp = otp
 window.teamvault = teamvault
@@ -37,25 +42,14 @@ window.qrScanner = require("jsqr")
 // Bigtext
 require('bigtext');
 
-// Notyf
-document.addEventListener('DOMContentLoaded', () => {
-  // Notyf tries to hook to a body, which we don't have in this context yet.
-  window.notyf = new Notyf({position: {x: 'right', y: 'top'}})
-})
-
 // Card
 window.Card = require('card')
 
-// ClipboardJS
+// ClipboardJS — keep global for now, used by secret detail inline scripts
+import ClipboardJS from "clipboard";
 window.ClipboardJS = ClipboardJS
 
-// autocomplete.js
-window.autoCompleteJS = autoCompleteJS
-
-// DOMPurify (needed for autocompleteJS ajax queries)
-window.DOMPurify = DOMPurify
-
-// Tempus Dominus
+// Tempus Dominus — keep global for HTMX-loaded share modal
 window.TempusDominus = TempusDominus
 
 // zxcvbn
@@ -79,3 +73,11 @@ $.fn.select2.amd.require(['select2/selection/search'], function (Search) {
 
 // tom-select
 window.TomSelect = TomSelect
+
+// Initialize modules on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', () => {
+  initThemeToggle()
+  initTooltips()
+  initNotifications()
+  initSearch()
+})
