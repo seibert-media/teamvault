@@ -1,3 +1,5 @@
+from base64 import b64encode
+
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
 
@@ -30,16 +32,37 @@ def make_user(username: str, superuser=False):
     )
 
 
-def new_secret(owner: User, **kwargs) -> Secret:
-    """Creates a password secret with minimal required data."""
+def new_secret(
+    owner: User,
+    *,
+    name: str = 'Test Secret',
+    content_type: ContentType = ContentType.PASSWORD,
+    access_policy: AccessPolicy = AccessPolicy.DISCOVERABLE,
+    share_with_owner: bool = True,
+) -> Secret:
+    """Creates a secret with minimal required data. Defaults to PASSWORD type."""
     secret = Secret.objects.create(
-        name=kwargs.get('name', 'Test Secret'),
+        name=name,
         created_by=owner,
-        content_type=ContentType.PASSWORD,
-        access_policy=kwargs.get('access_policy', AccessPolicy.DISCOVERABLE),
+        content_type=content_type,
+        access_policy=access_policy,
         status=SecretStatus.OK,
     )
-    RevisionService.save_payload(secret=secret, actor=owner, payload={'password': 'initial‑pw'}, skip_acl=True)
-    # Give the owner permanent share so they can delegate
-    SharedSecretData.objects.create(secret=secret, user=owner)
+    if content_type == ContentType.PASSWORD:
+        payload = {'password': 'initial‑pw'}
+    elif content_type == ContentType.CC:
+        payload = {
+            'holder': 'Test User',
+            'number': '4111111111111111',
+            'expiration_month': '12',
+            'expiration_year': '2030',
+            'security_code': '123',
+            'password': '',
+        }
+    else:
+        # RevisionService uses json.dumps internally — bytes are not serialisable
+        payload = {'filename': 'test.txt', 'file_content': b64encode(b'hello').decode('ascii')}
+    RevisionService.save_payload(secret=secret, actor=owner, payload=payload, skip_acl=True)
+    if share_with_owner:
+        SharedSecretData.objects.create(secret=secret, user=owner)
     return secret

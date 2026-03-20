@@ -1,11 +1,13 @@
 from configparser import ConfigParser
 
 from django.core.exceptions import ImproperlyConfigured
-from django.test import RequestFactory, SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase, TestCase, override_settings
+from django.urls import reverse
 
 from teamvault.apps.secrets.context_processors import secrets_config
+from teamvault.apps.secrets.enums import ContentType
 from teamvault.apps.settings.config import configure_enabled_secret_types
-from teamvault.apps.secrets.tests.utils import COMMON_OVERRIDES
+from teamvault.apps.secrets.tests.utils import COMMON_OVERRIDES, make_user, new_secret
 
 
 def _config(value=None):
@@ -18,6 +20,9 @@ def _config(value=None):
 
 
 _TYPES_SUBSET = {**COMMON_OVERRIDES, 'TEAMVAULT_ENABLED_SECRET_TYPES': {'password', 'file'}}
+
+TYPES_PASSWORD_ONLY = {**COMMON_OVERRIDES, 'TEAMVAULT_ENABLED_SECRET_TYPES': {'password'}}
+TYPES_ALL = {**COMMON_OVERRIDES, 'TEAMVAULT_ENABLED_SECRET_TYPES': {'password', 'cc', 'file'}}
 
 
 class SecretsConfigContextProcessorTests(SimpleTestCase):
@@ -67,3 +72,35 @@ class ConfigureEnabledSecretTypesTests(SimpleTestCase):
         settings = FakeSettings()
         with self.assertRaises(ImproperlyConfigured):
             configure_enabled_secret_types(_config('   '), settings)
+
+
+@override_settings(**TYPES_PASSWORD_ONLY)
+class SecretAddViewGuardTests(TestCase):
+    def setUp(self):
+        self.user = make_user('guard-user')
+        self.client.force_login(self.user)
+
+    def test_add_enabled_type_is_allowed(self):
+        resp = self.client.get(reverse('secrets.secret-add', kwargs={'content_type': 'password'}))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_add_disabled_type_returns_403(self):
+        resp = self.client.get(reverse('secrets.secret-add', kwargs={'content_type': 'cc'}))
+        self.assertEqual(resp.status_code, 403)
+
+    def test_add_disabled_type_post_returns_403(self):
+        resp = self.client.post(reverse('secrets.secret-add', kwargs={'content_type': 'file'}), data={})
+        self.assertEqual(resp.status_code, 403)
+
+
+@override_settings(**TYPES_PASSWORD_ONLY)
+class SecretEditViewGuardTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = make_user('edit-guard-owner')
+        cls.cc_secret = new_secret(cls.owner, name='cc-secret', content_type=ContentType.CC)
+
+    def test_edit_disabled_type_returns_403(self):
+        self.client.force_login(self.owner)
+        resp = self.client.get(reverse('secrets.secret-edit', kwargs={'hashid': self.cc_secret.hashid}))
+        self.assertEqual(resp.status_code, 403)
