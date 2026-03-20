@@ -15,10 +15,21 @@
             <!-- Add btn-group -->
             <div class="col-12 col-lg-auto my-2 d-flex align-items-center justify-content-center justify-content-lg-start">
                 <div class="btn-group btn-group-sm">
-                    <a href="{% url 'secrets.secret-add' content_type='password' %}"
-                       class="btn btn-accent text-nowrap">
-                        <i class="fa fa-plus-circle fa-fw"></i> {% trans "Add Password" %}
-                    </a>
+                    {% if 'password' in enabled_secret_types %}
+                        <a href="{% url 'secrets.secret-add' content_type='password' %}"
+                           class="btn btn-accent text-nowrap">
+                            <i class="fa fa-plus-circle fa-fw"></i> {% trans "Add Password" %}
+                        </a>
+                    {% else %}
+                        <button type="button"
+                                class="btn btn-secondary text-nowrap"
+                                disabled
+                                data-bs-toggle="tooltip"
+                                data-bs-placement="bottom"
+                                title="{% trans "Your administrator has disabled the creation of this secret type." %}">
+                            <i class="fa fa-plus-circle fa-fw"></i> {% trans "Add Password" %}
+                        </button>
+                    {% endif %}
                     <button type="button" class="btn btn-accent dropdown-toggle dropdown-toggle-split"
                             data-bs-toggle="dropdown" aria-expanded="false">
                         <span class="caret"></span>
@@ -26,14 +37,32 @@
                     </button>
                     <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" role="menu">
                         <li>
-                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}">
-                                <i class="fa fa-credit-card fa-fw"></i> {% trans "Add Credit Card" %}
-                            </a>
+                            {% if 'cc' in enabled_secret_types %}
+                                <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}">
+                                    <i class="fa fa-credit-card fa-fw"></i> {% trans "Add Credit Card" %}
+                                </a>
+                            {% else %}
+                                <span class="dropdown-item disabled"
+                                      data-bs-toggle="tooltip"
+                                      data-bs-placement="right"
+                                      title="{% trans "Your administrator has disabled the creation of this secret type." %}">
+                                    <i class="fa fa-credit-card fa-fw"></i> {% trans "Add Credit Card" %}
+                                </span>
+                            {% endif %}
                         </li>
                         <li>
-                            <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}">
-                                <i class="fa fa-upload fa-fw"></i> {% trans "Upload File" %}
-                            </a>
+                            {% if 'file' in enabled_secret_types %}
+                                <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}">
+                                    <i class="fa fa-upload fa-fw"></i> {% trans "Upload File" %}
+                                </a>
+                            {% else %}
+                                <span class="dropdown-item disabled"
+                                      data-bs-toggle="tooltip"
+                                      data-bs-placement="right"
+                                      title="{% trans "Your administrator has disabled the creation of this secret type." %}">
+                                    <i class="fa fa-upload fa-fw"></i> {% trans "Upload File" %}
+                                </span>
+                            {% endif %}
                         </li>
                     </ul>
                 </div>
