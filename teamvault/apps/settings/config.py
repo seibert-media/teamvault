@@ -449,6 +449,7 @@ session_expire_at_browser_close = True
 session_cookie_secure = False
 time_zone = UTC
 # allow_superuser_reads = False
+# enabled_secret_types = password,cc,file
 
 #[password_generator]
 #length = 16
