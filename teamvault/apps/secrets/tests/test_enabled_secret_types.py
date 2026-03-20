@@ -60,17 +60,17 @@ class ConfigureEnabledSecretTypesTests(SimpleTestCase):
 
     def test_invalid_type_raises(self):
         settings = FakeSettings()
-        with self.assertRaises(ImproperlyConfigured):
+        with self.assertRaisesRegex(ImproperlyConfigured, 'banana'):
             configure_enabled_secret_types(_config('password,banana'), settings)
 
     def test_empty_value_raises(self):
         settings = FakeSettings()
-        with self.assertRaises(ImproperlyConfigured):
+        with self.assertRaisesRegex(ImproperlyConfigured, 'at least one valid type'):
             configure_enabled_secret_types(_config(''), settings)
 
     def test_whitespace_only_value_raises(self):
         settings = FakeSettings()
-        with self.assertRaises(ImproperlyConfigured):
+        with self.assertRaisesRegex(ImproperlyConfigured, 'at least one valid type'):
             configure_enabled_secret_types(_config('   '), settings)
 
 
@@ -103,4 +103,15 @@ class SecretEditViewGuardTests(TestCase):
     def test_edit_disabled_type_returns_403(self):
         self.client.force_login(self.owner)
         resp = self.client.get(reverse('secrets.secret-edit', kwargs={'hashid': self.cc_secret.hashid}))
+        self.assertEqual(resp.status_code, 403)
+
+    @override_settings(**TYPES_ALL)
+    def test_edit_enabled_type_is_allowed(self):
+        self.client.force_login(self.owner)
+        resp = self.client.get(reverse('secrets.secret-edit', kwargs={'hashid': self.cc_secret.hashid}))
+        self.assertEqual(resp.status_code, 200)
+
+    def test_edit_disabled_type_post_returns_403(self):
+        self.client.force_login(self.owner)
+        resp = self.client.post(reverse('secrets.secret-edit', kwargs={'hashid': self.cc_secret.hashid}), data={})
         self.assertEqual(resp.status_code, 403)

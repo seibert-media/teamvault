@@ -89,7 +89,7 @@ class SecretAdd(CreateView):
     def dispatch(self, request, *args, **kwargs):
         # login_required wraps SecretAdd.as_view() at module level (see `secret_add` below),
         # so unauthenticated requests are redirected to login BEFORE this dispatch() is called.
-        if kwargs.get('content_type') not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
+        if kwargs['content_type'] not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
             raise PermissionDenied
         return super().dispatch(request, *args, **kwargs)
 
