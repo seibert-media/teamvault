@@ -1,9 +1,11 @@
 from configparser import ConfigParser
 
 from django.core.exceptions import ImproperlyConfigured
-from django.test import SimpleTestCase
+from django.test import RequestFactory, SimpleTestCase
 
+from teamvault.apps.secrets.context_processors import secrets_config
 from teamvault.apps.settings.config import configure_enabled_secret_types
+from teamvault.apps.secrets.tests.utils import COMMON_OVERRIDES
 
 
 def _config(value=None):
@@ -13,6 +15,17 @@ def _config(value=None):
     if value is not None:
         cfg.set('teamvault', 'enabled_secret_types', value)
     return cfg
+
+
+_TYPES_SUBSET = {**COMMON_OVERRIDES, 'TEAMVAULT_ENABLED_SECRET_TYPES': {'password', 'file'}}
+
+
+class SecretsConfigContextProcessorTests(SimpleTestCase):
+    def test_enabled_secret_types_in_context(self):
+        request = RequestFactory().get('/')
+        with self.settings(**_TYPES_SUBSET):
+            ctx = secrets_config(request)
+        self.assertEqual(ctx['enabled_secret_types'], {'password', 'file'})
 
 
 class FakeSettings:
