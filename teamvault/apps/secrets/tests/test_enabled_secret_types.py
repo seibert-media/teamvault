@@ -182,4 +182,4 @@ class SecretDetailAPIGuardTests(TestCase):
             data=json.dumps({'name': 'Renamed'}),
             content_type='application/json',
         )
-        self.assertNotEqual(resp.status_code, 403)
+        self.assertEqual(resp.status_code, 200)
