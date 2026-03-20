@@ -1,3 +1,4 @@
+import json
 from configparser import ConfigParser
 
 from django.core.exceptions import ImproperlyConfigured
@@ -114,4 +115,61 @@ class SecretEditViewGuardTests(TestCase):
     def test_edit_disabled_type_post_returns_403(self):
         self.client.force_login(self.owner)
         resp = self.client.post(reverse('secrets.secret-edit', kwargs={'hashid': self.cc_secret.hashid}), data={})
+        self.assertEqual(resp.status_code, 403)
+
+
+@override_settings(**TYPES_PASSWORD_ONLY)
+class SecretListAPIGuardTests(TestCase):
+    def setUp(self):
+        self.user = make_user('api-guard-user')
+        self.client.force_login(self.user)
+
+    def test_create_enabled_type_is_allowed(self):
+        resp = self.client.post(
+            reverse('api.secret_list'),
+            data=json.dumps({
+                'content_type': 'password',
+                'name': 'Test',
+                'access_policy': 'discoverable',
+                'secret_data': {'password': 'hunter2'},
+            }),
+            content_type='application/json',
+        )
+        self.assertNotEqual(resp.status_code, 403)
+
+    def test_create_disabled_type_returns_403(self):
+        resp = self.client.post(
+            reverse('api.secret_list'),
+            data=json.dumps({
+                'content_type': 'cc',
+                'name': 'My Card',
+                'access_policy': 'discoverable',
+                'secret_data': {
+                    'holder': 'Test',
+                    'number': '4111111111111111',
+                    'expiration_month': '12',
+                    'expiration_year': '2030',
+                    'security_code': '123',
+                    'password': '',
+                },
+            }),
+            content_type='application/json',
+        )
+        self.assertEqual(resp.status_code, 403)
+
+
+@override_settings(**TYPES_PASSWORD_ONLY)
+class SecretDetailAPIGuardTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = make_user('api-edit-guard-owner')
+        cls.cc_secret = new_secret(cls.owner, name='api-cc', content_type=ContentType.CC)
+
+    def test_update_disabled_type_returns_403(self):
+        self.client.force_login(self.owner)
+        resp = self.client.patch(
+            reverse('api.secret_detail', kwargs={'hashid': self.cc_secret.hashid}),
+            data=json.dumps({'name': 'Renamed'}),
+            content_type='application/json',
+        )
         self.assertEqual(resp.status_code, 403)
