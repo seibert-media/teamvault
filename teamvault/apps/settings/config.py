@@ -338,6 +338,32 @@ def configure_max_file_size(config, settings):
     settings.FILE_UPLOAD_MAX_MEMORY_SIZE = settings.TEAMVAULT_MAX_FILE_SIZE
 
 
+_VALID_SECRET_TYPES = frozenset({'password', 'cc', 'file'})
+
+
+def configure_enabled_secret_types(config, settings):
+    raw = get_from_config(config, 'teamvault', 'enabled_secret_types', None)
+    if raw is None:
+        settings.TEAMVAULT_ENABLED_SECRET_TYPES = set(_VALID_SECRET_TYPES)
+        return
+
+    types = {t.strip().lower() for t in raw.split(',') if t.strip()}
+
+    if not types:
+        raise ImproperlyConfigured(
+            'enabled_secret_types in [teamvault] must contain at least one valid type (password, cc, file)'
+        )
+
+    invalid = types - _VALID_SECRET_TYPES
+    if invalid:
+        raise ImproperlyConfigured(
+            f'Invalid secret type(s) in enabled_secret_types: {", ".join(sorted(invalid))}. '
+            f'Valid types are: password, cc, file'
+        )
+
+    settings.TEAMVAULT_ENABLED_SECRET_TYPES = types
+
+
 def configure_password_update_alert(config, settings):
     equivalent_true_values = ['1', 'true', 'enabled', 'yes']
 
