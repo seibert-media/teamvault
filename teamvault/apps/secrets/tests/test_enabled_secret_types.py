@@ -135,7 +135,7 @@ class SecretListAPIGuardTests(TestCase):
             }),
             content_type='application/json',
         )
-        self.assertNotEqual(resp.status_code, 403)
+        self.assertEqual(resp.status_code, 201)
 
     def test_create_disabled_type_returns_403(self):
         resp = self.client.post(
@@ -173,3 +173,13 @@ class SecretDetailAPIGuardTests(TestCase):
             content_type='application/json',
         )
         self.assertEqual(resp.status_code, 403)
+
+    @override_settings(**TYPES_ALL)
+    def test_update_enabled_type_is_allowed(self):
+        self.client.force_login(self.owner)
+        resp = self.client.patch(
+            reverse('api.secret_detail', kwargs={'hashid': self.cc_secret.hashid}),
+            data=json.dumps({'name': 'Renamed'}),
+            content_type='application/json',
+        )
+        self.assertNotEqual(resp.status_code, 403)

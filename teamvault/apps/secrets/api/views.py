@@ -37,7 +37,7 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
     def perform_update(self, serializer):
         type_str = CONTENT_TYPE_REPR[serializer.instance.content_type]
         if type_str not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
-            raise PermissionDenied('This secret type has been disabled by the administrator.')
+            raise PermissionDenied(_('This secret type has been disabled by the administrator.'))
         instance = serializer.save()
         if hasattr(instance, '_data'):
             RevisionService.save_payload(secret=instance, actor=self.request.user, payload=instance._data)
@@ -60,7 +60,7 @@ class SecretList(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         content_type_str = serializer.validated_data['content_type']
         if content_type_str not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
-            raise PermissionDenied('This secret type has been disabled by the administrator.')
+            raise PermissionDenied(_('This secret type has been disabled by the administrator.'))
         instance = serializer.save(created_by=self.request.user)
         if hasattr(instance, '_data'):
             RevisionService.save_payload(
