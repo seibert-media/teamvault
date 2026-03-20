@@ -1,11 +1,13 @@
 from base64 import b64encode
 from contextlib import suppress
+from typing import override
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied
 from django.db import models
 from django.http import Http404
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
@@ -296,7 +298,10 @@ class SharedSecretDataSerializer(serializers.ModelSerializer):
             entity_type = 'user'
             entity_name = data['user']
 
-        if SharedSecretData.objects.filter(secret=secret, **{entity_type: entity_name}).exists():
+        active_share = SharedSecretData.objects.filter(secret=secret, **{entity_type: entity_name}).exclude(
+            granted_until__lte=now()
+        )
+        if active_share.exists():
             raise ValidationError(
                 _('Secret %(secret)s was already shared with %(entity_type)s %(entity_name)s.')
                 % {
@@ -307,6 +312,12 @@ class SharedSecretDataSerializer(serializers.ModelSerializer):
                 code='unique',
             )
         return data
+
+    @override
+    def create(self, validated_data):
+        secret = validated_data.pop('secret')
+        granted_by = validated_data.pop('granted_by')
+        return secret.share(granted_by=granted_by, **validated_data)
 
     class Meta:
         model = SharedSecretData

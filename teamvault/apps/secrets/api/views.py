@@ -95,27 +95,8 @@ class SecretShare(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         secret = self.get_object()
-        permission = secret.is_shareable_by_user(self.request.user)
-        if not permission:
-            raise PermissionDenied
-
-        obj = serializer.save(granted_by=self.request.user, secret=secret)
-        log(
-            _("{user} granted access to {shared_entity_type} '{name}' {time}").format(
-                shared_entity_type=obj.shared_entity_type,
-                name=obj.shared_entity_name,
-                user=self.request.user.username,
-                time=_('until ') + obj.granted_until.isoformat() if obj.granted_until else _('permanently'),
-            ),
-            actor=self.request.user,
-            category=(
-                AuditLogCategoryChoices.SECRET_SUPERUSER_SHARED
-                if permission == AccessPermissionTypes.SUPERUSER_ALLOWED
-                else AuditLogCategoryChoices.SECRET_SHARED
-            ),
-            level='warning',
-            secret=secret,
-        )
+        secret.check_share_access(self.request.user)
+        serializer.save(granted_by=self.request.user, secret=secret)
 
 
 class SecretShareDetail(generics.RetrieveDestroyAPIView):
@@ -127,10 +108,7 @@ class SecretShareDetail(generics.RetrieveDestroyAPIView):
         return obj
 
     def perform_destroy(self, instance):
-        permission = instance.secret.is_shareable_by_user(self.request.user)
-        if not permission:
-            raise PermissionDenied()
-
+        permission = instance.check_delete_access(self.request.user)
         secret = instance.secret
         entity_type = instance.shared_entity_type
         entity_name = instance.shared_entity_name

@@ -406,6 +406,13 @@ class Secret(HashIDModel):
         if not shareable:
             raise PermissionDenied()
 
+        # Delete any expired share for the same user/group to avoid unique_together violation
+        entity_filter = {'user': user} if user else {'group': group}
+        self.share_data.filter(
+            granted_until__lte=now(),
+            **entity_filter,
+        ).delete()
+
         share_obj = self.share_data.create(
             grant_description=grant_description,
             granted_by=granted_by,
@@ -863,6 +870,9 @@ class SharedSecretData(models.Model):
             if time_left <= timedelta(hours=8):
                 return 'danger'
         return 'warning'
+
+    def check_delete_access(self, user: User) -> AccessPermissionTypes:
+        return self.secret.check_share_access(user)
 
 
 @receiver(post_save, sender=Secret)
