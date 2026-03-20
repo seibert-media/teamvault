@@ -58,6 +58,9 @@ class SecretList(generics.ListCreateAPIView):
             return Secret.get_all_visible_to_user(self.request.user)
 
     def perform_create(self, serializer):
+        # validated_data['content_type'] is a ContentTypeStr (Django TextChoices), which
+        # inherits from str. Its values ('password', 'cc', 'file') are identical to the
+        # keys used in TEAMVAULT_ENABLED_SECRET_TYPES, so the membership test is correct.
         content_type_str = serializer.validated_data['content_type']
         if content_type_str not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
             raise PermissionDenied(_('This secret type has been disabled by the administrator.'))
