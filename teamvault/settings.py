@@ -143,5 +143,5 @@ BOOTSTRAP5 = {
     'error_css_class': 'is-invalid',
 }
 
-HUEY = SqliteHuey('teamvault')
 HUEY_TASKS = configure_huey(CONFIG)
+HUEY = SqliteHuey('teamvault', filename=HUEY_TASKS['data_dir']) if HUEY_TASKS['data_dir'] else SqliteHuey('teamvault')

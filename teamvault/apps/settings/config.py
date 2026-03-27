@@ -203,7 +203,10 @@ def configure_huey(config):
                 )
             ) from exc
 
+    data_dir = get_from_config(config, 'tasks', 'data_dir', None)
+
     return {
+        'data_dir': data_dir,
         'revoke_unused_shares_after_days': revoke,
         'scheduler_frequency': scheduler_frequency,
     }
@@ -475,6 +478,7 @@ salt = {hashid_salt}
 #[tasks]
 #scheduler_frequency = daily  # or hourly, minutely
 #revoke_unused_shares_after_days = 365  # task disabled if unset
+#data_dir = /var/lib/teamvault/huey.db
     """.format(
         django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
         hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),
