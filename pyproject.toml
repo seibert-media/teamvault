@@ -62,6 +62,7 @@ Source = "https://github.com/seibert-media/teamvault"
 
 [tool.uv]
 package = true
+exclude-newer = "7d"
 
 [tool.uv.build-backend]
 module-root = ""
