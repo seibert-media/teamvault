@@ -7,7 +7,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
-from teamvault.apps.secrets.models import Secret, SharedSecretData
+from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 User = get_user_model()
 
@@ -44,6 +44,17 @@ class TestPendingSecretsEndpoints(APITestCase):
             user=self.target_user,
             granted_by=self.admin_user,
         )
+
+        # Simulate target_user having read the secret — required by the access-history-based query
+        rev = SecretRevision.objects.create(
+            secret=self.secret_needs_change,
+            set_by=self.admin_user,
+            encrypted_data=b'x',
+            plaintext_data_sha256='a' * 64,
+        )
+        rev.accessed_by.add(self.target_user)
+        self.secret_needs_change.current_revision = rev
+        self.secret_needs_change.save()
 
         self.target_user.is_active = False
         self.target_user.save()

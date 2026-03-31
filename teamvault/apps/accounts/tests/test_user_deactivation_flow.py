@@ -3,7 +3,7 @@ from django.test import TestCase
 
 from teamvault.apps.accounts.utils import get_pending_secrets_for_user
 from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
-from teamvault.apps.secrets.models import Secret, SharedSecretData
+from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 
 class TestPendingSecretsQueryLogic(TestCase):
@@ -11,6 +11,19 @@ class TestPendingSecretsQueryLogic(TestCase):
         User = get_user_model()
         self.bob = User.objects.create_user(username='bob', password='x')
         self.alice = User.objects.create_user(username='alice', password='x')
+
+    def _make_current_revision(self, secret, accessed_by):
+        """Create a minimal revision, record access by user, and set as current."""
+        rev = SecretRevision.objects.create(
+            secret=secret,
+            set_by=self.alice,
+            encrypted_data=b'x',
+            plaintext_data_sha256='a' * 64,
+        )
+        rev.accessed_by.add(accessed_by)
+        secret.current_revision = rev
+        secret.save()
+        return rev
 
     def test_query_filters_correctly(self):
         self.bob.is_active = False
@@ -23,6 +36,7 @@ class TestPendingSecretsQueryLogic(TestCase):
             status=SecretStatus.NEEDS_CHANGING,
             needs_changing_on_leave=True,
         )
+        self._make_current_revision(global_needs_change, self.bob)
 
         global_needs_change_but_not_on_leave = Secret.objects.create(  # noqa: F841
             name='global_needs_change_not_on_leave',
@@ -44,6 +58,7 @@ class TestPendingSecretsQueryLogic(TestCase):
             user=self.bob,
             granted_by=self.alice,
         )
+        self._make_current_revision(shared_secret, self.bob)
 
         hidden_for_alice_only = Secret.objects.create(
             name='hidden_for_alice_only',
