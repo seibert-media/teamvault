@@ -115,11 +115,15 @@ def merge_users(user1, user2, dry_run=True):
 
 def get_pending_secrets_for_user(user):
     """
-    Return all secrets readable by this user that currently need changing.
-    Includes secrets created by others or shared with the user.
+    Return all secrets that need changing and whose current revision was accessed by this user.
+    Based on access history, so group membership at the time of query is irrelevant.
     """
-    qs = Secret.get_all_readable_by_user(user)
-    return qs.filter(
+    accessed_revs = SecretRevision.objects.filter(
+        accessed_by=user,
+    )
+
+    return Secret.objects.filter(
         status=SecretStatus.NEEDS_CHANGING,
         needs_changing_on_leave=True,
+        current_revision__in=accessed_revs,
     )

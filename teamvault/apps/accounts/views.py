@@ -81,6 +81,13 @@ class UserPendingSecretsView(PageSizeMixin, ListView):
     def user_object(self):
         return get_object_or_404(User, username=self.kwargs['username'])
 
+    def dispatch(self, request, *args, **kwargs):
+        if self.user_object.is_active:
+            redirect_url = reverse_lazy('accounts.user-detail', kwargs={'username': self.user_object.username})
+            return HttpResponseRedirect(redirect_url)
+
+        return super().dispatch(request, *args, **kwargs)
+
     def get_queryset(self):
         qs = get_pending_secrets_for_user(self.user_object)
         query = self.request.GET.get('q')
@@ -244,10 +251,6 @@ def user_activate(request, username, deactivate=False):
         )
 
         detail_url = reverse('accounts.user-detail', kwargs={'username': user.username})
-
-        pending = get_pending_secrets_for_user(user)
-        if pending.exists():
-            detail_url = f'{detail_url}?show_pending=1'
 
     else:
         log(
