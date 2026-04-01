@@ -62,7 +62,7 @@ Source = "https://github.com/seibert-media/teamvault"
 
 [tool.uv]
 package = true
-exclude-newer = "7d"
+exclude-newer = "7 days"
 
 [tool.uv.build-backend]
 module-root = ""
