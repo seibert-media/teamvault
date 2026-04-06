@@ -58,5 +58,27 @@ We use [huey](https://huey.readthedocs.io/en/latest/) to run background jobs. Th
 
     teamvault run_huey
 
+## Fernet key rotation
+
+TeamVault encrypts all secrets with a Fernet key defined in your config file. To rotate this key:
+
+1. Generate a new key:
+
+		teamvault plumbing generate_fernet_key
+
+2. Save your current `fernet_key` from the config file (you'll need it in step 4).
+
+3. Replace `fernet_key` in your config file with the new key.
+
+4. Re-encrypt all secrets with the new key:
+
+		teamvault plumbing rotate_fernet_key <old_key>
+
+   This re-encrypts all stored revisions in a single transaction. If anything fails, all changes are rolled back and your data remains encrypted with the old key.
+
+5. Verify TeamVault starts without errors.
+
+**Important:** The application must be stopped during key rotation to prevent read/write conflicts while secrets are being re-encrypted.
+
 ## Release process
 Run the github action to cut a release with a specific version number.
