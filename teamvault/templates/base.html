@@ -1,6 +1,5 @@
 {% load i18n %}
 {% load render_bundle from webpack_loader %}
-{% load webpack_static from webpack_loader %}
 
 {% load static %}
 <!DOCTYPE html>
@@ -14,8 +13,7 @@
     <link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
     <link rel="icon" type="image/x-icon" href="{% static 'rest_framework/docs/img/favicon.ico' %}">
 
-    {% render_bundle 'vendor' %}
-    {% render_bundle 'base' %}
+    {% render_bundle 'base' attrs='crossorigin="anonymous"' %}
 
     {% block head %}{% endblock %}
 </head>
@@ -23,7 +21,7 @@
 <body data-bs-no-jquery>
 
 {% if messages %}
-<div data-django-messages='[{% for message in messages %}{"type":"{{ message.level_tag }}","message":"{{ message }}"}{% if not forloop.last %},{% endif %}{% endfor %}]' hidden></div>
+<div data-django-messages='[{% for message in messages %}{"type":"{{ message.level_tag }}","message":"{{ message|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]' hidden></div>
 {% endif %}
 
 <div class="background"></div>

@@ -5,6 +5,7 @@ import '../../scss/base.scss'
 
 import * as bootstrap from 'bootstrap'
 import $ from 'jquery'
+import {createPopper} from '@popperjs/core'
 import {TempusDominus} from '@eonasdan/tempus-dominus'
 import TomSelect from 'tom-select';
 
@@ -23,27 +24,12 @@ window.bootstrap = bootstrap
 window.htmx = require('htmx.org')
 window.$ = $
 window.jQuery = $
+window.Popper = {createPopper}
 window.TempusDominus = TempusDominus
 window.TomSelect = TomSelect
 
-// Bigtext (jQuery plugin, used by secret-detail-password.js via $.bigtext)
-require('bigtext');
-
-// Select2 (jQuery plugin, used by inline scripts in templates)
-require('select2');
-$.fn.select2.defaults.set("theme", "bootstrap-5")
-$.fn.select2.defaults.set("width", "100%")  // https://github.com/select2/select2/issues/3278
-$.fn.select2.amd.require(['select2/selection/search'], function (Search) {
-  // Patch backspace on select2 4.X. See https://github.com/select2/select2/issues/3354
-  Search.prototype.searchRemoveChoice = function (decorated, item) {
-    this.trigger('unselect', {
-      data: item
-    });
-
-    this.$search.val('');
-    this.handleSearch();
-  };
-}, null, true);
+// Select2 initialization (attaches to $.fn, sets defaults, patches backspace)
+import '../modules/select2-init';
 
 // Initialize modules on DOMContentLoaded
 document.addEventListener('DOMContentLoaded', () => {

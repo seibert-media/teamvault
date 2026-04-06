@@ -1,5 +1,6 @@
 import * as bootstrap from 'bootstrap';
 import $ from 'jquery';
+import './select2-init';
 
 export function initAddeditCommon(config) {
   const searchableTooltip = config.dataset.searchableTooltip;

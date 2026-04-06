@@ -5,7 +5,7 @@ import {getColorfulPasswordHTML} from '../utils';
 let shouldShowModal;
 let changeSecretModal;
 
-export function initReveal(config) {
+export function initReveal(config, {onModalClose} = {}) {
   const secretUrl = config.dataset.secretUrl;
   const placeholder = config.dataset.placeholder;
   shouldShowModal = config.dataset.showPasswordUpdateAlert === 'true';
@@ -46,7 +46,7 @@ export function initReveal(config) {
   }
 
   function reveal(password) {
-    const revBtnTooltip = bootstrap.Tooltip.getInstance('#revealButton');
+    const revBtnTooltip = bootstrap.Tooltip.getOrCreateInstance('#revealButton');
     revBtnTooltip.setContent({'.tooltip-inner': hideTooltip});
 
     const revBtn = document.getElementById('revealButton');
@@ -62,7 +62,7 @@ export function initReveal(config) {
   }
 
   function unreveal() {
-    const revBtnTooltip = bootstrap.Tooltip.getInstance('#revealButton');
+    const revBtnTooltip = bootstrap.Tooltip.getOrCreateInstance('#revealButton');
     revBtnTooltip.setContent({'.tooltip-inner': revealTooltip});
 
     const revBtn = document.getElementById('revealButton');
@@ -100,8 +100,11 @@ export function initReveal(config) {
 
   function closeModal() {
     changeSecretModal.hide();
-    document.getElementById('copy-password').onclick = null;
-    setUpPasswordClipboard();
+    const copyPassword = document.getElementById('copy-password');
+    if (copyPassword) copyPassword.onclick = null;
+    const copyOtp = document.getElementById('copy-otp');
+    if (copyOtp) copyOtp.onclick = null;
+    if (onModalClose) onModalClose();
   }
 
   if (changeSecretModalContinueButton) {
@@ -116,8 +119,4 @@ export function initReveal(config) {
 
   // Expose for use by other modules
   return {getSecret, getSecretSync, reveal, showModal, shouldShowModal: () => shouldShowModal};
-}
-
-function setUpPasswordClipboard() {
-  // This is set up by the clipboard module
 }

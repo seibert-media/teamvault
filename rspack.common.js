@@ -17,6 +17,10 @@ module.exports = {
     cssChunkFilename: '[name]-[fullhash].css',
   },
   optimization: {
+    // All entries share one runtime and module cache. Without this, each entry
+    // gets its own instance of shared modules (e.g. Bootstrap), causing issues
+    // like duplicate plugin registration and broken event handling.
+    runtimeChunk: 'single',
     splitChunks: {
       chunks: 'all',
       cacheGroups: {

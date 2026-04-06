@@ -1,6 +1,8 @@
 import {initReveal} from '../modules/secret-reveal';
 import {setUpPasswordClipboard, setUpOtpClipboard, setUpAdditionalClipboards} from '../modules/secret-clipboard';
 import {initOtp} from '../modules/secret-otp';
+import {init as initPasswordDetail} from '../modules/secret-detail-password';
+import {init as initCCDetail} from '../modules/secret-detail-cc';
 import * as bootstrap from 'bootstrap';
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -12,10 +14,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const otpEnabled = config.dataset.otpEnabled === 'true';
   const suAccess = config.dataset.suAccess === 'true';
 
-  // Initialize the reveal API (shared between password and CC detail pages)
-  const revealApi = initReveal(config);
+  function wireUpClipboards(revealApi) {
+    setUpPasswordClipboard(revealApi.getSecretSync, config.dataset.passwordCopied);
+    if (otpEnabled) {
+      setUpOtpClipboard(config.dataset.otpCopied);
+    }
+  }
 
   if (contentType === 'password') {
+    // Initialize reveal with modal close callback for clipboard wiring
+    const revealApi = initReveal(config, {
+      onModalClose: () => wireUpClipboards(revealApi),
+    });
+
     // Set up clipboards
     setUpAdditionalClipboards(
       config.dataset.urlCopied,
@@ -26,17 +37,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // When modal is needed, show it on clipboard button clicks
       const copyPassword = document.getElementById('copy-password');
       if (copyPassword) {
-        copyPassword.addEventListener('click', () => revealApi.showModal());
+        copyPassword.onclick = () => revealApi.showModal();
       }
       const copyOtp = document.getElementById('copy-otp');
       if (copyOtp) {
-        copyOtp.addEventListener('click', () => revealApi.showModal());
+        copyOtp.onclick = () => revealApi.showModal();
       }
     } else {
-      setUpPasswordClipboard(revealApi.getSecretSync, config.dataset.passwordCopied);
-      if (otpEnabled) {
-        setUpOtpClipboard(config.dataset.otpCopied);
-      }
+      wireUpClipboards(revealApi);
     }
 
     // OTP countdown
@@ -45,9 +53,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Password-specific features (large type, OTP button)
-    import('../modules/secret-detail-password').then(m => m.init(config, revealApi));
+    initPasswordDetail(config, revealApi);
   } else if (contentType === 'cc') {
-    import('../modules/secret-detail-cc').then(m => m.init(config, revealApi));
+    const revealApi = initReveal(config);
+    initCCDetail(config, revealApi);
   }
 
   // Superuser confirmation modal

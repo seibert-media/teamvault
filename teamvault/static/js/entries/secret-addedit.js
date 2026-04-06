@@ -1,4 +1,7 @@
 import {initAddeditCommon} from '../modules/addedit-common';
+import {init as initPasswordForm} from '../modules/password-form';
+import {init as initCCForm} from '../modules/cc-form';
+import {init as initFileForm} from '../modules/file-form';
 
 document.addEventListener('DOMContentLoaded', () => {
   const config = document.getElementById('secret-addedit-config');
@@ -8,10 +11,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const contentType = config.dataset.contentType;
   if (contentType === 'password') {
-    import('../modules/password-form').then(m => m.init(config));
+    initPasswordForm(config);
   } else if (contentType === 'cc') {
-    import('../modules/cc-form').then(m => m.init(config));
+    initCCForm(config);
   } else if (contentType === 'file') {
-    import('../modules/file-form').then(m => m.init());
+    initFileForm();
   }
 });

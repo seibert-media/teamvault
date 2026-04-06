@@ -8,6 +8,7 @@ function refreshTooltips() {
 }
 
 export function initTooltips() {
+  refreshTooltips();
   document.addEventListener('htmx:load', () => {
     refreshTooltips();
   });

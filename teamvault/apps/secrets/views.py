@@ -121,6 +121,7 @@ class SecretAdd(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
+            context['content_type'] = self.kwargs['content_type']
             context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError as exc:
             raise Http404 from exc
@@ -198,6 +199,7 @@ class SecretEdit(UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['content_type'] = CONTENT_TYPE_IDENTIFIERS[self.object.content_type]
         context['current_revision'] = self.object.current_revision
         context['pretty_content_type'] = self.object.get_content_type_display()
         return context

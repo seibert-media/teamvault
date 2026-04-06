@@ -89,8 +89,8 @@ export function init(config, revealApi) {
     } else {
       const data = revealApi.getSecretSync();
       revealBtnSpan.textContent = hideText;
-      revealBtnIcon.classList.remove('fa-shield');
-      revealBtnIcon.classList.add('fa-magic');
+      revealBtnIcon.classList.remove('fa-magic');
+      revealBtnIcon.classList.add('fa-shield');
       fillCreditCard(data['number'], data['holder'], data['expiration_month'], data['expiration_year']);
 
       document.getElementById('id_security_code').value = data['security_code'];
