@@ -26,7 +26,9 @@ def configure_base_url(config, settings):
 
 
 def configure_data_dir(config):
-    data_dir = pathlib.Path(get_from_config(config, 'teamvault', 'data_dir', '/var/lib/teamvault'))
+    data_dir = pathlib.Path(
+        environ.get('TEAMVAULT_DATA_DIR') or get_from_config(config, 'teamvault', 'data_dir', '/var/lib/teamvault')
+    )
     if not data_dir.is_dir():
         raise RuntimeError(
             _('data_dir {path} does not exist or is not a directory (set in {config})').format(
