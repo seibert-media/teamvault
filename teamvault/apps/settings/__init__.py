@@ -7,7 +7,7 @@ class SettingsConfig(AppConfig):
     def ready(self):  # noqa: PLR6301
         from django.conf import settings
 
-        from . import config, webpack
+        from . import checks, config, webpack  # noqa: F401
 
         parsed_config = config.get_config()
         config.configure_base_url(parsed_config, settings)

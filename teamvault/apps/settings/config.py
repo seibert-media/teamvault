@@ -2,7 +2,6 @@ import pathlib
 from base64 import b64decode, b64encode
 from configparser import ConfigParser
 from gettext import gettext as _
-from hashlib import sha1
 from os import environ, umask
 from secrets import choice
 from string import ascii_letters, digits, punctuation
@@ -10,7 +9,6 @@ from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
 from django.core.exceptions import ImproperlyConfigured
-from django.db.utils import ProgrammingError
 
 
 class UnconfiguredSettingsError(Exception):
@@ -369,29 +367,7 @@ def configure_superuser_reads(config, settings):
 
 
 def configure_teamvault_secret_key(config, settings):
-    from .models import Setting
-
-    key = config.get('teamvault', 'fernet_key')
-
-    try:
-        checksum = Setting.get('fernet_key_hash', default=None)
-    except ProgrammingError:  # db not populated
-        pass
-    else:
-        key_hash = sha1(key.encode('utf-8')).hexdigest()
-
-        if checksum is None:
-            Setting.set('fernet_key_hash', key_hash)
-
-        elif key_hash != checksum:
-            raise RuntimeError(
-                _("secret in '{path}' does not match SHA1 hash in database ({hash})").format(
-                    hash=checksum,
-                    path=environ['TEAMVAULT_CONFIG_FILE'],
-                )
-            )
-
-    settings.TEAMVAULT_SECRET_KEY = key
+    settings.TEAMVAULT_SECRET_KEY = config.get('teamvault', 'fernet_key')
 
 
 def configure_time_zone(config):
