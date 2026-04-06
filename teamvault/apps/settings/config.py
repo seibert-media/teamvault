@@ -25,6 +25,29 @@ def configure_base_url(config, settings):
     settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
 
 
+def configure_data_dir(config):
+    data_dir = pathlib.Path(get_from_config(config, 'teamvault', 'data_dir', '/var/lib/teamvault'))
+    if not data_dir.is_dir():
+        raise RuntimeError(
+            _('data_dir {path} does not exist or is not a directory (set in {config})').format(
+                path=data_dir,
+                config=environ['TEAMVAULT_CONFIG_FILE'],
+            )
+        )
+    test_file = data_dir / '.teamvault_write_test'
+    try:
+        test_file.touch()
+        test_file.unlink()
+    except OSError as exc:
+        raise RuntimeError(
+            _('data_dir {path} is not writable (set in {config})').format(
+                path=data_dir,
+                config=environ['TEAMVAULT_CONFIG_FILE'],
+            )
+        ) from exc
+    return data_dir
+
+
 def configure_database(config):
     """
     Called directly from the Django settings module.
@@ -203,10 +226,7 @@ def configure_huey(config):
                 )
             ) from exc
 
-    data_dir = get_from_config(config, 'tasks', 'data_dir', None)
-
     return {
-        'data_dir': data_dir,
         'revoke_unused_shares_after_days': revoke,
         'scheduler_frequency': scheduler_frequency,
     }
@@ -426,6 +446,7 @@ session_expire_at_browser_close = True
 session_cookie_secure = False
 time_zone = UTC
 # allow_superuser_reads = False
+# data_dir = /var/lib/teamvault
 
 #[password_generator]
 #length = 16
@@ -478,7 +499,6 @@ salt = {hashid_salt}
 #[tasks]
 #scheduler_frequency = daily  # or hourly, minutely
 #revoke_unused_shares_after_days = 365  # task disabled if unset
-#data_dir = /var/lib/teamvault/huey.db
     """.format(
         django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
         hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),
