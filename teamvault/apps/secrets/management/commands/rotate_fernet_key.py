@@ -38,6 +38,9 @@ class Command(BaseCommand):
         total = SecretRevision.objects.count()
         if total == 0:
             self.stdout.write('No revisions to re-encrypt.')
+
+            # still change hash - this can happen when there are no secrets in the database
+            Setting.set('fernet_key_hash', sha1(new_key.encode('utf-8')).hexdigest())
             return
 
         self.stdout.write(f'Re-encrypting {total} revisions in batches of {BATCH_SIZE}...')

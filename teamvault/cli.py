@@ -2,7 +2,6 @@ import contextlib
 import pathlib
 import sys
 from argparse import REMAINDER, ArgumentParser
-from gettext import gettext as _
 from hashlib import sha1
 from importlib import metadata
 from os import environ
@@ -23,8 +22,8 @@ def build_parser():
         version=metadata.version('teamvault'),
     )
     subparsers = parser.add_subparsers(
-        title=_('subcommands'),
-        help=_("use 'teamvault <subcommand> --help' for more info"),
+        title='subcommands',
+        help="use 'teamvault <subcommand> --help' for more info",
     )
 
     environ['DJANGO_SETTINGS_MODULE'] = 'teamvault.settings'
@@ -87,6 +86,7 @@ def plumbing(pargs):
 
 
 def run(pargs):
+    execute_from_command_line(['', 'check'])
     cmd = 'gunicorn --preload teamvault.wsgi:application'
     if pargs.bind:
         cmd += ' -b ' + pargs.bind

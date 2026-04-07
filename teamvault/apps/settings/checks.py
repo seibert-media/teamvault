@@ -12,8 +12,8 @@ def check_fernet_key_hash(app_configs, **kwargs):  # noqa: ARG001
 
     from .models import Setting
 
-    key = getattr(settings, 'TEAMVAULT_SECRET_KEY', None)
-    if key is None:
+    key = getattr(settings, 'TEAMVAULT_SECRET_KEY', '')
+    if not key:
         return [
             Error(
                 'TEAMVAULT_SECRET_KEY is not configured.',
