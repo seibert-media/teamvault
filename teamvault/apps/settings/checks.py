@@ -1,4 +1,3 @@
-from gettext import gettext as _
 from hashlib import sha1
 from os import environ
 
@@ -42,7 +41,7 @@ def check_fernet_key_hash(app_configs, **kwargs):  # noqa: ARG001
     if key_hash != checksum:
         return [
             Error(
-                _("fernet_key in '{path}' does not match the hash stored in the database ({hash}).").format(
+                "fernet_key in '{path}' does not match the hash stored in the database ({hash}).".format(
                     hash=checksum,
                     path=environ['TEAMVAULT_CONFIG_FILE'],
                 ),
