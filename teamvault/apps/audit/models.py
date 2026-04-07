@@ -25,6 +25,7 @@ class AuditLogCategoryChoices(TextChoices):
     SHARE_AUTOMATICALLY_REVOKED = 'share_automatically_revoked', _('share_automatically_revoked')
 
     MISCELLANEOUS = 'miscellaneous', _('miscellaneous')
+    DATA_EXPORT = 'data_export', _('data_export')
 
 
 class LogEntry(models.Model):
