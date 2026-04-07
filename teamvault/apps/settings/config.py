@@ -25,6 +25,31 @@ def configure_base_url(config, settings):
     settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
 
 
+def configure_data_dir(config):
+    data_dir = pathlib.Path(
+        environ.get('TEAMVAULT_DATA_DIR') or get_from_config(config, 'teamvault', 'data_dir', '/var/lib/teamvault')
+    )
+    if not data_dir.is_dir():
+        raise RuntimeError(
+            _('data_dir {path} does not exist or is not a directory (set in {config})').format(
+                path=data_dir,
+                config=environ['TEAMVAULT_CONFIG_FILE'],
+            )
+        )
+    test_file = data_dir / '.teamvault_write_test'
+    try:
+        test_file.touch()
+        test_file.unlink()
+    except OSError as exc:
+        raise RuntimeError(
+            _('data_dir {path} is not writable (set in {config})').format(
+                path=data_dir,
+                config=environ['TEAMVAULT_CONFIG_FILE'],
+            )
+        ) from exc
+    return data_dir
+
+
 def configure_database(config):
     """
     Called directly from the Django settings module.
@@ -423,6 +448,7 @@ session_expire_at_browser_close = True
 session_cookie_secure = False
 time_zone = UTC
 # allow_superuser_reads = False
+# data_dir = /var/lib/teamvault
 
 #[password_generator]
 #length = 16
