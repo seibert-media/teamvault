@@ -288,6 +288,7 @@ def configure_ldap_auth(config, settings):
         'is_superuser': config.get('auth_ldap', 'admin_group'),
     }
 
+    settings.AUTH_LDAP_USER_ATTRLIST = ['*', entry_uuid_attr]
     settings.AUTH_LDAP_ALWAYS_UPDATE_USER = True
     settings.AUTH_LDAP_FIND_GROUP_PERMS = False
     settings.AUTH_LDAP_MIRROR_GROUPS = True
