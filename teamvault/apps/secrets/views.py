@@ -483,18 +483,19 @@ class SecretShareList(CreateView):
     def get_form_class(self):
         form_class = super().get_form_class()
 
-        # Exclude groups and users which the secret was already shared with
+        # Exclude groups and users which the secret is actively (non-expired) shared with
+        active_group_shares = self.group_shares.filter(is_expired=False)
+        active_user_shares = self.user_shares.filter(is_expired=False)
         form_class.base_fields['group'].queryset = (
             Group.objects
             .all()
-            .exclude(name__in=self.group_shares.values_list('group__name', flat=True))
+            .exclude(name__in=active_group_shares.values_list('group__name', flat=True))
             .order_by('name')
         )
         form_class.base_fields['user'].queryset = (
             User.objects
             .filter(is_active=True)
-            .order_by('username')
-            .exclude(username__in=self.user_shares.values_list('user__username', flat=True))
+            .exclude(username__in=active_user_shares.values_list('user__username', flat=True))
             .order_by('username')
         )
         return form_class
@@ -508,12 +509,9 @@ secret_share_list = login_required(SecretShareList.as_view())
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
     user_can_read_initial = share_data.secret.is_readable(request.user)
-    permission = share_data.secret.check_share_access(request.user)
-    if not permission:
-        raise PermissionDenied()
+    permission = share_data.check_delete_access(request.user)
 
     secret = share_data.secret
-    user_can_read_initial = secret.check_read_access(request.user)
     entity_type = share_data.shared_entity_type
     entity_name = share_data.shared_entity_name
     share_data.delete()
