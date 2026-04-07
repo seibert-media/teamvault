@@ -90,7 +90,7 @@
             <div class="col-12 col-lg-auto my-2 me-lg-4 mb-lg-2 d-flex justify-content-center align-items-center">
                 <button class="btn btn-outline-primary bg-transparent btn-sm border-0 d-flex align-items-center"
                         role="button"
-                        onclick="toggleTheme()"
+                        data-theme-toggle
                         aria-expanded="false"
                         title="{% trans "Change Theme" %}">
                     <i class="fa fa-fw fa-xl text-white lh-1" id="theme-icon"></i>
@@ -100,61 +100,6 @@
                     </span>
                 </button>
             </div>
-
-            <script>
-                document.addEventListener('DOMContentLoaded', () => {
-                    const storedTheme = localStorage.getItem('theme');
-                    const isAuto = !storedTheme || storedTheme === 'auto';
-                    if (isAuto) {
-                        updateThemeIcon(true);
-                    } else {
-                        updateThemeIcon(false, storedTheme);
-                    }
-                });
-
-                function getSystemTheme() {
-                    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-                }
-
-                function toggleTheme() {
-                    const storedTheme = localStorage.getItem('theme');
-
-                    let newStoredTheme;
-                    if (!storedTheme || storedTheme === 'auto') {
-                        newStoredTheme = 'light';
-                    } else if (storedTheme === 'light') {
-                        newStoredTheme = 'dark';
-                    } else {
-                        newStoredTheme = 'auto';
-                    }
-
-                    if (newStoredTheme === 'auto') {
-                        localStorage.removeItem('theme');
-                        document.documentElement.setAttribute('data-bs-theme', getSystemTheme());
-                        updateThemeIcon(true);
-                    } else {
-                        localStorage.setItem('theme', newStoredTheme);
-                        document.documentElement.setAttribute('data-bs-theme', newStoredTheme);
-                        updateThemeIcon(false, newStoredTheme);
-                    }
-                }
-
-                function updateThemeIcon(isAuto, theme) {
-                    const icon = document.getElementById('theme-icon');
-                    const autoIcon = document.getElementById('theme-icon-auto');
-                    if (!icon || !autoIcon) return;
-
-                    if (isAuto) {
-                        icon.style.display = 'none';
-                        autoIcon.style.display = '';
-                    } else {
-                        autoIcon.style.display = 'none';
-                        icon.style.display = '';
-                        icon.classList.remove('fa-sun', 'fa-moon');
-                        icon.classList.add(theme === 'dark' ? 'fa-moon' : 'fa-sun');
-                    }
-                }
-            </script>
 
             <!-- User actions -->
             <div class="col-12 col-lg-auto my-2 mb-lg-2 d-flex justify-content-center justify-content-lg-end align-items-center">
