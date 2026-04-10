@@ -5,23 +5,25 @@ from django.conf import settings
 from django.db import migrations
 from cryptography.fernet import Fernet
 
+from teamvault.apps.secrets.enums import ContentType
+
 
 def change_pwd_into_new_format(apps, schema_editor):
     f = Fernet(settings.TEAMVAULT_SECRET_KEY)
     SecretRevision = apps.get_model("secrets", "SecretRevision")
-    pwd_secret_revision = SecretRevision.objects.filter(secret__content_type=1)
+    pwd_secret_revision = SecretRevision.objects.filter(secret__content_type=ContentType.PASSWORD)
 
     for revision in pwd_secret_revision:
         encrypted = revision.encrypted_data
         decrypted_payload = f.decrypt(encrypted).decode('utf-8')
         deserialized = json.loads(decrypted_payload)
 
-        if type(deserialized) == dict:
+        if isinstance(deserialized, dict):
             continue
 
         new_data = {"password": str(deserialized)}
-        json_encoded = json.dumps(new_data)
-        revision.encrypted_data = f.encrypt(json_encoded.encode('utf-8'))
+        json_serialized = json.dumps(new_data)
+        revision.encrypted_data = f.encrypt(json_serialized.encode('utf-8'))
         revision.save()
 
 
