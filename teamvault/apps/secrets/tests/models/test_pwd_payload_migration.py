@@ -1,4 +1,5 @@
 import json
+from typing import override
 
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
@@ -33,6 +34,7 @@ class Secret0041MigrationTest(MigratorTestCase):
     migrate_from = ('secrets', '0040_secretchange_scrubbed_fields')
     migrate_to = ('secrets', '0041_fix_passwords_old_payload')
 
+    @override
     def prepare(self):
         user = User.objects.create_user(username='pwd migration test user')
         user.save()
@@ -143,6 +145,7 @@ class Secret0041RawStringMigrationTest(MigratorTestCase):
     migrate_from = ('secrets', '0040_secretchange_scrubbed_fields')
     migrate_to = ('secrets', '0041_fix_passwords_old_payload')
 
+    @override
     def prepare(self):
         user = User.objects.create_user(username='pwd raw string test user')
         user.save()
