@@ -16,7 +16,10 @@ def change_pwd_into_new_format(apps, schema_editor):
     for revision in pwd_secret_revision:
         encrypted = revision.encrypted_data
         decrypted_payload = f.decrypt(encrypted).decode('utf-8')
-        deserialized = json.loads(decrypted_payload)
+        try:
+            deserialized = json.loads(decrypted_payload)
+        except json.JSONDecodeError:
+            deserialized = decrypted_payload
 
         if isinstance(deserialized, dict):
             continue
