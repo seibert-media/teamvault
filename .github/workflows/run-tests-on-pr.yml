@@ -7,13 +7,13 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0 # immutable
 
       - name: Set up just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Run Ruff format check
         run: just check-format
@@ -24,10 +24,10 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Bun
-        uses: oven-sh/setup-bun@v2
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -75,15 +75,15 @@ jobs:
           libsasl2-dev \
           postgresql-contrib
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@v8.1.0 # immutable
         with:
           enable-cache: true
           cache-dependency-glob: |
@@ -91,10 +91,10 @@ jobs:
             **/pyproject.toml
 
       - name: Set up just
-        uses: extractions/setup-just@v3
+        uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
       - name: Cache venv
-        uses: actions/cache@v4
+        uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
           path: |
             .venv
