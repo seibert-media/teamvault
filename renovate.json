@@ -4,9 +4,8 @@
   "packageRules": [
     {
       "matchUpdateTypes": ["minor", "patch"],
-      "matchVersioningStrategy": "semver",
-      "automerge": true,
-      "minimumReleaseAge": "7 days"
+      "minimumReleaseAge": "7 days",
+      "groupName": "all non-major dependencies"
     }
   ]
 }
