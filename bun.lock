@@ -1,5 +1,6 @@
 {
   "lockfileVersion": 1,
+  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "teamvault",
@@ -19,7 +20,7 @@
         "core-js": "^3.47.0",
         "dompurify": "^3.3.0",
         "esbuild": "^0.27.0",
-        "htmx.org": "^1.9.12",
+        "htmx.org": "^2.0.0",
         "jquery": "^3.7.1",
         "jsqr": "^1.4.0",
         "lodash": "^4.17.21",
@@ -523,7 +524,7 @@
 
     "html-escaper": ["html-escaper@2.0.2", "", {}, "sha512-H2iMtd0I4Mt5eYiapRdIDjp+XzelXQ0tFE4JS7YFwFevXXMmOp9myNrUvCg0D6ws8iqkRPBfKHgbwig1SmlLfg=="],
 
-    "htmx.org": ["htmx.org@1.9.12", "", {}, "sha512-VZAohXyF7xPGS52IM8d1T1283y+X4D+Owf3qY1NZ9RuBypyu9l8cGsxUMAG5fEAb/DhT7rDoJ9Hpu5/HxFD3cw=="],
+    "htmx.org": ["htmx.org@2.0.10", "", {}, "sha512-kdeJe7ZVwaS6QMz/ebBIVtZdpwen6L0OQ5GOhPV9MKBb196TCZeZu4yA7ZIQsaLKv7EpXz+So7KSXNuHXhj7Cw=="],
 
     "http-deceiver": ["http-deceiver@1.2.7", "", {}, "sha512-LmpOGxTfbpgtGVxJrj5k7asXHCgNZp5nLfp+hWc8QQRqtb7fUy6kRY3BO1h9ddF6yIPYUARgxGOwB42DnxIaNw=="],
 
