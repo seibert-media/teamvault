@@ -3,7 +3,7 @@ revision = 3
 requires-python = ">=3.12"
 
 [options]
-exclude-newer = "2026-04-15T10:26:47.194898077Z"
+exclude-newer = "0001-01-01T00:00:00Z" # This has no effect and is included for backwards compatibility when using relative exclude-newer values.
 exclude-newer-span = "P7D"
 
 [[package]]
@@ -353,14 +353,14 @@ wheels = [
 
 [[package]]
 name = "djangorestframework"
-version = "3.16.1"
+version = "3.17.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8a/95/5376fe618646fde6899b3cdc85fd959716bb67542e273a76a80d9f326f27/djangorestframework-3.16.1.tar.gz", hash = "sha256:166809528b1aced0a17dc66c24492af18049f2c9420dbd0be29422029cfc3ff7", size = 1089735, upload-time = "2025-08-06T17:50:53.251Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/d7/c016e69fac19ff8afdc89db9d31d9ae43ae031e4d1993b20aca179b8301a/djangorestframework-3.17.1.tar.gz", hash = "sha256:a6def5f447fe78ff853bff1d47a3c59bf38f5434b031780b351b0c73a62db1a5", size = 905742, upload-time = "2026-03-24T16:58:33.705Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b0/ce/bf8b9d3f415be4ac5588545b5fcdbbb841977db1c1d923f7568eeabe1689/djangorestframework-3.16.1-py3-none-any.whl", hash = "sha256:33a59f47fb9c85ede792cbf88bde71893bcda0667bc573f784649521f1102cec", size = 1080442, upload-time = "2025-08-06T17:50:50.667Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/e1/2c516bdc83652b1a60c6119366ac2c0607b479ed05cd6093f916ca8928f8/djangorestframework-3.17.1-py3-none-any.whl", hash = "sha256:c3c74dd3e83a5a3efc37b3c18d92bd6f86a6791c7b7d4dff62bb068500e76457", size = 898844, upload-time = "2026-03-24T16:58:31.845Z" },
 ]
 
 [[package]]
@@ -391,14 +391,14 @@ wheels = [
 
 [[package]]
 name = "gunicorn"
-version = "25.0.3"
+version = "25.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "packaging" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/e5/e1d2225d2b75fe4988821715d2c526fdf7b39f4a7260aa7e2bb4b25ec65c/gunicorn-25.0.3.tar.gz", hash = "sha256:b53a7fff1a07b825b962af320554de44ae77a26abfa373711ff3f83d57d3506d", size = 9702357, upload-time = "2026-02-07T16:53:52.72Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/c4/f4/e78fa054248fab913e2eab0332c6c2cb07421fca1ce56d8fe43b6aef57a4/gunicorn-25.3.0.tar.gz", hash = "sha256:f74e1b2f9f76f6cd1ca01198968bd2dd65830edc24b6e8e4d78de8320e2fe889", size = 634883, upload-time = "2026-03-27T00:00:26.092Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/84/117f39896ded517149be72d16c02252885690e9b0d1b84281944928f61aa/gunicorn-25.0.3-py3-none-any.whl", hash = "sha256:aca364c096c81ca11acd4cede0aaeea91ba76ca74e2c0d7f879154db9d890f35", size = 171728, upload-time = "2026-02-07T16:53:49.546Z" },
+    { url = "https://files.pythonhosted.org/packages/43/c8/8aaf447698c4d59aa853fd318eed300b5c9e44459f242ab8ead6c9c09792/gunicorn-25.3.0-py3-none-any.whl", hash = "sha256:cacea387dab08cd6776501621c295a904fe8e3b7aae9a1a3cbb26f4e7ed54660", size = 208403, upload-time = "2026-03-27T00:00:27.386Z" },
 ]
 
 [[package]]
@@ -598,15 +598,15 @@ wheels = [
 
 [[package]]
 name = "social-auth-app-django"
-version = "5.7.0"
+version = "5.8.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "django" },
     { name = "social-auth-core" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/eb/1d/50d9f85975f8aebec6fd353e815d260acada851004e0457fa53e346ed242/social_auth_app_django-5.7.0.tar.gz", hash = "sha256:c0cc118d1bb935dbf02acb8a57fabd7b07694452fce755a5956282c69f019c79", size = 29192, upload-time = "2025-12-18T19:00:26.209Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/d7/89/bebc2fe61afa22f0da654fd2c3f671a4c84d08bdaae744ed16295f841e37/social_auth_app_django-5.8.0.tar.gz", hash = "sha256:512d4a0f28f29d961badad14ed9b7247e4b3f870ed8f261035735a7ac69f4455", size = 29409, upload-time = "2026-04-20T10:49:10.765Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/39/df/8ed6e0b5e97a3893fc9d2fa5ef57844f0ed820119df49ea151fc1b0ceac1/social_auth_app_django-5.7.0-py3-none-any.whl", hash = "sha256:492b6f64e1e9fa5ed62b24bc19bde31c235fd4eb7fbd5c310e999e752b8f699a", size = 28542, upload-time = "2025-12-18T19:00:26.955Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/09/5ac5ba20704b0c86e9d5547a0a91aaa3c8baadae43a02f5c1b265a778f46/social_auth_app_django-5.8.0-py3-none-any.whl", hash = "sha256:c4ecbbbb1fd42143aaa16e2b18a1d77d652939385bcc6a0ff53af3bacd65e5f4", size = 28480, upload-time = "2026-04-20T10:49:09.548Z" },
 ]
 
 [[package]]
@@ -678,16 +678,16 @@ requires-dist = [
     { name = "django-htmx", specifier = "~=1.27.0" },
     { name = "django-test-migrations", specifier = ">=1.5.0" },
     { name = "django-webpack-loader", specifier = "~=3.2.3" },
-    { name = "djangorestframework", specifier = "~=3.16.1" },
-    { name = "gunicorn", specifier = "~=25.0.3" },
+    { name = "djangorestframework", specifier = "~=3.17.1" },
+    { name = "gunicorn", specifier = "~=25.3.0" },
     { name = "hashids", specifier = "~=1.3.1" },
     { name = "huey", specifier = "~=2.6.0" },
     { name = "psycopg", specifier = "~=3.3.2" },
     { name = "pyotp", specifier = "~=2.9" },
     { name = "pytz", specifier = "~=2025.2" },
     { name = "requests", specifier = "~=2.32" },
-    { name = "social-auth-app-django", specifier = "~=5.7.0" },
-    { name = "whitenoise", extras = ["brotli"], specifier = "~=6.11.0" },
+    { name = "social-auth-app-django", specifier = "~=5.8.0" },
+    { name = "whitenoise", extras = ["brotli"], specifier = "~=6.12.0" },
 ]
 
 [package.metadata.requires-dev]
@@ -736,11 +736,11 @@ wheels = [
 
 [[package]]
 name = "whitenoise"
-version = "6.11.0"
+version = "6.12.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/15/95/8c81ec6b6ebcbf8aca2de7603070ccf37dbb873b03f20708e0f7c1664bc6/whitenoise-6.11.0.tar.gz", hash = "sha256:0f5bfce6061ae6611cd9396a8231e088722e4fc67bc13a111be74c738d99375f", size = 26432, upload-time = "2025-09-18T09:16:10.995Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/cb/2a/55b3f3a4ec326cd077c1c3defeee656b9298372a69229134d930151acd01/whitenoise-6.12.0.tar.gz", hash = "sha256:f723ebb76a112e98816ff80fcea0a6c9b8ecde835f8ddda25df7a30a3c2db6ad", size = 26841, upload-time = "2026-02-27T00:05:42.028Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/6c/e9/4366332f9295fe0647d7d3251ce18f5615fbcb12d02c79a26f8dba9221b3/whitenoise-6.11.0-py3-none-any.whl", hash = "sha256:b2aeb45950597236f53b5342b3121c5de69c8da0109362aee506ce88e022d258", size = 20197, upload-time = "2025-09-18T09:16:09.754Z" },
+    { url = "https://files.pythonhosted.org/packages/db/eb/d5583a11486211f3ebd4b385545ae787f32363d453c19fffd81106c9c138/whitenoise-6.12.0-py3-none-any.whl", hash = "sha256:fc5e8c572e33ebf24795b47b6a7da8da3c00cff2349f5b04c02f28d0cc5a3cc2", size = 20302, upload-time = "2026-02-27T00:05:40.086Z" },
 ]
 
 [package.optional-dependencies]
