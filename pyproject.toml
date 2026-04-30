@@ -24,7 +24,7 @@ classifiers = [
 ]
 keywords = ["password", "safe", "manager", "sharing"]
 dependencies = [
-    "cryptography~=46.0.4",
+    "cryptography~=47.0.0",
     "django-auth-ldap~=5.3.0",
     "django-bootstrap5==26.2",
     "django-filter==25.2",
