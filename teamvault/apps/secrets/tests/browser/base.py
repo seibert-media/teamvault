@@ -35,7 +35,13 @@ class PlaywrightTestCase(StaticLiveServerTestCase):
         os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = 'true'
         super().setUpClass()
         cls.playwright = sync_playwright().start()
-        cls.browser = cls.playwright.chromium.launch(headless=True)
+        # Force the full Chromium binary so the suite works whether or not
+        # chrome-headless-shell was installed (we run `playwright install
+        # --no-shell` in CI to keep the install footprint small).
+        cls.browser = cls.playwright.chromium.launch(
+            headless=True,
+            executable_path=cls.playwright.chromium.executable_path,
+        )
 
     @classmethod
     def tearDownClass(cls):
