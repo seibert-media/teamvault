@@ -22,8 +22,8 @@
     "tom-select": "^2.5.2"
   },
   "devDependencies": {
-    "@rspack/cli": "^1.7.11",
-    "@rspack/core": "^1.7.11",
+    "@rspack/cli": "^2.0.0",
+    "@rspack/core": "^2.0.0",
     "sass-embedded": "^1.99.0",
     "sass-loader": "^16.0.7",
     "webpack-bundle-tracker": "^3.2.3",
