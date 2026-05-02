@@ -1,7 +1,12 @@
 import * as bootstrap from 'bootstrap';
-import {initZxcvbn} from '../zxcvbn.ts';
 
-const zxcvbn = initZxcvbn();
+// zxcvbn dictionaries (~1.6 MB) and the jsqr QR scanner (~250 KB) start
+// downloading the moment this module evaluates — the secret-addedit
+// entry imports this file, so the fetch begins as soon as the page's
+// JS runs, in parallel with everything else. Use sites await the saved
+// promise so first interaction never waits on network.
+const zxcvbnReady = import(/* webpackChunkName: "zxcvbn" */ '../zxcvbn.ts').then(m => m.initZxcvbn());
+const jsqrReady = import(/* webpackChunkName: "jsqr" */ 'jsqr').then(m => m.default);
 
 export function init(config) {
   const generatePasswordUrl = config.dataset.generatePasswordUrl;
@@ -19,16 +24,19 @@ export function init(config) {
 
   passwordField.generated = false;
 
-  function ratePassword() {
-    let score = zxcvbn(passwordField.value.toString()).score + 1;
-    let color = 'text-warning-bright';
-    if (!passwordField.value) {
-      color = 'text-muted';
-      score = 0;
-    } else if (score <= 2) {
-      color = 'text-danger-bright';
-    } else if (score === 5) {
-      color = 'text-success-bright';
+  async function ratePassword() {
+    let score = 0;
+    let color = 'text-muted';
+    if (passwordField.value) {
+      const zxcvbn = await zxcvbnReady;
+      score = zxcvbn(passwordField.value.toString()).score + 1;
+      if (score <= 2) {
+        color = 'text-danger-bright';
+      } else if (score === 5) {
+        color = 'text-success-bright';
+      } else {
+        color = 'text-warning-bright';
+      }
     }
     const filledStar = `<i class='fas fa-star ${color}'></i>`;
     const hollowStar = `<i class='far fa-star ${color}'></i>`;
@@ -88,7 +96,7 @@ export function init(config) {
 
   ratePassword();
 
-  otpField.addEventListener('change', () => {
+  otpField.addEventListener('change', async () => {
     if (otpField.type !== 'file') {
       return;
     }
@@ -96,7 +104,7 @@ export function init(config) {
     if (!file) {
       return;
     }
-    const qrScanner = require('jsqr');
+    const qrScanner = await jsqrReady;
     const reader = new FileReader();
     reader.onload = function (event) {
       const img = new Image();

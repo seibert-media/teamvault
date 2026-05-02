@@ -6,7 +6,6 @@ import '../../scss/base.scss'
 import * as bootstrap from 'bootstrap'
 import $ from 'jquery'
 import {createPopper} from '@popperjs/core'
-import {TempusDominus} from '@eonasdan/tempus-dominus'
 import TomSelect from 'tom-select';
 
 // Modules
@@ -25,7 +24,6 @@ window.htmx = require('htmx.org')
 window.$ = $
 window.jQuery = $
 window.Popper = {createPopper}
-window.TempusDominus = TempusDominus
 window.TomSelect = TomSelect
 
 // Select2 initialization (attaches to $.fn, sets defaults, patches backspace)
