@@ -1,6 +1,5 @@
 {
   "lockfileVersion": 1,
-  "configVersion": 0,
   "workspaces": {
     "": {
       "name": "teamvault",
@@ -26,8 +25,9 @@
         "tom-select": "^2.5.2",
       },
       "devDependencies": {
-        "@rspack/cli": "^2.0.0",
-        "@rspack/core": "^2.0.0",
+        "@rspack/cli": "^2.0.1",
+        "@rspack/core": "^2.0.1",
+        "@rspack/dev-server": "^2.0.1",
         "sass-embedded": "^1.99.0",
         "sass-loader": "^16.0.7",
         "webpack-bundle-tracker": "^3.2.3",
@@ -121,6 +121,10 @@
     "@rspack/cli": ["@rspack/cli@2.0.1", "", { "peerDependencies": { "@rspack/core": "^2.0.0-0", "@rspack/dev-server": "^2.0.0-0" }, "optionalPeers": ["@rspack/dev-server"], "bin": { "rspack": "bin/rspack.js" } }, "sha512-UwqLnShg6ui3LOsJfJvyGNfHtgkGd/Cjjm2T7jR6lTkoX9Jj7YKl55gkPqNw34et8+gp/5Ehso6tsga8bqZi5Q=="],
 
     "@rspack/core": ["@rspack/core@2.0.1", "", { "dependencies": { "@rspack/binding": "2.0.1" }, "peerDependencies": { "@module-federation/runtime-tools": "^0.24.1 || ^2.0.0", "@swc/helpers": ">=0.5.1" }, "optionalPeers": ["@module-federation/runtime-tools", "@swc/helpers"] }, "sha512-lgfZiExh8kDR/3obgi3RQKwKG5av1Xf5qDN1aVde777W9pbmx0Pqvrww1qtNvJ+gobEjbrrn5HEZWYGe0VLmcA=="],
+
+    "@rspack/dev-middleware": ["@rspack/dev-middleware@2.0.1", "", { "peerDependencies": { "@rspack/core": "^2.0.0-0" }, "optionalPeers": ["@rspack/core"] }, "sha512-cXSubf5/C+dvkWV2/+rGTtiZ93wSLd3OlTQhwMvsmsmGDdPlkYqIvQ+BTkOk9UCXxKIaF0DDYYmCpBeRRYJfJw=="],
+
+    "@rspack/dev-server": ["@rspack/dev-server@2.0.1", "", { "dependencies": { "@rspack/dev-middleware": "^2.0.1" }, "peerDependencies": { "@rspack/core": "^2.0.0-0", "selfsigned": "^5.0.0" }, "optionalPeers": ["selfsigned"] }, "sha512-N5sIdU9v6WhwPH6Ek8QCj4IMvGd8jA3ZW1NMAyHP1ezzKIr2/idcNV2zX5vbC6FJvOLRLww0rFjfKA+z4tshDA=="],
 
     "@tarekraafat/autocomplete.js": ["@tarekraafat/autocomplete.js@10.2.9", "", {}, "sha512-A7OP3iJDTWeO85M3Vxu391acu9SmDguormHpMZ13khuyM180dKl9O1gAXSDA322XwkYuUU1Ad7WchW1TQNNuDw=="],
 
