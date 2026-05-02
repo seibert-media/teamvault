@@ -48,7 +48,7 @@ version = "0.12.0"  # automatically changed via "uv version"
 
 [dependency-groups]
 dev = [
-    "django-stubs~=5.2.0",
+    "django-stubs~=6.0.3",
     "djangorestframework-stubs~=3.16.0",
     "faker",
     "ruff>=0.14.6",
