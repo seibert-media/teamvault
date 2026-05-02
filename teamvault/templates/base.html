@@ -1,6 +1,5 @@
 {% load i18n %}
 {% load render_bundle from webpack_loader %}
-{% load webpack_static from webpack_loader %}
 
 {% load static %}
 <!DOCTYPE html>
@@ -13,60 +12,16 @@
     <link href="{% url 'opensearch' %}" type="application/opensearchdescription+xml" title="TeamVault" rel="search">
     <link rel="icon" type="image/x-icon" href="{% static 'rest_framework/docs/img/favicon.ico' %}">
 
-    {% render_bundle 'main' %}
+    {% render_bundle 'base' attrs='crossorigin="anonymous"' %}
 
     {% block head %}{% endblock %}
 </head>
 
 <body data-bs-no-jquery>
-<script>
-    (function () {
-        const getStoredTheme = () => localStorage.getItem('theme');
-        const getSystemTheme = () => window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 
-        const theme = getStoredTheme() || getSystemTheme();
-
-        document.documentElement.setAttribute('data-bs-theme', theme);
-    })();
-</script>
-
-<script>
-    const tooltipOptions = {container: 'body', html: true, trigger: 'hover'}
-
-    function refreshTooltips() {
-        let tooltipTriggerList = htmx.findAll('[data-bs-toggle="tooltip"]');
-        [...tooltipTriggerList].map(tooltipTriggerEl => bootstrap.Tooltip.getOrCreateInstance(tooltipTriggerEl, tooltipOptions));
-    }
-
-    document.addEventListener('htmx:load', () => {
-        refreshTooltips()
-    })
-</script>
-<script>
-    function triggerNotyf(type, message) {
-        window.notyf.open({
-            dismissible: true,
-            message: message,
-            type: type,
-        })
-    }
-
-    {% if messages %}
-        document.addEventListener('DOMContentLoaded', () => {
-            {% for message in messages %}
-                triggerNotyf("{{ message.level_tag }}", "{{ message }}");
-            {% endfor %}
-        })
-    {% endif %}
-
-    // listener for htmx message events
-    document.addEventListener('django.contrib.messages', event => {
-        // event.detail contains the message_list we defined in our htmx_message_middleware
-        for (const msg of event['detail']['message_list']) {
-            triggerNotyf(msg.level, msg.message)
-        }
-    });
-</script>
+{% if messages %}
+<div data-django-messages='[{% for message in messages %}{"type":"{{ message.level_tag }}","message":"{{ message|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]' hidden></div>
+{% endif %}
 
 <div class="background"></div>
 

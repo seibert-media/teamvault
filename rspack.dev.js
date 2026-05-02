@@ -16,6 +16,9 @@ module.exports = merge(common, {
     static: path.resolve('./teamvault/static/bundled/'),
     hot: true,
     port: 3000,
+    devMiddleware: {
+      publicPath: '/dist/',
+    },
     headers: {
       'Access-Control-Allow-Origin': '*',
     },
