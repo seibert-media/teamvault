@@ -8,8 +8,4 @@ module.exports = merge(common, {
   output: {
     publicPath: '/static/bundled/',
   },
-  optimization: {
-    minimize: true,
-    usedExports: true,
-  },
 });

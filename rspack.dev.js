@@ -5,12 +5,9 @@ const path = require('path');
 /** @type {import('@rspack/core').Configuration} */
 module.exports = merge(common, {
   mode: 'development',
+  devtool: 'eval-cheap-module-source-map',
   output: {
     publicPath: 'http://localhost:3000/dist/',
-  },
-  optimization: {
-    minimize: false,
-    usedExports: false,
   },
   devServer: {
     static: path.resolve('./teamvault/static/bundled/'),

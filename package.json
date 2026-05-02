@@ -62,5 +62,9 @@
     "build": "rspack build --config rspack.prod.js",
     "serve": "rspack serve --config rspack.dev.js"
   },
+  "browserslist": [
+    "last 2 versions",
+    "not dead"
+  ],
   "trustedDependencies": []
 }
