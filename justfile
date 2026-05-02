@@ -41,7 +41,7 @@ db_ready:
 
 # Run frontend dev server (bun + rspack)
 frontend:
-  bun run serve
+  bun --bun run serve
 
 # Start DB and then teamvault
 teamvault: db db_ready
