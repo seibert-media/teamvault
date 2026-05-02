@@ -42,9 +42,6 @@ module.exports = {
   resolve: {
     extensions: ['*', '.js', '.ts'],
   },
-  experiments: {
-    css: true,
-  },
   module: {
     rules: [
       {
