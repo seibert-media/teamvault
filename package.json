@@ -22,8 +22,9 @@
     "tom-select": "^2.5.2"
   },
   "devDependencies": {
-    "@rspack/cli": "^1.7.11",
-    "@rspack/core": "^1.7.11",
+    "@rspack/cli": "^2.0.1",
+    "@rspack/core": "^2.0.1",
+    "@rspack/dev-server": "^2.0.1",
     "sass-embedded": "^1.99.0",
     "sass-loader": "^16.0.7",
     "webpack-bundle-tracker": "^3.2.3",
@@ -61,5 +62,9 @@
     "build": "rspack build --config rspack.prod.js",
     "serve": "rspack serve --config rspack.dev.js"
   },
+  "browserslist": [
+    "last 2 versions",
+    "not dead"
+  ],
   "trustedDependencies": []
 }

@@ -4,6 +4,7 @@ const BundleTracker = require('webpack-bundle-tracker');
 /** @type {import('@rspack/core').Configuration} */
 module.exports = {
   context: __dirname,
+  target: 'browserslist',
   entry: {
     base: './teamvault/static/js/entries/base.js',
     'secret-detail': './teamvault/static/js/entries/secret-detail.js',
@@ -11,10 +12,13 @@ module.exports = {
   },
   output: {
     path: path.resolve('./teamvault/static/bundled/'),
-    filename: '[name]-[fullhash].js',
-    chunkFilename: '[name]-[fullhash].js',
-    cssFilename: '[name]-[fullhash].css',
-    cssChunkFilename: '[name]-[fullhash].css',
+    filename: '[name]-[contenthash].js',
+    chunkFilename: '[name]-[contenthash].js',
+    cssFilename: '[name]-[contenthash].css',
+    cssChunkFilename: '[name]-[contenthash].css',
+  },
+  cache: {
+    type: 'filesystem',
   },
   optimization: {
     // All entries share one runtime and module cache. Without this, each entry
@@ -40,10 +44,7 @@ module.exports = {
     }),
   ],
   resolve: {
-    extensions: ['*', '.js', '.ts'],
-  },
-  experiments: {
-    css: true,
+    extensions: ['.js', '.ts'],
   },
   module: {
     rules: [
@@ -80,7 +81,11 @@ module.exports = {
         type: 'css',
       },
       {
-        test: /\.(eot|svg|ttf|woff|woff2|png|jpg|gif)$/i,
+        test: /\.(eot|ttf|woff|woff2)$/i,
+        type: 'asset/resource',
+      },
+      {
+        test: /\.(svg|png|jpg|gif)$/i,
         type: 'asset',
       },
     ],
