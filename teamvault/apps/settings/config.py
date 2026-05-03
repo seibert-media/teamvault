@@ -399,6 +399,17 @@ def configure_teamvault_secret_key(config, settings):
     settings.TEAMVAULT_SECRET_KEY = config.get('teamvault', 'fernet_key')
 
 
+def configure_template_loaders(config):
+    base_loaders = [
+        'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
+    ]
+    insecure_debug = get_from_config(config, 'teamvault', 'insecure_debug_mode', 'no').lower()
+    if insecure_debug in {'1', 'enabled', 'true', 'yes'}:
+        return base_loaders
+    return [('django.template.loaders.cached.Loader', base_loaders)]
+
+
 def configure_time_zone(config):
     return get_from_config(config, 'teamvault', 'time_zone', 'UTC')
 
