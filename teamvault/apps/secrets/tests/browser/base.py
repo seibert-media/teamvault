@@ -73,7 +73,7 @@ class PlaywrightTestCase(StaticLiveServerTestCase):
     def _on_response(self, response):
         # Surface any non-success HTTP response so failures point at the
         # actual URL instead of just "Failed to load resource".
-        if response.status >= 400:
+        if response.status >= 400:  # noqa: PLR2004
             self.js_errors.append(f'http {response.status}: {response.url}')
 
     def _login(self, username, password):
