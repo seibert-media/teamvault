@@ -52,6 +52,7 @@ def configure_database(config):
     """
     Called directly from the Django settings module.
     """
+    health_checks = get_from_config(config, 'database', 'conn_health_checks', 'yes').lower()
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -60,6 +61,8 @@ def configure_database(config):
             'PASSWORD': get_from_config(config, 'database', 'password', ''),
             'PORT': get_from_config(config, 'database', 'port', '5432'),
             'USER': get_from_config(config, 'database', 'user', 'teamvault'),
+            'CONN_MAX_AGE': int(get_from_config(config, 'database', 'conn_max_age', '60')),
+            'CONN_HEALTH_CHECKS': health_checks in {'1', 'enabled', 'true', 'yes'},
         },
     }
     return DATABASES
@@ -443,6 +446,13 @@ host = localhost
 name = teamvault
 user = teamvault
 password = teamvault
+## How long (seconds) a worker keeps a Postgres connection alive between
+## requests. 0 = open/close per request (Django's old default). Higher values
+## reduce per-request latency at the cost of holding connection slots.
+#conn_max_age = 60
+## When True, validates the connection before reusing it (handles Postgres
+## restarts gracefully). Recommended whenever conn_max_age > 0.
+#conn_health_checks = yes
 
 [hashid]
 min_length = 6
