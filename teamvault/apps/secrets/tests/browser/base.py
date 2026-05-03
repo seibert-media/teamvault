@@ -58,6 +58,7 @@ class PlaywrightTestCase(StaticLiveServerTestCase):
         self.js_errors: list[str] = []
         self.page.on('pageerror', lambda exc: self.js_errors.append(f'pageerror: {exc}'))
         self.page.on('console', self._on_console)
+        self.page.on('response', self._on_response)
         self._login(SUPERUSER_NAME, SUPERUSER_PASSWORD)
 
     def tearDown(self):
@@ -66,7 +67,14 @@ class PlaywrightTestCase(StaticLiveServerTestCase):
 
     def _on_console(self, msg):
         if msg.type == 'error':
-            self.js_errors.append(f'console.error: {msg.text}')
+            url = msg.location.get('url') if msg.location else ''
+            self.js_errors.append(f'console.error: {msg.text} ({url})' if url else f'console.error: {msg.text}')
+
+    def _on_response(self, response):
+        # Surface any non-success HTTP response so failures point at the
+        # actual URL instead of just "Failed to load resource".
+        if response.status >= 400:
+            self.js_errors.append(f'http {response.status}: {response.url}')
 
     def _login(self, username, password):
         self.page.goto(f'{self.live_server_url}{reverse("accounts.login")}')
