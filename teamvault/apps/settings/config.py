@@ -52,6 +52,7 @@ def configure_database(config):
     """
     Called directly from the Django settings module.
     """
+    health_checks = get_from_config(config, 'database', 'conn_health_checks', 'yes').lower()
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -60,6 +61,8 @@ def configure_database(config):
             'PASSWORD': get_from_config(config, 'database', 'password', ''),
             'PORT': get_from_config(config, 'database', 'port', '5432'),
             'USER': get_from_config(config, 'database', 'user', 'teamvault'),
+            'CONN_MAX_AGE': int(get_from_config(config, 'database', 'conn_max_age', '60')),
+            'CONN_HEALTH_CHECKS': health_checks in {'1', 'enabled', 'true', 'yes'},
         },
     }
     return DATABASES
@@ -396,6 +399,17 @@ def configure_teamvault_secret_key(config, settings):
     settings.TEAMVAULT_SECRET_KEY = config.get('teamvault', 'fernet_key')
 
 
+def configure_template_loaders(config):
+    base_loaders = [
+        'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
+    ]
+    insecure_debug = get_from_config(config, 'teamvault', 'insecure_debug_mode', 'no').lower()
+    if insecure_debug in {'1', 'enabled', 'true', 'yes'}:
+        return base_loaders
+    return [('django.template.loaders.cached.Loader', base_loaders)]
+
+
 def configure_time_zone(config):
     return get_from_config(config, 'teamvault', 'time_zone', 'UTC')
 
@@ -443,6 +457,13 @@ host = localhost
 name = teamvault
 user = teamvault
 password = teamvault
+## How long (seconds) a worker keeps a Postgres connection alive between
+## requests. 0 = open/close per request (Django's old default). Higher values
+## reduce per-request latency at the cost of holding connection slots.
+#conn_max_age = 60
+## When True, validates the connection before reusing it (handles Postgres
+## restarts gracefully). Recommended whenever conn_max_age > 0.
+#conn_health_checks = yes
 
 [hashid]
 min_length = 6
