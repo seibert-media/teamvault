@@ -49,6 +49,10 @@ async function initIn(root) {
   if (!els.length) return;
   const TempusDominus = await tdReady;
   for (const el of els) {
+    // Re-check after the await: htmx:afterSwap and shown.bs.modal can
+    // both fire for the same modal content while tdReady is pending,
+    // so a previous initIn call may have already initialized this el.
+    if (el.dataset.tdInitialized === 'true') continue;
     new TempusDominus(el, tdOptions);
     el.dataset.tdInitialized = 'true';
   }

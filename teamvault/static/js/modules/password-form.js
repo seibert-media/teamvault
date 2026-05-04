@@ -29,13 +29,17 @@ export function init(config) {
     let color = 'text-muted';
     if (passwordField.value) {
       const zxcvbn = await zxcvbnReady;
-      score = zxcvbn(passwordField.value.toString()).score + 1;
-      if (score <= 2) {
-        color = 'text-danger-bright';
-      } else if (score === 5) {
-        color = 'text-success-bright';
-      } else {
-        color = 'text-warning-bright';
+      // Re-check after the await: the user may have cleared the field
+      // while the zxcvbn chunk was still downloading.
+      if (passwordField.value) {
+        score = zxcvbn(passwordField.value.toString()).score + 1;
+        if (score <= 2) {
+          color = 'text-danger-bright';
+        } else if (score === 5) {
+          color = 'text-success-bright';
+        } else {
+          color = 'text-warning-bright';
+        }
       }
     }
     const filledStar = `<i class='fas fa-star ${color}'></i>`;
