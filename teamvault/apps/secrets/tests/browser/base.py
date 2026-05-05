@@ -94,4 +94,8 @@ class PlaywrightTestCase(StaticLiveServerTestCase):
             self.page.wait_for_selector(dom_selector, state='attached', timeout=5_000)
         except PlaywrightError as exc:
             raise AssertionError(f'expected element {dom_selector!r} not found on {path}: {exc}') from exc
+        # Wait for HTMX hx-trigger="load" fragments and any other deferred
+        # requests to settle, otherwise errors fired during async swaps
+        # would slip past the assertion below.
+        self.page.wait_for_load_state('networkidle')
         self.assertEqual([], self.js_errors, f'JS errors on {path}: {self.js_errors}')
