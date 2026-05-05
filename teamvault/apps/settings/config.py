@@ -2,7 +2,7 @@ import pathlib
 from base64 import b64decode, b64encode
 from configparser import ConfigParser
 from gettext import gettext as _
-from os import environ, umask
+from os import cpu_count, environ, umask
 from secrets import choice
 from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
@@ -184,6 +184,18 @@ def configure_google_auth(config, settings):
 
     # LDAP compatibility settings
     # When LDAP is enabled, social auth user creation is handled via entry_uuid linking.
+
+
+def configure_gunicorn(config):
+    # cpu_count() reflects host CPUs, not cgroup quota. In containers with
+    # restricted CPU, set [gunicorn] workers explicitly.
+    default_workers = (cpu_count() or 1) * 2 + 1
+    return {
+        'workers': int(get_from_config(config, 'gunicorn', 'workers', str(default_workers))),
+        'timeout': int(get_from_config(config, 'gunicorn', 'timeout', '30')),
+        'max_requests': int(get_from_config(config, 'gunicorn', 'max_requests', '1000')),
+        'max_requests_jitter': int(get_from_config(config, 'gunicorn', 'max_requests_jitter', '200')),
+    }
 
 
 def configure_huey(config):
@@ -495,6 +507,18 @@ salt = {hashid_salt}
 #oauth2_key = 123456789.apps.googleusercontent.com
 #oauth2_secret = ******************
 #use_avatars = True
+
+#[gunicorn]
+## Number of worker processes. Defaults to (2 * CPU cores) + 1.
+## In containers with restricted CPU, set this explicitly.
+## cpu_count() reflects host CPUs, not the cgroup quota.
+#workers = 5
+## Worker timeout in seconds. Workers idle longer than this are killed.
+#timeout = 30
+## Restart each worker after this many requests (preventive recycling).
+#max_requests = 1000
+## Random offset added per worker so they don't all recycle at once.
+#max_requests_jitter = 200
 
 #[tasks]
 #scheduler_frequency = daily  # or hourly, minutely
