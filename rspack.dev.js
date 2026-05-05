@@ -6,6 +6,12 @@ const path = require('path');
 module.exports = merge(common, {
   mode: 'development',
   devtool: 'eval-cheap-module-source-map',
+  // @rspack/cli's `serve` auto-enables lazyCompilation for web targets when
+  // unset. Its runtime POSTs to a relative `_rspack/lazy/trigger`, which the
+  // browser resolves against the Django origin (localhost:8000), not the
+  // rspack dev server (localhost:3000), so dynamic imports never resolve.
+  // We could make this work, but it's not worth it.
+  lazyCompilation: false,
   output: {
     publicPath: 'http://localhost:3000/dist/',
   },
