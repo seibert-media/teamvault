@@ -6,6 +6,7 @@ build-backend = "uv_build"
 name = "teamvault"
 description = "Keep your passwords behind the firewall"
 readme = "README.md"
+license = "GPL-3.0-only"
 license-files = ["LICENSE"]
 authors = [{ name = "Seibert Group GmbH" }]
 requires-python = ">=3.12"
@@ -13,7 +14,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Web Environment",
     "Framework :: Django",
-    "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
     "Natural Language :: English",
     "Operating System :: POSIX :: Linux",
     "Programming Language :: Python :: 3",
