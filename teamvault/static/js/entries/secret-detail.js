@@ -3,7 +3,12 @@ import {setUpPasswordClipboard, setUpOtpClipboard, setUpAdditionalClipboards} fr
 import {initOtp} from '../modules/secret-otp';
 import {init as initPasswordDetail} from '../modules/secret-detail-password';
 import {init as initCCDetail} from '../modules/secret-detail-cc';
+import {initTempusDominus} from '../modules/tempus-dominus-init';
 import * as bootstrap from 'bootstrap';
+
+// Kick off the tempus-dominus chunk download immediately and register
+// listeners that initialize the date picker once the share modal swaps in.
+initTempusDominus();
 
 document.addEventListener('DOMContentLoaded', () => {
   const config = document.getElementById('secret-detail-config');

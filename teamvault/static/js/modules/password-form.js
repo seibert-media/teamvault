@@ -1,7 +1,12 @@
 import * as bootstrap from 'bootstrap';
-import {initZxcvbn} from '../zxcvbn.ts';
 
-const zxcvbn = initZxcvbn();
+// zxcvbn dictionaries (~1.6 MB) and the jsqr QR scanner (~250 KB) start
+// downloading the moment this module evaluates — the secret-addedit
+// entry imports this file, so the fetch begins as soon as the page's
+// JS runs, in parallel with everything else. Use sites await the saved
+// promise so first interaction never waits on network.
+const zxcvbnReady = import(/* webpackChunkName: "zxcvbn" */ '../zxcvbn.ts').then(m => m.initZxcvbn());
+const jsqrReady = import(/* webpackChunkName: "jsqr" */ 'jsqr').then(m => m.default);
 
 export function init(config) {
   const generatePasswordUrl = config.dataset.generatePasswordUrl;
@@ -19,16 +24,23 @@ export function init(config) {
 
   passwordField.generated = false;
 
-  function ratePassword() {
-    let score = zxcvbn(passwordField.value.toString()).score + 1;
-    let color = 'text-warning-bright';
-    if (!passwordField.value) {
-      color = 'text-muted';
-      score = 0;
-    } else if (score <= 2) {
-      color = 'text-danger-bright';
-    } else if (score === 5) {
-      color = 'text-success-bright';
+  async function ratePassword() {
+    let score = 0;
+    let color = 'text-muted';
+    if (passwordField.value) {
+      const zxcvbn = await zxcvbnReady;
+      // Re-check after the await: the user may have cleared the field
+      // while the zxcvbn chunk was still downloading.
+      if (passwordField.value) {
+        score = zxcvbn(passwordField.value.toString()).score + 1;
+        if (score <= 2) {
+          color = 'text-danger-bright';
+        } else if (score === 5) {
+          color = 'text-success-bright';
+        } else {
+          color = 'text-warning-bright';
+        }
+      }
     }
     const filledStar = `<i class='fas fa-star ${color}'></i>`;
     const hollowStar = `<i class='far fa-star ${color}'></i>`;
@@ -70,7 +82,24 @@ export function init(config) {
     }
   });
 
-  document.addEventListener('submit', () => {
+  let qrDecodePending = false;
+
+  document.addEventListener('submit', e => {
+    // Only intervene for submits of the form that owns the OTP field.
+    // Don't preventDefault on unrelated forms (e.g. nav search).
+    if (!e.target.contains(otpField)) {
+      return;
+    }
+    if (qrDecodePending) {
+      // QR scanner chunk or decode still in flight; otpField.value is
+      // the file-input pseudo-path right now, not a usable OTP secret.
+      e.preventDefault();
+      window.notyf.error('Still decoding QR code, please try again.');
+      return;
+    }
+    if (otpField.type !== 'text') {
+      return;
+    }
     if (otpField.value && !otpKeyData.value) {
       let data = otpField.value;
       if (!data.includes('?secret=')) {
@@ -88,7 +117,7 @@ export function init(config) {
 
   ratePassword();
 
-  otpField.addEventListener('change', () => {
+  otpField.addEventListener('change', async () => {
     if (otpField.type !== 'file') {
       return;
     }
@@ -96,33 +125,46 @@ export function init(config) {
     if (!file) {
       return;
     }
-    const qrScanner = require('jsqr');
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      const img = new Image();
-      img.onload = function () {
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = img.width;
-        canvas.height = img.height;
-        ctx.fillStyle = 'rgb(255, 255, 255)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        try {
-          const code = qrScanner(imageData.data, imageData.width, imageData.height);
-          keyInputQr();
-          let data = new URL(code.data.toString());
-          otpKeyData.value = data;
-          otpField.value = data.searchParams.get('secret');
-        } catch (e) {
-          keyInputText();
-          window.notyf.error('Error. No QR code found. Please try again.');
-        }
-      };
-      img.src = event.target.result;
-    };
-    reader.readAsDataURL(file);
+    qrDecodePending = true;
+    try {
+      const qrScanner = await jsqrReady;
+      // Wrap the FileReader/Image chain in a promise so the
+      // qrDecodePending flag covers the entire async pipeline, not
+      // just the jsqr chunk download.
+      await new Promise(resolve => {
+        const reader = new FileReader();
+        reader.onerror = () => resolve();
+        reader.onload = function (event) {
+          const img = new Image();
+          img.onerror = () => resolve();
+          img.onload = function () {
+            const canvas = document.getElementById('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.fillStyle = 'rgb(255, 255, 255)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            try {
+              const code = qrScanner(imageData.data, imageData.width, imageData.height);
+              keyInputQr();
+              let data = new URL(code.data.toString());
+              otpKeyData.value = data;
+              otpField.value = data.searchParams.get('secret');
+            } catch (e) {
+              keyInputText();
+              window.notyf.error('Error. No QR code found. Please try again.');
+            }
+            resolve();
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    } finally {
+      qrDecodePending = false;
+    }
   });
 
   passwordField.addEventListener('keyup', () => {
