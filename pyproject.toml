@@ -50,6 +50,7 @@ dev = [
     "django-stubs~=6.0.3",
     "djangorestframework-stubs~=3.16.0",
     "faker",
+    "playwright>=1.58.0",
     "ruff>=0.14.6",
 ]
 

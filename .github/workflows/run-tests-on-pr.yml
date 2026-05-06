@@ -93,6 +93,9 @@ jobs:
       - name: Set up just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
 
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+
       - name: Cache venv
         uses: actions/cache@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
         with:
@@ -109,6 +112,16 @@ jobs:
       - name: Activate venv for later steps
         shell: bash
         run: echo "${{ github.workspace }}/.venv/bin" >> "$GITHUB_PATH"
+
+      - name: Build frontend bundle
+        working-directory: ${{ github.workspace }}
+        run: |
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Install Playwright browsers
+        working-directory: ${{ github.workspace }}
+        run: uv run playwright install --with-deps chromium --no-shell
 
       - name: Set Up TeamVault Config File
         working-directory: ${{ github.workspace }}
