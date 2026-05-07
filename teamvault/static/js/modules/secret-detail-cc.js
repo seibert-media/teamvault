@@ -1,8 +1,8 @@
 import ClipboardJS from 'clipboard';
+import Card from 'card';
+import 'card/lib/card.css';
 
 export function init(config, revealApi) {
-  const Card = require('card');
-
   const validDateText = config.dataset.ccValidDate;
   const monthYearText = config.dataset.ccMonthYear;
   const fullNameText = config.dataset.ccFullName;

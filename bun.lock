@@ -36,6 +36,9 @@
       },
     },
   },
+  "patchedDependencies": {
+    "card@2.5.4": "patches/card@2.5.4.patch",
+  },
   "packages": {
     "@bufbuild/protobuf": ["@bufbuild/protobuf@2.10.0", "", {}, "sha512-fdRs9PSrBF7QUntpZpq6BTw58fhgGJojgg39m9oFOJGZT+nip9b0so5cYY1oWl5pvemDLr0cPPsH46vwThEbpQ=="],
 

@@ -1,5 +1,8 @@
 from django.urls import reverse
 
+from teamvault.apps.secrets.enums import ContentType
+
+from ..utils import new_secret
 from .base import PlaywrightTestCase
 
 
@@ -21,11 +24,25 @@ class SmokeTests(PlaywrightTestCase):
     def test_secret_detail(self):
         self.smoke(reverse('secrets.secret-detail', kwargs={'hashid': self.secret.hashid}))
 
+    def test_secret_detail_cc(self):
+        cc = new_secret(self.superuser, content_type=ContentType.CC, name='Smoke CC')
+        self.smoke(reverse('secrets.secret-detail', kwargs={'hashid': cc.hashid}))
+
+    def test_secret_detail_file(self):
+        f = new_secret(self.superuser, content_type=ContentType.FILE, name='Smoke File')
+        self.smoke(reverse('secrets.secret-detail', kwargs={'hashid': f.hashid}))
+
     def test_secret_edit(self):
         self.smoke(reverse('secrets.secret-edit', kwargs={'hashid': self.secret.hashid}))
 
     def test_secret_add_password(self):
         self.smoke(reverse('secrets.secret-add', kwargs={'content_type': 'password'}))
+
+    def test_secret_add_cc(self):
+        self.smoke(reverse('secrets.secret-add', kwargs={'content_type': 'cc'}))
+
+    def test_secret_add_file(self):
+        self.smoke(reverse('secrets.secret-add', kwargs={'content_type': 'file'}))
 
     def test_user_list(self):
         self.smoke(reverse('accounts.user-list'))

@@ -1,6 +1,7 @@
-export function init(config) {
-  const Card = require('card');
+import Card from 'card';
+import 'card/lib/card.css';
 
+export function init(config) {
   const validDateText = config.dataset.ccValidDate;
   const monthYearText = config.dataset.ccMonthYear;
   const fullNameText = config.dataset.ccFullName;

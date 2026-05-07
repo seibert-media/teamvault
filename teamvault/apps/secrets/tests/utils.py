@@ -1,3 +1,5 @@
+from base64 import b64encode
+
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
 
@@ -19,6 +21,19 @@ COMMON_OVERRIDES = {
 
 User = get_user_model()
 
+_DEFAULT_PAYLOADS = {
+    ContentType.PASSWORD: {'password': 'initial‑pw'},
+    ContentType.CC: {
+        'holder': 'Jane Doe',
+        'number': '4111111111111111',
+        'expiration_month': '12',
+        'expiration_year': '2030',
+        'security_code': '123',
+        'password': '',
+    },
+    ContentType.FILE: {'file_content': b64encode(b'hello-from-bytes').decode('ascii')},
+}
+
 
 def make_user(username: str, superuser=False):
     return User.objects.create_user(
@@ -30,16 +45,29 @@ def make_user(username: str, superuser=False):
     )
 
 
-def new_secret(owner: User, **kwargs) -> Secret:
-    """Creates a password secret with minimal required data."""
-    secret = Secret.objects.create(
-        name=kwargs.get('name', 'Test Secret'),
-        created_by=owner,
-        content_type=ContentType.PASSWORD,
-        access_policy=kwargs.get('access_policy', AccessPolicy.DISCOVERABLE),
-        status=SecretStatus.OK,
+def new_secret(
+    owner: User,
+    content_type: ContentType = ContentType.PASSWORD,
+    payload: dict | None = None,
+    **kwargs,
+) -> Secret:
+    """Create a secret of the given content type with a sensible default payload."""
+    fields = {
+        'name': kwargs.get('name', 'Test Secret'),
+        'created_by': owner,
+        'content_type': content_type,
+        'access_policy': kwargs.get('access_policy', AccessPolicy.DISCOVERABLE),
+        'status': SecretStatus.OK,
+    }
+    if content_type == ContentType.FILE:
+        fields['filename'] = kwargs.get('filename', 'hello.bin')
+    secret = Secret.objects.create(**fields)
+    RevisionService.save_payload(
+        secret=secret,
+        actor=owner,
+        payload=payload if payload is not None else _DEFAULT_PAYLOADS[content_type],
+        skip_acl=True,
     )
-    RevisionService.save_payload(secret=secret, actor=owner, payload={'password': 'initial‑pw'}, skip_acl=True)
     # Give the owner permanent share so they can delegate
     SharedSecretData.objects.create(secret=secret, user=owner)
     return secret

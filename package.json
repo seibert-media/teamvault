@@ -66,5 +66,8 @@
     "last 2 versions",
     "not dead"
   ],
-  "trustedDependencies": []
+  "trustedDependencies": [],
+  "patchedDependencies": {
+    "card@2.5.4": "patches/card@2.5.4.patch"
+  }
 }
