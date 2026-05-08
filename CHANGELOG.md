@@ -1,3 +1,7 @@
+# Current releases
+
+You can find the current release notes per version in https://github.com/seibert-media/teamvault/releases
+
 # 0.9.2
 
 2021-02-08
