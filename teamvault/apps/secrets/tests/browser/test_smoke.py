@@ -1,9 +1,8 @@
 from django.urls import reverse
 
 from teamvault.apps.secrets.enums import ContentType
-
-from ..utils import new_secret
 from .base import PlaywrightTestCase
+from ..utils import new_secret
 
 
 class SmokeTests(PlaywrightTestCase):
