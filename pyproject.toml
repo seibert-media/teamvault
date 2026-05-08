@@ -44,7 +44,7 @@ dependencies = [
     "whitenoise[brotli]~=6.12.0",
 ]
 
-version = "0.12.0"  # automatically changed via "uv version"
+version = "0.13.0"  # automatically changed via "uv version"
 
 [dependency-groups]
 dev = [
