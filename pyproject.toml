@@ -40,7 +40,7 @@ dependencies = [
     "huey~=3.0.0",
     "psycopg~=3.3.2",
     "requests~=2.32",
-    "social-auth-app-django~=5.8.0",
+    "social-auth-app-django~=5.9.0",
     "whitenoise[brotli]~=6.12.0",
 ]
 
