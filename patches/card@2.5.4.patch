@@ -1,0 +1,17 @@
+diff --git a/lib/card.js b/lib/card.js
+index 438992b82694dc095c6655193045744816ef2178..21b578a376e17f57292033a843555ae76a04d7e9 100644
+--- a/lib/card.js
++++ b/lib/card.js
+@@ -3,7 +3,11 @@
+   var Card, QJ, extend, payment,
+     bind = function(fn, me){ return function(){ return fn.apply(me, arguments); }; };
+ 
+-  require('./card.css');
++  // Patched: card-css require removed. Rspack 2.x's native CSS pipeline
++  // wraps CommonJS-required CSS as a JS module with an unconditional
++  // `module.hot.accept()`, which throws in dev because we run with HMR off
++  // (Bun WS limitation). card.css is now ESM-imported from the modules
++  // that consume the card visual.
+ 
+   QJ = require('qj');
+ 

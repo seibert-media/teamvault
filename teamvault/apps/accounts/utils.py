@@ -6,6 +6,7 @@ import requests
 
 from teamvault.apps.accounts.models import UserProfile, UserProfile as UserProfileModel
 from teamvault.apps.audit.models import LogEntry
+from teamvault.apps.secrets.enums import SecretStatus
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 logger = logging.getLogger(__name__)
@@ -110,3 +111,19 @@ def merge_users(user1, user2, dry_run=True):
 
         user1.delete()
         logger.info('Deleted User')
+
+
+def get_pending_secrets_for_user(user):
+    """
+    Return all secrets that need changing and whose current revision was accessed by this user.
+    Based on access history, so group membership at the time of query is irrelevant.
+    """
+    accessed_revs = SecretRevision.objects.filter(
+        accessed_by=user,
+    )
+
+    return Secret.objects.filter(
+        status=SecretStatus.NEEDS_CHANGING,
+        needs_changing_on_leave=True,
+        current_revision__in=accessed_revs,
+    )

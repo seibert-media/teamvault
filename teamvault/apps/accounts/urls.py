@@ -7,6 +7,8 @@ from .views import (
     user_activate,
     user_detail,
     user_detail_from_request,
+    user_pending_secrets,
+    user_pending_secrets_csv,
     user_settings,
     users,
 )
@@ -46,6 +48,16 @@ urlpatterns = (
         'users/<str:username>/',
         user_detail,
         name='accounts.user-detail',
+    ),
+    path(
+        'users/<str:username>/pending-secrets/',
+        user_pending_secrets,
+        name='accounts.user-pending-secrets',
+    ),
+    path(
+        'users/<str:username>/pending-secrets/csv/',
+        user_pending_secrets_csv,
+        name='accounts.user-pending-secrets-csv',
     ),
     path(
         'users/<str:username>/reactivate',

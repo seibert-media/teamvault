@@ -15,5 +15,6 @@ def configure_webpack(settings):
             'TIMEOUT': None,
             'IGNORE': [r'.+\.hot-update.js', r'.+\.map'],
             'LOADER_CLASS': loader_class,
+            'SKIP_COMMON_CHUNKS': True,
         }
     }

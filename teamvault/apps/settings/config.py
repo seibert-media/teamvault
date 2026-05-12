@@ -2,8 +2,7 @@ import pathlib
 from base64 import b64decode, b64encode
 from configparser import ConfigParser
 from gettext import gettext as _
-from hashlib import sha1
-from os import environ, umask
+from os import cpu_count, environ, umask
 from secrets import choice
 from string import ascii_letters, digits, punctuation
 from urllib.parse import urlparse
@@ -25,10 +24,36 @@ def configure_base_url(config, settings):
     settings.ALLOWED_HOSTS = [urlparse(settings.BASE_URL).hostname]
 
 
+def configure_data_dir(config):
+    data_dir = pathlib.Path(
+        environ.get('TEAMVAULT_DATA_DIR') or get_from_config(config, 'teamvault', 'data_dir', '/var/lib/teamvault')
+    )
+    if not data_dir.is_dir():
+        raise RuntimeError(
+            _('data_dir {path} does not exist or is not a directory (set in {config})').format(
+                path=data_dir,
+                config=environ['TEAMVAULT_CONFIG_FILE'],
+            )
+        )
+    test_file = data_dir / '.teamvault_write_test'
+    try:
+        test_file.touch()
+        test_file.unlink()
+    except OSError as exc:
+        raise RuntimeError(
+            _('data_dir {path} is not writable (set in {config})').format(
+                path=data_dir,
+                config=environ['TEAMVAULT_CONFIG_FILE'],
+            )
+        ) from exc
+    return data_dir
+
+
 def configure_database(config):
     """
     Called directly from the Django settings module.
     """
+    health_checks = get_from_config(config, 'database', 'conn_health_checks', 'yes').lower()
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -37,6 +62,8 @@ def configure_database(config):
             'PASSWORD': get_from_config(config, 'database', 'password', ''),
             'PORT': get_from_config(config, 'database', 'port', '5432'),
             'USER': get_from_config(config, 'database', 'user', 'teamvault'),
+            'CONN_MAX_AGE': int(get_from_config(config, 'database', 'conn_max_age', '60')),
+            'CONN_HEALTH_CHECKS': health_checks in {'1', 'enabled', 'true', 'yes'},
         },
     }
     return DATABASES
@@ -160,6 +187,18 @@ def configure_google_auth(config, settings):
     # When LDAP is enabled, social auth user creation is handled via entry_uuid linking.
 
 
+def configure_gunicorn(config):
+    # cpu_count() reflects host CPUs, not cgroup quota. In containers with
+    # restricted CPU, set [gunicorn] workers explicitly.
+    default_workers = (cpu_count() or 1) * 2 + 1
+    return {
+        'workers': int(get_from_config(config, 'gunicorn', 'workers', str(default_workers))),
+        'timeout': int(get_from_config(config, 'gunicorn', 'timeout', '30')),
+        'max_requests': int(get_from_config(config, 'gunicorn', 'max_requests', '1000')),
+        'max_requests_jitter': int(get_from_config(config, 'gunicorn', 'max_requests_jitter', '200')),
+    }
+
+
 def configure_huey(config):
     # For now, all tasks use the same crontab value. They're all
     # background maintenance task at the moment.
@@ -263,6 +302,7 @@ def configure_ldap_auth(config, settings):
         'is_superuser': config.get('auth_ldap', 'admin_group'),
     }
 
+    settings.AUTH_LDAP_USER_ATTRLIST = ['*', entry_uuid_attr]
     settings.AUTH_LDAP_ALWAYS_UPDATE_USER = True
     settings.AUTH_LDAP_FIND_GROUP_PERMS = False
     settings.AUTH_LDAP_MIRROR_GROUPS = True
@@ -395,29 +435,18 @@ def configure_superuser_reads(config, settings):
 
 
 def configure_teamvault_secret_key(config, settings):
-    from .models import Setting
+    settings.TEAMVAULT_SECRET_KEY = config.get('teamvault', 'fernet_key')
 
-    key = config.get('teamvault', 'fernet_key')
 
-    try:
-        checksum = Setting.get('fernet_key_hash', default=None)
-    except ProgrammingError:  # db not populated
-        pass
-    else:
-        key_hash = sha1(key.encode('utf-8')).hexdigest()
-
-        if checksum is None:
-            Setting.set('fernet_key_hash', key_hash)
-
-        elif key_hash != checksum:
-            raise RuntimeError(
-                _("secret in '{path}' does not match SHA1 hash in database ({hash})").format(
-                    hash=checksum,
-                    path=environ['TEAMVAULT_CONFIG_FILE'],
-                )
-            )
-
-    settings.TEAMVAULT_SECRET_KEY = key
+def configure_template_loaders(config):
+    base_loaders = [
+        'django.template.loaders.filesystem.Loader',
+        'django.template.loaders.app_directories.Loader',
+    ]
+    insecure_debug = get_from_config(config, 'teamvault', 'insecure_debug_mode', 'no').lower()
+    if insecure_debug in {'1', 'enabled', 'true', 'yes'}:
+        return base_loaders
+    return [('django.template.loaders.cached.Loader', base_loaders)]
 
 
 def configure_time_zone(config):
@@ -450,6 +479,7 @@ session_cookie_secure = False
 time_zone = UTC
 # allow_superuser_reads = False
 # enabled_secret_types = password,cc,file
+# data_dir = /var/lib/teamvault
 
 #[password_generator]
 #length = 16
@@ -467,6 +497,13 @@ host = localhost
 name = teamvault
 user = teamvault
 password = teamvault
+## How long (seconds) a worker keeps a Postgres connection alive between
+## requests. 0 = open/close per request (Django's old default). Higher values
+## reduce per-request latency at the cost of holding connection slots.
+#conn_max_age = 60
+## When True, validates the connection before reusing it (handles Postgres
+## restarts gracefully). Recommended whenever conn_max_age > 0.
+#conn_health_checks = yes
 
 [hashid]
 min_length = 6
@@ -498,6 +535,18 @@ salt = {hashid_salt}
 #oauth2_key = 123456789.apps.googleusercontent.com
 #oauth2_secret = ******************
 #use_avatars = True
+
+#[gunicorn]
+## Number of worker processes. Defaults to (2 * CPU cores) + 1.
+## In containers with restricted CPU, set this explicitly.
+## cpu_count() reflects host CPUs, not the cgroup quota.
+#workers = 5
+## Worker timeout in seconds. Workers idle longer than this are killed.
+#timeout = 30
+## Restart each worker after this many requests (preventive recycling).
+#max_requests = 1000
+## Random offset added per worker so they don't all recycle at once.
+#max_requests_jitter = 200
 
 #[tasks]
 #scheduler_frequency = daily  # or hourly, minutely

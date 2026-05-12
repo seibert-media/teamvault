@@ -5,10 +5,10 @@ from django.views.generic import ListView
 from .filters import AuditLogFilter
 from .models import LogEntry
 from ..secrets.models import Secret
-from ...views import FilterMixin
+from ...views import FilterMixin, PageSizeMixin
 
 
-class LogEntryList(ListView, FilterMixin):
+class LogEntryList(PageSizeMixin, ListView, FilterMixin):
     filter = None
     filter_class = AuditLogFilter
     context_object_name = 'log_entries'

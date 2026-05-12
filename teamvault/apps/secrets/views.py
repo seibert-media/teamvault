@@ -31,7 +31,7 @@ from .utils import serialize_add_edit_data
 from ..accounts.models import UserProfile
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ...views import FilterMixin
+from ...views import FilterMixin, PageSizeMixin
 
 User = get_user_model()
 
@@ -128,6 +128,7 @@ class SecretAdd(CreateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         try:
+            context['content_type'] = self.kwargs['content_type']
             context['pretty_content_type'] = CONTENT_TYPE_NAMES[self.kwargs['content_type']]
         except KeyError as exc:
             raise Http404 from exc
@@ -205,6 +206,7 @@ class SecretEdit(UpdateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['content_type'] = CONTENT_TYPE_IDENTIFIERS[self.object.content_type]
         context['current_revision'] = self.object.current_revision
         context['pretty_content_type'] = self.object.get_content_type_display()
         return context
@@ -380,7 +382,7 @@ def secret_metadata(request, hashid):
     return render(request, context=context, template_name='secrets/detail_content/meta.html')
 
 
-class SecretList(ListView, FilterMixin):
+class SecretList(PageSizeMixin, ListView, FilterMixin):
     context_object_name = 'secrets'
     filter = None
     filter_class = SecretFilter
@@ -442,6 +444,7 @@ class SecretShareList(CreateView):
         context = {
             'secret': secret,
             'shareable': secret.check_share_access(self.request.user),
+            'share_with_self': self.request.GET.get('share_with_self') == '1',
             'shares': {
                 'groups': self.group_shares,
                 'users': self.user_shares,
@@ -483,29 +486,38 @@ class SecretShareList(CreateView):
             },
         })
         response = self.render_to_response(context=context)
-        if user_can_read_initial != secret.is_readable(self.request.user):
+        if self.request.GET.get('share_with_self') == '1':
+            trigger_client_event(response, 'pendingSecretsRefresh')
+        elif user_can_read_initial != secret.is_readable(self.request.user):
             response.headers['HX-Refresh'] = 'true'
         else:
             trigger_client_event(response, 'refreshMetadata')
+
         return response
 
     def get_form_class(self):
         form_class = super().get_form_class()
 
-        # Exclude groups and users which the secret was already shared with
+        # Exclude groups and users which the secret is actively (non-expired) shared with
+        active_group_shares = self.group_shares.filter(is_expired=False)
+        active_user_shares = self.user_shares.filter(is_expired=False)
         form_class.base_fields['group'].queryset = (
             Group.objects
             .all()
-            .exclude(name__in=self.group_shares.values_list('group__name', flat=True))
+            .exclude(name__in=active_group_shares.values_list('group__name', flat=True))
             .order_by('name')
         )
         form_class.base_fields['user'].queryset = (
             User.objects
             .filter(is_active=True)
-            .order_by('username')
-            .exclude(username__in=self.user_shares.values_list('user__username', flat=True))
+            .exclude(username__in=active_user_shares.values_list('user__username', flat=True))
             .order_by('username')
         )
+
+        if self.request.GET.get('share_with_self') == '1':
+            form_class.base_fields['user'].queryset = User.objects.filter(id=self.request.user.id)
+            form_class.base_fields['group'].queryset = Group.objects.none()
+
         return form_class
 
 
@@ -517,12 +529,9 @@ secret_share_list = login_required(SecretShareList.as_view())
 def secret_share_delete(request, hashid, share_id):
     share_data = get_object_or_404(SharedSecretData, secret__hashid=hashid, id=share_id)
     user_can_read_initial = share_data.secret.is_readable(request.user)
-    permission = share_data.secret.check_share_access(request.user)
-    if not permission:
-        raise PermissionDenied()
+    permission = share_data.check_delete_access(request.user)
 
     secret = share_data.secret
-    user_can_read_initial = secret.check_read_access(request.user)
     entity_type = share_data.shared_entity_type
     entity_name = share_data.shared_entity_name
     share_data.delete()
