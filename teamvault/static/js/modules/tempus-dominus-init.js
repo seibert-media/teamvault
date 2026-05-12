@@ -36,11 +36,12 @@ const tdOptions = {
       next: 'fa fa-chevron-right',
       today: 'fa fa-calendar-check',
       clear: 'fa fa-trash',
-      close: 'fa fa-times-circle',
+      close: 'fa fa-check-circle',
     },
   },
   localization: {
     format: 'yyyy-MM-dd HH:mm',
+    close: 'Confirm date',
   },
 };
 
