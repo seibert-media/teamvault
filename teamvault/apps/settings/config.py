@@ -1,3 +1,4 @@
+import logging
 import pathlib
 from base64 import b64decode, b64encode
 from configparser import ConfigParser
@@ -16,6 +17,12 @@ class UnconfiguredSettingsError(Exception):
         return _('missing config file at {} (set env var TEAMVAULT_CONFIG_FILE to use a different path)').format(
             environ['TEAMVAULT_CONFIG_FILE']
         )
+
+class LDAPAuthFailureFilter(logging.Filter):
+    def filter(self, record):
+        return ("Authentication failed for" in record.getMessage()
+                or "Rejecting empty password for" in record.getMessage()
+                or record.levelno >= logging.INFO)
 
 
 def configure_base_url(config, settings):
@@ -346,6 +353,11 @@ def configure_logging(config):
                 'format': '[%(asctime)s] %(levelname)s %(module)s: %(message)s',
             },
         },
+        'filters': {
+            'LDAPAuthFailureFilter': {
+                "()": "teamvault.apps.settings.config.LDAPAuthFailureFilter",
+            },
+        },
         'handlers': {
             'console': {
                 'formatter': 'console',
@@ -360,7 +372,8 @@ def configure_logging(config):
             },
             'django_auth_ldap': {
                 'handlers': ['console'],
-                'level': level,
+                'level': 'DEBUG',
+                'filters': ['LDAPAuthFailureFilter'],
             },
             'teamvault': {
                 'handlers': ['console'],
