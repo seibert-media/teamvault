@@ -13,6 +13,7 @@
             <div class="col-auto vr mx-3 my-3 d-none d-lg-block opacity-100 text-tertiary"></div>
 
             <!-- Add btn-group -->
+            {% if enabled_secret_types %}
             <div class="col-12 col-lg-auto my-2 d-flex align-items-center justify-content-center justify-content-lg-start">
                 <div class="btn-group btn-group-sm">
                     {% if 'password' in enabled_secret_types %}
@@ -20,53 +21,33 @@
                            class="btn btn-accent text-nowrap">
                             <i class="fa fa-plus-circle fa-fw"></i> {% trans "Add Password" %}
                         </a>
-                    {% else %}
-                        <button type="button"
-                                class="btn btn-secondary text-nowrap"
-                                disabled
-                                data-bs-toggle="tooltip"
-                                data-bs-placement="bottom"
-                                title="{% trans "Your administrator has disabled the creation of this secret type." %}">
-                            <i class="fa fa-plus-circle fa-fw"></i> {% trans "Add Password" %}
-                        </button>
                     {% endif %}
-                    <button type="button" class="btn btn-accent dropdown-toggle dropdown-toggle-split"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                        <span class="caret"></span>
-                        <span class="visually-hidden">Toggle Dropdown</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" role="menu">
-                        <li>
+                    {% if 'cc' in enabled_secret_types or 'file' in enabled_secret_types %}
+                        <button type="button" class="btn btn-accent dropdown-toggle dropdown-toggle-split"
+                                data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="visually-hidden">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" role="menu">
                             {% if 'cc' in enabled_secret_types %}
-                                <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}">
-                                    <i class="fa fa-credit-card fa-fw"></i> {% trans "Add Credit Card" %}
-                                </a>
-                            {% else %}
-                                <span class="dropdown-item disabled"
-                                      data-bs-toggle="tooltip"
-                                      data-bs-placement="right"
-                                      title="{% trans "Your administrator has disabled the creation of this secret type." %}">
-                                    <i class="fa fa-credit-card fa-fw"></i> {% trans "Add Credit Card" %}
-                                </span>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}">
+                                        <i class="fa fa-credit-card fa-fw"></i> {% trans "Add Credit Card" %}
+                                    </a>
+                                </li>
                             {% endif %}
-                        </li>
-                        <li>
                             {% if 'file' in enabled_secret_types %}
-                                <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}">
-                                    <i class="fa fa-upload fa-fw"></i> {% trans "Upload File" %}
-                                </a>
-                            {% else %}
-                                <span class="dropdown-item disabled"
-                                      data-bs-toggle="tooltip"
-                                      data-bs-placement="right"
-                                      title="{% trans "Your administrator has disabled the creation of this secret type." %}">
-                                    <i class="fa fa-upload fa-fw"></i> {% trans "Upload File" %}
-                                </span>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}">
+                                        <i class="fa fa-upload fa-fw"></i> {% trans "Upload File" %}
+                                    </a>
+                                </li>
                             {% endif %}
-                        </li>
-                    </ul>
+                        </ul>
+                    {% endif %}
                 </div>
             </div>
+            {% endif %}
 
             <!-- Searchbar -->
             <div class="col-6 col-lg-4 my-2 mx-auto d-flex justify-content-center">
