@@ -18,11 +18,14 @@ class UnconfiguredSettingsError(Exception):
             environ['TEAMVAULT_CONFIG_FILE']
         )
 
+
 class LDAPAuthFailureFilter(logging.Filter):
     def filter(self, record):
-        return ("Authentication failed for" in record.getMessage()
-                or "Rejecting empty password for" in record.getMessage()
-                or record.levelno >= logging.INFO)
+        return (
+            'Authentication failed for' in record.getMessage()
+            or 'Rejecting empty password for' in record.getMessage()
+            or record.levelno >= logging.INFO
+        )
 
 
 def configure_base_url(config, settings):
@@ -355,7 +358,7 @@ def configure_logging(config):
         },
         'filters': {
             'LDAPAuthFailureFilter': {
-                "()": "teamvault.apps.settings.config.LDAPAuthFailureFilter",
+                '()': 'teamvault.apps.settings.config.LDAPAuthFailureFilter',
             },
         },
         'handlers': {
