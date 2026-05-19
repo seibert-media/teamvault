@@ -7,8 +7,8 @@ from django.urls import reverse
 
 from teamvault.apps.secrets.context_processors import secrets_config
 from teamvault.apps.secrets.enums import ContentType
-from teamvault.apps.settings.config import configure_enabled_secret_types
 from teamvault.apps.secrets.tests.utils import COMMON_OVERRIDES, make_user, new_secret
+from teamvault.apps.settings.config import configure_enabled_secret_types
 
 
 def _config(value=None):

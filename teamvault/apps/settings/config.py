@@ -9,7 +9,6 @@ from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
 from django.core.exceptions import ImproperlyConfigured
-from django.db.utils import ProgrammingError
 
 
 class UnconfiguredSettingsError(Exception):
