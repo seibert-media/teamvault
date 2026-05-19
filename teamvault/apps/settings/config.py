@@ -6,6 +6,7 @@ from gettext import gettext as _
 from os import cpu_count, environ, umask
 from secrets import choice
 from string import ascii_letters, digits, punctuation
+from typing import override
 from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
@@ -20,6 +21,7 @@ class UnconfiguredSettingsError(Exception):
 
 
 class LDAPAuthFailureFilter(logging.Filter):
+    @override
     def filter(self, record):
         return (
             'Authentication failed for' in record.getMessage()
