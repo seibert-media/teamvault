@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Generate GitHub App Token
-        uses: actions/create-github-app-token@v3.1.1 # immutable
+        uses: actions/create-github-app-token@v3.2.0 # immutable
         id: app-token
         with:
           app-id: ${{ secrets.RELEASE_BOT_APP_ID }}
