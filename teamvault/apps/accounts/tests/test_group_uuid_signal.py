@@ -2,7 +2,7 @@ from types import SimpleNamespace
 from unittest.mock import Mock
 
 from django.contrib.auth.models import Group
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django_auth_ldap.config import GroupOfNamesType
 
 from teamvault.apps.accounts.models import GroupUUIDMapping
@@ -23,6 +23,7 @@ def info(name, entry_uuid):
     return dn, {'cn': [name], 'entryUUID': [entry_uuid]}
 
 
+@override_settings(AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID')
 class SyncGroupUUIDsBeforeMirrorTests(TestCase):
     @staticmethod
     def _fire(group_infos):

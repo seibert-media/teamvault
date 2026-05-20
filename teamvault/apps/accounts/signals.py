@@ -16,7 +16,7 @@ def _collect_ldap_groups(ldap_user):
     group_infos = groups._get_group_infos()
     # noinspection PyProtectedMember
     group_type = groups._group_type
-    entry_uuid_attr = getattr(settings, 'AUTH_LDAP_GROUP_ENTRY_UUID_ATTR', 'entryUUID')
+    entry_uuid_attr = settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR
 
     ldap_groups = {}
     for group_info in group_infos:
@@ -39,8 +39,8 @@ def sync_group_uuids_before_mirror(sender, user, ldap_user, **kwargs):  # noqa: 
     django-auth-ldap behavior finds correctly-named groups.
 
     Requires:
-     - AUTH_LDAP_GROUP_SEARCH attrlist includes the configured entryUUID attr
-       (configure_ldap_auth sets it; AccountsConfig.ready() defensively tops it up)
+     - AUTH_LDAP_GROUP_ENTRY_UUID_ATTR set (opt-in toggle for this feature)
+     - AUTH_LDAP_GROUP_SEARCH attrlist includes that attr (configure_ldap_auth handles it)
      - AUTH_LDAP_ALWAYS_UPDATE_USER = True (so the signal always fires)
      - AUTH_LDAP_MIRROR_GROUPS = True
     """

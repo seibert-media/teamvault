@@ -18,7 +18,10 @@ class Command(BaseCommand):
             self.stderr.write('Missing AUTH_LDAP_SERVER_URI in settings.')
             return
 
-        entry_uuid_attr = getattr(settings, 'AUTH_LDAP_GROUP_ENTRY_UUID_ATTR', 'entryUUID')
+        entry_uuid_attr = getattr(settings, 'AUTH_LDAP_GROUP_ENTRY_UUID_ATTR', None)
+        if not entry_uuid_attr:
+            self.stderr.write('attr_group_entry_uuid is not configured; nothing to do.')
+            return
         base_search = settings.AUTH_LDAP_GROUP_SEARCH
         search = LDAPSearch(
             base_search.base_dn,
