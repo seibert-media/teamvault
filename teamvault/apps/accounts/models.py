@@ -9,6 +9,21 @@ class User(AbstractUser):
     entry_uuid = models.CharField(max_length=36, default='', blank=True)
 
 
+class GroupUUIDMapping(models.Model):
+    """
+    Side table linking Django auth.Group rows to their LDAP entryUUID,
+    enabling group renames in LDAP to propagate to Django without
+    breaking memberships, shares, or default-sharing-group references.
+    auth.Group is not swappable, so a 1:1 side table is the cleanest fit.
+    """
+
+    group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='uuid_mapping')
+    entry_uuid = models.CharField(max_length=36, unique=True)
+
+    def __str__(self):
+        return f'{self.group.name} ({self.entry_uuid})'
+
+
 class UserProfile(models.Model):
     # Since our static files are not served by some webserver but by TeamVault (/Whitenoise) directly
     # to keep the installation overhead low, we'd have to do the same thing with media files.

@@ -159,3 +159,7 @@ def upgrade(_pargs):
 
     print('\n### Updating search index...\n')
     execute_from_command_line(['', 'update_search_index'])
+
+    if getattr(settings, 'LDAP_AUTH_ENABLED', False) and getattr(settings, 'AUTH_LDAP_AUTO_RENAME_GROUPS', False):
+        print('\n### Backfilling LDAP group entryUUIDs...\n')
+        execute_from_command_line(['', 'sync_group_entry_uuids'])
