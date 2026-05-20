@@ -18,6 +18,7 @@ from teamvault.apps.secrets.enums import ContentType, SecretStatus
 from teamvault.apps.secrets.exceptions import PermissionError as SecretPermissionError
 from teamvault.apps.secrets.services.revision import RevisionService
 from .serializers import (
+    CONTENT_TYPE_REPR,
     PendingSecretSerializer,
     SecretDetailSerializer,
     SecretRevisionSerializer,
@@ -45,6 +46,9 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
         return obj
 
     def perform_update(self, serializer):
+        type_str = CONTENT_TYPE_REPR[serializer.instance.content_type]
+        if type_str not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
+            raise PermissionDenied(_('This secret type has been disabled by the administrator.'))
         instance = serializer.save()
         if hasattr(instance, '_data'):
             RevisionService.save_payload(secret=instance, actor=self.request.user, payload=instance._data)
@@ -65,6 +69,12 @@ class SecretList(generics.ListCreateAPIView):
             return Secret.get_all_visible_to_user(self.request.user)
 
     def perform_create(self, serializer):
+        # validated_data['content_type'] is a ContentTypeStr (Django TextChoices), which
+        # inherits from str. Its values ('password', 'cc', 'file') are identical to the
+        # keys used in TEAMVAULT_ENABLED_SECRET_TYPES, so the membership test is correct.
+        content_type_str = serializer.validated_data['content_type']
+        if content_type_str not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
+            raise PermissionDenied(_('This secret type has been disabled by the administrator.'))
         instance = serializer.save(created_by=self.request.user)
         if hasattr(instance, '_data'):
             RevisionService.save_payload(

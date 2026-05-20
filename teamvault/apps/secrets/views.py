@@ -86,6 +86,13 @@ class SecretAdd(CreateView):
     slug_field = 'hashid'
     slug_url_kwarg = 'hashid'
 
+    def dispatch(self, request, *args, **kwargs):
+        # login_required wraps SecretAdd.as_view() at module level (see `secret_add` below),
+        # so unauthenticated requests are redirected to login BEFORE this dispatch() is called.
+        if kwargs['content_type'] not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
+            raise PermissionDenied
+        return super().dispatch(request, *args, **kwargs)
+
     def form_valid(self, form):
         secret = Secret()
         secret.content_type = CONTENT_TYPE_IDS[self.kwargs['content_type']]
@@ -237,6 +244,8 @@ class SecretEdit(UpdateView):
     def get_object(self, queryset=None):  # noqa: ARG002
         secret = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
         secret.check_read_access(self.request.user)
+        if CONTENT_TYPE_IDENTIFIERS[secret.content_type] not in settings.TEAMVAULT_ENABLED_SECRET_TYPES:
+            raise PermissionDenied
         return secret
 
     def get_template_names(self):
