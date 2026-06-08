@@ -11,6 +11,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
+
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
@@ -26,7 +27,7 @@ from teamvault.apps.secrets.utils import META_FIELDS, apply_snapshot_to_secret, 
 @dataclass
 class HistoryEntry:
     ts: datetime
-    kind: Literal['payload', 'meta', 'restore']
+    kind: Literal['payload', 'meta', 'payload_and_meta', 'restore']
     user: str
     name: str
     changes: list[dict[str, str]]
@@ -260,7 +261,14 @@ class RevisionService:
             meta_changes = cls._get_meta_diff(ch, parent)
 
             # Determine kind
-            kind = 'restore' if ch.restored_from_id else ('payload' if payload_changes else 'meta')
+            if ch.restored_from_id:
+                kind = 'restore'
+            elif payload_changes and meta_changes:
+                kind = 'payload_and_meta'
+            elif payload_changes:
+                kind = 'payload'
+            elif meta_changes:
+                kind = 'meta'
 
             # Merge changes: payload first for readability
             merged = []
