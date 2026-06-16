@@ -1,3 +1,4 @@
+import base64
 from base64 import b64encode
 
 from django.conf import settings
@@ -52,6 +53,9 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
         # Only metadata changed
         elif instance.current_revision:
             current_data = instance.current_revision.peek_data(self.request.user)
+            if instance.content_type == ContentType.FILE and isinstance(current_data, (bytes, bytearray)):
+                # Keep current data on metadata-only edit
+                current_data = {'file_content': base64.b64encode(current_data).decode()}
             RevisionService.save_payload(secret=instance, actor=self.request.user, payload=current_data)
 
 
