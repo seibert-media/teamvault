@@ -21,12 +21,16 @@ class UnconfiguredSettingsError(Exception):
 
 
 class LDAPAuthFailureFilter(logging.Filter):
+    def __init__(self, min_loglevel=logging.INFO):
+        super().__init__()
+        self.min_loglevel = min_loglevel
+
     @override
     def filter(self, record):
         return (
             'Authentication failed for' in record.getMessage()
             or 'Rejecting empty password for' in record.getMessage()
-            or record.levelno >= logging.INFO
+            or record.levelno >= self.min_loglevel
         )
 
 
@@ -361,6 +365,7 @@ def configure_logging(config):
         'filters': {
             'LDAPAuthFailureFilter': {
                 '()': 'teamvault.apps.settings.config.LDAPAuthFailureFilter',
+                'min_loglevel': logging.getLevelName(level),
             },
         },
         'handlers': {
