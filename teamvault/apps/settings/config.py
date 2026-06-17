@@ -348,11 +348,16 @@ def configure_ldap_auth(config, settings):
 
 
 def configure_logging(config):
-    level = 'INFO'
+    tv_logger_level = 'INFO'
+    ldap_logger_level = 'INFO'
 
     insecure_debug = get_from_config(config, 'teamvault', 'insecure_debug_mode', 'no').lower()
     if insecure_debug in {'1', 'enabled', 'true', 'yes'}:
-        level = 'DEBUG'
+        tv_logger_level = 'DEBUG'
+
+    log_auth_failures = get_from_config(config, 'teamvault', 'log_auth_failures_mode', 'no').lower()
+    if log_auth_failures in {'1', 'enabled', 'true', 'yes'}:
+        ldap_logger_level = 'DEBUG'
 
     LOGGING = {
         'version': 1,
@@ -365,7 +370,7 @@ def configure_logging(config):
         'filters': {
             'LDAPAuthFailureFilter': {
                 '()': 'teamvault.apps.settings.config.LDAPAuthFailureFilter',
-                'min_loglevel': logging.getLevelName(level),
+                'min_loglevel': logging.getLevelName(tv_logger_level),
             },
         },
         'handlers': {
@@ -382,12 +387,12 @@ def configure_logging(config):
             },
             'django_auth_ldap': {
                 'handlers': ['console'],
-                'level': 'DEBUG',
+                'level': ldap_logger_level,
                 'filters': ['LDAPAuthFailureFilter'],
             },
             'teamvault': {
                 'handlers': ['console'],
-                'level': level,
+                'level': tv_logger_level,
             },
         },
     }
