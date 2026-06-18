@@ -57,7 +57,7 @@ class SecretListFilter(filters.FilterSet):
         parent = super().qs
         # Guarantee a deterministic total order so LIMIT/OFFSET pagination
         # is stable across requests even when the sort key has ties.
-        return parent.order_by(*parent.query.order_by, 'pk')
+        return parent.order_by(*parent.query.order_by, 'hashid')
 
     class Meta:
         model = Secret
