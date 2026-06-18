@@ -41,10 +41,10 @@ curl -u "username:password" https://teamvault.example.com/api/secrets/
 ```python
 import requests
 
-BASE = "https://teamvault.example.com"
-AUTH = ("username", "password")
+BASE = 'https://teamvault.example.com'
+AUTH = ('username', 'password')
 
-r = requests.get(f"{BASE}/api/secrets/", auth=AUTH)
+r = requests.get(f'{BASE}/api/secrets/', auth=AUTH)
 r.raise_for_status()
 print(r.json())
 ```
@@ -182,28 +182,28 @@ curl -u "username:password" \
 ```python
 import requests
 
-BASE = "https://teamvault.example.com"
-AUTH = ("username", "password")
+BASE = 'https://teamvault.example.com'
+AUTH = ('username', 'password')
 
 
 def list_secrets(**params):
     """Yield every secret across all pages, applying filters/ordering."""
-    url = f"{BASE}/api/secrets/"
+    url = f'{BASE}/api/secrets/'
     while url:
         r = requests.get(url, params=params, auth=AUTH)
         r.raise_for_status()
         body = r.json()
-        yield from body["results"]
-        url, params = body["next"], None  # 'next' already carries the params
+        yield from body['results']
+        url, params = body['next'], None  # 'next' already carries the params
 
 
 # Stale password secrets, oldest-read first
 for secret in list_secrets(
-    content_type="password",
-    status="needs_changing",
-    ordering="last_read",
+    content_type='password',
+    status='needs_changing',
+    ordering='last_read',
 ):
-    print(secret["name"], secret["last_read"])
+    print(secret['name'], secret['last_read'])
 ```
 
 ## Quick reference
