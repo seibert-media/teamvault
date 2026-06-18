@@ -472,6 +472,8 @@ base_url = https://example.com
 fernet_key = {teamvault_key}
 # do not enable this in production
 insecure_debug_mode = disabled
+# enable DEBUG-level logging for failed LDAP authentication attempts including failure reason
+log_auth_failures_mode = disabled
 # file uploads larger than this number of bytes will have their connection reset
 max_file_size = 5242880
 session_cookie_age = 3600
