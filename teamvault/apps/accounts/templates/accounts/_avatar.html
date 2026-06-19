@@ -20,7 +20,7 @@
         </text>
     </svg>
 {% else %}
-    <div class="avatar {{ classes }} d-inline-flex align-items-center justify-content-center border border-5"
+    <div class="avatar {{ classes }} d-inline-flex flex-shrink-0 align-items-center justify-content-center"
          style="background-color: var(--bs-border-color)"
             {% if tooltip_title %}
          data-bs-toggle="tooltip"
@@ -28,6 +28,6 @@
          data-bs-title="{{ tooltip_title }}"
             {% endif %}
     >
-        <i class="fa fa-user-secret fa-fw lh-1"></i>
+        <i class="fa fa-user-secret fa-sm fa-fw lh-1"></i>
     </div>
 {% endif %}
