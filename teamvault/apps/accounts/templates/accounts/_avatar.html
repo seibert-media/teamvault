@@ -20,7 +20,14 @@
         </text>
     </svg>
 {% else %}
-    <div class="rounded-circle border border-5" style="background-color: var(--bs-border-color)">
-        <i class="fa fa-user-secret fa-lg fa-fw lh-1"></i>
+    <div class="avatar {{ classes }} d-inline-flex flex-shrink-0 align-items-center justify-content-center"
+         style="background-color: var(--bs-border-color)"
+            {% if tooltip_title %}
+         data-bs-toggle="tooltip"
+         data-bs-placement="top"
+         data-bs-title="{{ tooltip_title }}"
+            {% endif %}
+    >
+        <i class="fa fa-user-secret fa-sm fa-fw lh-1"></i>
     </div>
 {% endif %}
