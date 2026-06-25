@@ -1,6 +1,7 @@
 from django.conf.urls import include
 from django.urls import path
 
+handler403 = 'teamvault.views.handler403'
 handler404 = 'teamvault.views.handler404'
 
 urlpatterns = (

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+{% block title %}{% trans "Access denied" %}{% endblock %}
+{% block content %}
+    <div class="d-flex flex-column align-items-center justify-content-center text-center" style="min-height: 70vh">
+        <i class="fa-solid fa-lock fa-4x text-accent mb-4 opacity-50"></i>
+        <div class="display-1 fw-bold text-accent lh-1">403</div>
+        <h4 class="mt-3 mb-2">{% trans "Access denied" %}</h4>
+        <p class="text-body-secondary mb-4" style="max-width: 30rem">
+            {% trans "You don't have permission to access this resource." %}
+        </p>
+        <div class="d-flex gap-2">
+            <a href="/" class="btn btn-accent">
+                <i class="fa fa-house me-1"></i> {% trans "Dashboard" %}
+            </a>
+            <a href="javascript:history.back()" class="btn btn-outline-tertiary">
+                {% trans "Go back" %}
+            </a>
+        </div>
+    </div>
+{% endblock %}

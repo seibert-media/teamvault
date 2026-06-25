@@ -24,6 +24,13 @@ class PageSizeMixin:
         return ctx
 
 
+def handler403(request, exception, **_kwargs):  # noqa: ARG001
+    if request.user.is_authenticated:
+        return render(request, '403_loggedin.html', status=403)
+    else:
+        return render(request, '403_anon.html', status=403)
+
+
 def handler404(request, exception, **_kwargs):  # noqa: ARG001
     if request.user.is_authenticated:
         return render(request, '404_loggedin.html', status=404)
