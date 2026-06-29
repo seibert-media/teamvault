@@ -15,7 +15,7 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0 # immutable
+        uses: astral-sh/setup-uv@v8.2.0 # immutable
 
       - name: Set up just
         uses: extractions/setup-just@53165ef7e734c5c07cb06b3c8e7b647c5aa16db3 # v4.0.0
@@ -88,7 +88,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Set Up uv
-        uses: astral-sh/setup-uv@v8.1.0 # immutable
+        uses: astral-sh/setup-uv@v8.2.0 # immutable
         with:
           enable-cache: true
           cache-dependency-glob: |

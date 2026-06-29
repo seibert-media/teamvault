@@ -72,7 +72,7 @@ jobs:
           python-version: "3.14"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v8.1.0 # immutable
+        uses: astral-sh/setup-uv@v8.2.0 # immutable
 
       - name: Update version
         run: |
