@@ -11,6 +11,7 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
+
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
@@ -61,7 +62,7 @@ class RevisionService:
         *,
         secret: Secret,
         actor,  # settings.AUTH_USER_MODEL
-        payload: dict[str, Any],
+        payload: dict[str, Any] | None = None,
         skip_acl: bool = False,
     ) -> SecretRevision:
         """Create or reuse a payload revision, set it current, and record
@@ -71,10 +72,14 @@ class RevisionService:
             raise PermissionDenied('User has no write access to secret payload')
 
         # 1. Build (or fetch) the revision representing _payload_
-        revision = cls._build_revision(secret=secret, actor=actor, payload=payload)
-        payload_changed = revision.plaintext_data_sha256 != (
-            secret.current_revision.plaintext_data_sha256 if secret.current_revision_id else None
-        )
+        if payload is not None:
+            revision = cls._build_revision(secret=secret, actor=actor, payload=payload)
+            payload_changed = revision.plaintext_data_sha256 != (
+                secret.current_revision.plaintext_data_sha256 if secret.current_revision_id else None
+            )
+        else:
+            revision = secret.current_revision
+            payload_changed = False
 
         previous_change = SecretChange.objects.filter(secret=secret).order_by('-created').first()
         incoming_snapshot = copy_meta_from_secret(secret)
