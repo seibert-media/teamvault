@@ -64,7 +64,7 @@ def sync_group_uuids_before_mirror(sender, user, ldap_user, **kwargs):  # noqa: 
         if groups_to_rename:
             Group.objects.bulk_update(groups_to_rename, ['name'])
 
-        new_uuids = set(ldap_groups.keys()) - set(existing_mappings.keys())
+        new_uuids: set[str] = set(ldap_groups) - set(existing_mappings)
         if not new_uuids:
             return
 
