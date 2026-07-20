@@ -1,4 +1,3 @@
-import base64
 import contextlib
 from copy import copy
 from urllib.parse import quote, urlencode
@@ -168,18 +167,13 @@ class SecretEdit(UpdateView):
         secret.save()
         plaintext_data = serialize_add_edit_data(form.cleaned_data, secret)
 
-        if not plaintext_data:  # Only metadata changed
-            # Re-use the existing encrypted data to create a new revision
+        # Only metadata changed
+        if not plaintext_data:
             if form.changed_data and secret.current_revision:
-                # Avoid logging a read for internal book-keeping
-                current_data = secret.current_revision.peek_data(self.request.user)
-                if secret.content_type == ContentType.FILE and isinstance(current_data, (bytes, bytearray)):
-                    # Keep current data on metadata-only edit
-                    current_data = {'file_content': base64.b64encode(current_data).decode()}
                 RevisionService.save_payload(
                     secret=secret,
                     actor=self.request.user,
-                    payload=current_data,
+                    payload=None,
                 )
         else:
             RevisionService.save_payload(
