@@ -92,7 +92,7 @@ class RevisionService:
         secret.current_revision = revision
         secret.last_changed = now()
         secret.last_read = now()
-        # Only clear NEEDS_CHANGING when payload actually changes
+        # 3. Only clear NEEDS_CHANGING when payload actually changes
         if payload_changed and secret.status == SecretStatus.NEEDS_CHANGING:
             secret.status = SecretStatus.OK
         secret.save(update_fields=['current_revision', 'last_changed', 'last_read', 'status'])
@@ -130,7 +130,6 @@ class RevisionService:
 
         return revision
 
-    @classmethod
     @classmethod
     @transaction.atomic
     def restore_to_change(
@@ -458,8 +457,3 @@ class RevisionService:
                         })
 
             return diffs or [{'label': 'Payload', 'old': '∅', 'new': 'Changed'}]
-
-    @staticmethod
-    def _is_current_payload(revision: SecretRevision, secret: Secret) -> bool:
-        """Check if this revision is the current payload."""
-        return revision.id == secret.current_revision_id
