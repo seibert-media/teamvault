@@ -3,6 +3,7 @@ from unittest.mock import Mock
 
 from django.contrib.auth.models import Group
 from django.test import TestCase, override_settings
+from django_auth_ldap.backend import populate_user
 from django_auth_ldap.config import GroupOfNamesType
 
 from teamvault.apps.accounts.models import GroupUUIDMapping
@@ -75,3 +76,19 @@ class SyncGroupUUIDsBeforeMirrorTests(TestCase):
 
         self.assertEqual(Group.objects.count(), 2)
         self.assertEqual(GroupUUIDMapping.objects.count(), 2)
+
+    def test_noop_when_feature_disabled(self):
+        with override_settings(AUTH_LDAP_GROUP_ENTRY_UUID_ATTR=None):
+            self._fire([info('engineering', 'uuid-eng')])
+
+        self.assertFalse(GroupUUIDMapping.objects.exists())
+        self.assertFalse(Group.objects.exists())
+
+
+@override_settings(AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID')
+class SignalConnectionTests(TestCase):
+    def test_receiver_connected_to_populate_user(self):
+        populate_user.send(sender=Mock, user=Mock(), ldap_user=fake_ldap_user([info('engineering', 'uuid-eng')]))
+
+        self.assertTrue(Group.objects.filter(name='engineering').exists())
+        self.assertTrue(GroupUUIDMapping.objects.filter(entry_uuid='uuid-eng').exists())

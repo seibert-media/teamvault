@@ -5,7 +5,7 @@ from django.db import transaction
 from teamvault.apps.accounts.models import GroupUUIDMapping
 
 
-def _collect_ldap_groups(ldap_user):
+def _collect_ldap_groups(ldap_user, *, entry_uuid_attr):
     """Return {entry_uuid: name} from the raw LDAP group infos cached on the ldap_user."""
     # django-auth-ldap exposes group infos only via the underscore API:
     # `group_names` / `group_dns` drop attribute payloads, so we reach for the cached raw
@@ -16,7 +16,6 @@ def _collect_ldap_groups(ldap_user):
     group_infos = groups._get_group_infos()
     # noinspection PyProtectedMember
     group_type = groups._group_type
-    entry_uuid_attr = settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR
 
     ldap_groups = {}
     for group_info in group_infos:
@@ -39,19 +38,23 @@ def sync_group_uuids_before_mirror(sender, user, ldap_user, **kwargs):  # noqa: 
     django-auth-ldap behavior finds correctly-named groups.
 
     Requires:
-     - AUTH_LDAP_GROUP_ENTRY_UUID_ATTR set (opt-in toggle for this feature)
+     - AUTH_LDAP_GROUP_ENTRY_UUID_ATTR set (opt-in toggle for this feature,
+       checked here because the receiver is connected unconditionally)
      - AUTH_LDAP_GROUP_SEARCH attrlist includes that attr (configure_ldap_auth handles it)
      - AUTH_LDAP_ALWAYS_UPDATE_USER = True (so the signal always fires)
      - AUTH_LDAP_MIRROR_GROUPS = True
     """
-    ldap_groups = _collect_ldap_groups(ldap_user)
+    entry_uuid_attr = getattr(settings, 'AUTH_LDAP_GROUP_ENTRY_UUID_ATTR', None)
+    if not entry_uuid_attr:
+        return
+
+    ldap_groups = _collect_ldap_groups(ldap_user, entry_uuid_attr=entry_uuid_attr)
     if not ldap_groups:
         return
 
     with transaction.atomic():
         existing_mappings = {
-            m.entry_uuid: m
-            for m in GroupUUIDMapping.objects.filter(entry_uuid__in=ldap_groups.keys()).select_related('group')
+            m.entry_uuid: m for m in GroupUUIDMapping.objects.filter(entry_uuid__in=ldap_groups).select_related('group')
         }
 
         groups_to_rename = []
