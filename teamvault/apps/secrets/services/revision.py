@@ -11,7 +11,6 @@ from django.db import transaction
 from django.urls import reverse
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
-
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
