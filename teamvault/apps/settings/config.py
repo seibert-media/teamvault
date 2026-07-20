@@ -314,8 +314,6 @@ def configure_ldap_auth(config, settings):
     settings.AUTH_LDAP_ALWAYS_UPDATE_USER = True
     settings.AUTH_LDAP_FIND_GROUP_PERMS = False
     settings.AUTH_LDAP_MIRROR_GROUPS = True
-    settings.AUTH_LDAP_CACHE_GROUPS = True
-    settings.AUTH_LDAP_GROUP_CACHE_TIMEOUT = 900
 
     settings.AUTH_LDAP_CONNECTION_OPTIONS = {}
     settings.AUTH_LDAP_GLOBAL_OPTIONS = {}
