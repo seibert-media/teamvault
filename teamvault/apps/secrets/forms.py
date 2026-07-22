@@ -148,13 +148,20 @@ class PasswordForm(SecretForm):
         fields = GENERIC_FIELDS_HEADER + ['password', 'username', 'url'] + GENERIC_FIELDS_FOOTER
 
 
+class UserRepresentationField(forms.ModelChoiceField):
+    def label_from_instance(self, obj):
+        """Shows the full name of the user, if available, otherwise the username."""
+        full_name = obj.get_full_name()
+        return full_name if full_name else obj.username
+
+
 class SecretShareForm(forms.ModelForm):
     group = forms.ModelChoiceField(
         required=False,
         queryset=Group.objects.none(),  # will be set in view
     )
 
-    user = forms.ModelChoiceField(
+    user = UserRepresentationField(
         required=False,
         queryset=User.objects.none(),  # will be set in view
     )
