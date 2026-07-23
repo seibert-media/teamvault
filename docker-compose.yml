@@ -1,0 +1,46 @@
+version: '2.0'
+services:
+  psql:
+    container_name: psql
+    environment:
+      - POSTGRES_USER=teamvault
+      - POSTGRES_PASSWORD=teamvault
+      - POSTGRES_DB=teamvault
+    image: postgres:latest
+    ports:
+      - 5432:5432
+    networks:
+      - teamvault-net
+
+  teamvault:
+    container_name: teamvault
+    image: teamvault-dev
+    depends_on:
+      psql:
+        condition: service_started
+      webpack:
+        condition: service_completed_successfully
+    networks:
+      - teamvault-net
+    ports:
+      - 8000:8000
+    working_dir: /teamvault
+    volumes:
+      - webpack-stats:/teamvault/teamvault/
+
+  webpack:
+    container_name: webpack
+    image: webpack-dev
+    networks:
+      - teamvault-net
+    ports:
+      - 3000:3000
+    volumes:
+      - webpack-stats:/teamvault/teamvault/
+
+networks:
+  teamvault-net:
+    driver: bridge
+
+volumes:
+  webpack-stats:
