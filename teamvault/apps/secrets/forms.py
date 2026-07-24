@@ -1,4 +1,5 @@
 from datetime import date
+from typing import override
 
 from django import forms
 from django.contrib.auth import get_user_model
@@ -149,10 +150,11 @@ class PasswordForm(SecretForm):
 
 
 class UserRepresentationField(forms.ModelChoiceField):
+    @override
     def label_from_instance(self, obj):
         """Shows the full name of the user, if available, otherwise the username."""
         full_name = obj.get_full_name()
-        return full_name if full_name else obj.username
+        return full_name or obj.username
 
 
 class SecretShareForm(forms.ModelForm):
