@@ -91,19 +91,20 @@
             },
             onLoad: function () {
                 const dropdownEl = this.dropdown;
-                htmx.process(dropdownEl);
+                (htmx.default || htmx).process(dropdownEl);
             },
+
             render: {
                 option(data, escape) {
-                    return `<div class="row align-items-center justify-between">
+                    return `<div class="row g-0 align-items-center">
                                 <div class="col-auto d-flex justify-content-center justify-content-lg-end align-items-center">
                                    <span id="avatar-span-${escape(data.username)}">
-                                       <div class="avatar-container me-2" hx-get="${avatarUrl}?username=${escape(data.username)}"
+                                       <div class="avatar-container me-3" hx-get="${avatarUrl}?username=${escape(data.username)}"
                                             hx-target="this"
                                             hx-swap="innerHTML"
                                             hx-trigger="load">
                                        </div>
-                                   </span
+                                   </span>
                                 </div>
                                 <div class="col-auto ts-option-name-field">${escape(data.cn)}</div>
                             </div>`;
