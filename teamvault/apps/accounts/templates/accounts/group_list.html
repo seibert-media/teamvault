@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load smart_pagination %}
+{% block title %}{% trans "Groups" %}{% endblock %}
+{% block content %}
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="row d-flex justify-content-between">
+                <div class="col">
+                    <h1 class="h1">
+                        {% trans "Groups" %}
+                    </h1>
+                </div>
+                <div class="col text-end align-self-center ps-3">
+                    <div class="groupsearch d-flex align-items-center border border-2 rounded-3 ps-3" tabindex="0" role="search" id="groupsearch-div">
+                        <label for="group-list-search">
+                            <i class="fa fa-search search-icon" aria-hidden="true"></i>
+                        </label>
+                        <select id="group-list-search" type="text" class="form-control"
+                                placeholder="Search group...">
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-body table-responsive">
+                    <table class="table table-hover">
+                        <tr>
+                            <th>{% trans "Groupname" %}</th>
+                            <th>{% trans "Membercount" %}</th>
+                        </tr>
+                        {% for group in groups %}
+                            <tr>
+                                <td>
+                                    <a href="{% url 'accounts.group-detail' groupname=group.name %}">{{ group.name }}</a>
+                                </td>
+                                <td>
+                                    <span>{{ group.user_set.count }}</span>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </table>
+                </div>
+            </div>
+            {% include "pagination.html" %}
+        </div>
+    </div>
+{% endblock %}
+{% block additionalJS %}
+    <script>
+        const groupUrl = '{% url "accounts.search-group" %}'
+        const ts = new TomSelect('#group-list-search', {
+            closeAfterSelect: true,
+            create: false,
+            dropdownParent: '#groupsearch-div',
+            labelField: 'name',
+            maxItems: 1,
+            openOnFocus: false,
+            searchField: ['name'],
+            valueField: 'name',
+            load: function (query, callback) {
+                if (!query) return callback();
+                const params = new URLSearchParams({
+                    q: query,
+                });
+                fetch(`${groupUrl}?${params.toString()}`)
+                    .then(res => res.json())
+                    .then(json => callback(json.results))
+                    .catch(() => callback());
+            },
+            onLoad: function () {
+                const dropdownEl = this.dropdown;
+                (htmx.default || htmx).process(dropdownEl);
+            },
+
+            render: {
+                option(data, escape) {
+                    return `<div class="row g-0 align-items-center">
+                                <div class="col-auto ts-option-name-field">${escape(data.name)}</div>
+                            </div>`;
+                },
+                item(data, escape) {
+                    return `<div>${escape(data.name)}</div>`;
+                }
+            }
+        });
+
+        ts.on('item_add', (value) => {
+            window.location.href = `{% url 'accounts.group-detail-from-request' %}?name=${value}`;
+        });
+
+        const groupSearchBar = document.getElementById('groupsearch-div');
+        const inputEl = groupSearchBar.children[2].children[0].children[0]
+        groupSearchBar.addEventListener('click', _ => {
+            if (document.activeElement === inputEl) return;
+            inputEl.focus();
+        })
+    </script>
+
+{% endblock %}
