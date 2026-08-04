@@ -8,6 +8,31 @@ if TYPE_CHECKING:
     from django.contrib.messages.storage.base import BaseStorage, Message
 
 
+V1_API_PREFIX = '/api/'
+V2_API_PREFIX = '/api/v2/'
+# RFC 8594: a root-relative deprecation link is permitted; we keep it relative so it resolves
+# regardless of host/scheme. No removal date is announced — v1 is frozen but supported.
+DEPRECATION_LINK = '</api/v2/MIGRATION.md>; rel="deprecation"'
+
+
+def v1_deprecation_headers_middleware(get_response):
+    """Tag every legacy DRF (v1) response as deprecated per RFC 8594.
+
+    Scoped to the `/api/` prefix but excluding `/api/v2/`, so the ninja v2 surface stays clean.
+    v1 response bodies and status codes are untouched.
+    """
+
+    def middleware(request):
+        response = get_response(request)
+        path = request.path
+        if path.startswith(V1_API_PREFIX) and not path.startswith(V2_API_PREFIX):
+            response.headers['Deprecation'] = 'true'
+            response.headers['Link'] = DEPRECATION_LINK
+        return response
+
+    return middleware
+
+
 def htmx_message_middleware(get_response):
     # One-time configuration and initialization.
 

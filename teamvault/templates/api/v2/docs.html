@@ -1,0 +1,84 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ api.title }}</title>
+    <script>
+        // Elements ships a full [data-theme=dark] palette in its CSS but never reads
+        // prefers-color-scheme itself, so mirror the system preference onto <html>.
+        // Runs before the stylesheet loads to avoid a light-mode flash.
+        const setTheme = dark => {
+            document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+            document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
+        };
+        const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        setTheme(darkQuery.matches);
+        darkQuery.addEventListener('change', event => setTheme(event.matches));
+    </script>
+    <script src="{% static 'bundled/stoplight-elements.min.js' %}"></script>
+    <link rel="stylesheet" href="{% static 'bundled/stoplight-elements.min.css' %}">
+    <style>
+        /* Spots the bundled dark palette misses — dark-mode workaround from
+           https://github.com/stoplightio/elements/issues/1439#issuecomment-4414173816 */
+        [data-theme="dark"] {
+            --color-canvas: #1a1a1a;
+            --color-canvas-tint: #141414;
+            --color-canvas-100: #0f172a;
+            --color-text: #e2e8f0;
+            --color-text-heading: #f8fafc;
+            --color-text-paragraph: #cbd5e1;
+            --color-text-muted: #94a3b8;
+        }
+        [data-theme="dark"] .sl-overflow-y-auto {
+            color-scheme: dark;
+        }
+        [data-theme="dark"] .sl-code-viewer,
+        [data-theme="dark"] .sl-code-viewer__scroller,
+        [data-theme="dark"] .sl-panel__content .sl-code-viewer {
+            background: #1a2236 !important;
+            filter: none !important;
+        }
+    </style>
+</head>
+<body style="height: 100vh; margin: 0">
+    <div id="elements-content" style="height: 100vh">
+        <elements-api apiDescriptionUrl="{{ openapi_json_url }}" router="hash" layout="sidebar"
+                      style="height: 100%"></elements-api>
+    </div>
+    <script>
+        // The syntax highlighter writes light-theme colors as inline styles, which CSS cannot
+        // override, so remap them as they appear (same issue comment as above). The rgb values
+        // are highlighter-version-specific: if a token stays dim in dark mode, inspect its
+        // <span style="color: rgb(...)"> and extend the map. Known limitation (as upstream):
+        // switching the OS theme to light after spans were remapped requires a reload.
+        if (darkQuery.matches) {
+            const colorMap = {
+                'rgb(24, 54, 145)': 'rgb(121, 192, 255)', // keys → blue
+                'rgb(3, 47, 98)': 'rgb(121, 192, 255)', // keys → blue
+                'rgb(51, 51, 51)': 'rgb(201, 209, 217)', // text → light gray
+                'rgb(36, 41, 47)': 'rgb(201, 209, 217)', // text → light gray
+                'rgb(5, 80, 174)': 'rgb(255, 123, 114)', // numbers/booleans → coral
+                'rgb(15, 76, 129)': 'rgb(121, 192, 255)', // strings → blue
+                'rgb(0, 92, 197)': 'rgb(255, 123, 114)', // numeric values → coral
+                'rgb(116, 66, 16)': 'rgb(255, 166, 87)', // numeric values → amber
+            };
+            const fixColors = () => {
+                document.querySelectorAll('#elements-content span').forEach(el => {
+                    const replacement = colorMap[el.style.color];
+                    if (replacement) {
+                        el.style.color = replacement;
+                    }
+                });
+            };
+            new MutationObserver(fixColors).observe(document.getElementById('elements-content'), {
+                childList: true,
+                subtree: true,
+                attributes: true,
+                attributeFilter: ['style'],
+            });
+        }
+    </script>
+</body>
+</html>

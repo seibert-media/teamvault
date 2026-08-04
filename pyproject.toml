@@ -42,6 +42,7 @@ dependencies = [
     "requests~=2.32",
     "social-auth-app-django~=5.9.0",
     "whitenoise[brotli]~=6.12.0",
+    "django-ninja~=1.4",
 ]
 
 version = "0.13.0"  # automatically changed via "uv version"

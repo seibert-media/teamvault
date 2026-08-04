@@ -1,0 +1,5993 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "TeamVault API",
+    "version": "2.0.0",
+    "description": "\nAPI for TeamVault, the shared password manager: secrets (passwords, credit cards, files),\ntheir payloads, shares, and revision history.\n\n## Authentication\n\nEvery endpoint requires a bearer token (exceptions: `GET /v2/me` and\n`GET /v2/password-suggestion` require a token but no scope; this documentation is public):\n\n```\nAuthorization: Bearer <prefix>.<secret>\n```\n\nTokens are issued in your TeamVault user settings (or by an administrator via the\n`issue_api_token` management command) and carry **scopes**; each operation documents its\nrequired scope. Call `GET /v2/me` to see who you are and which scopes your token holds.\nWildcard scopes (`secrets:*`) match every action on that resource. Reading decrypted\npayloads requires the dedicated `secrets:data:read` scope — it is never implied by\n`secrets:read` or `secrets:write`. Scopes only narrow what the token's user may already\ndo; they never grant access beyond the user's own permissions.\n\n## Errors\n\nAll 4xx/5xx responses use a single envelope:\n\n```json\n{\"detail\": \"Missing required scope: secrets:read\"}\n```\n\nFor validation errors (422), `detail` is a list of field-level error objects.\n\n## Conventions for list endpoints\n\n- **Pagination**: `?page=&page_size=` — response envelope `{count, next, previous, results}`.\n  Default `page_size` is 50, maximum 200 (silently clamped).\n- **Filtering**: each list endpoint documents its filter parameters. Unknown query parameters\n  are rejected with 422. Multiple filters combine with AND.\n- **Sorting**: `?sort=key,-key2` — comma-separated, `-` prefix for descending,\n  per-endpoint allowlist of sort keys.\n- **Expand**: `?expand=a,b` — opt into full objects in place of slim references,\n  per-endpoint allowlist, one level deep. Unknown values are rejected with 422.\n\n## Identifiers\n\nSecrets and revisions are addressed by their stable `hashid` (the same identifier the\nlegacy `/api/` used). Users and shares are addressed by their numeric `id`; users are\nnever addressed by username (usernames can change).\n\n## Migrating from the legacy DRF API\n\nThe legacy `/api/` (v1) endpoints are deprecated but frozen and still supported; every v1 response\ncarries RFC 8594 `Deprecation` and `Link` headers. See the migration guide at\n[`/api/v2/MIGRATION.md`](/api/v2/MIGRATION.md) for the endpoint and field mapping from the\ndeprecated `/api/` endpoints (auth, paths, and per-resource field renames).\n"
+  },
+  "paths": {
+    "/api/v2/me": {
+      "get": {
+        "operationId": "get_me",
+        "summary": "Identify the calling token",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeResponse"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Self-introspection: returns the user behind the bearer token used for this request, plus the token metadata (scopes, expiry). Useful for agents to discover which operations their token permits.\n\n- **Required scope**: none — any valid token",
+        "tags": [
+          "me"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/password-suggestion": {
+      "get": {
+        "operationId": "get_password_suggestion",
+        "summary": "Generate a password suggestion",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PasswordSuggestion"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns a freshly generated password built from the configured password-generator settings (length and minimum digits/upper/lower/special characters from the `[password_generator]` config section). The v2 home of v1's `/api/generate_password/`, now returning a `{password}` object instead of a bare string.\n\n- **Required scope**: none — any valid token. Like `/me`, this endpoint touches no stored data (it generates a random string), so it carries no scope; the bearer token is still required.",
+        "tags": [
+          "utility"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/": {
+      "get": {
+        "operationId": "list_secrets",
+        "summary": "List secrets",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Full-text/substring search across the secrets visible to you.",
+              "title": "Q"
+            },
+            "required": false,
+            "description": "Full-text/substring search across the secrets visible to you."
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact match on status ('ok', 'needs_changing', 'deleted').",
+              "title": "Status"
+            },
+            "required": false,
+            "description": "Exact match on status ('ok', 'needs_changing', 'deleted')."
+          },
+          {
+            "in": "query",
+            "name": "content_type",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact match on content type ('password', 'credit_card', 'file').",
+              "title": "Content Type"
+            },
+            "required": false,
+            "description": "Exact match on content type ('password', 'credit_card', 'file')."
+          },
+          {
+            "in": "query",
+            "name": "access_policy",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exact match on access policy ('any', 'discoverable', 'hidden').",
+              "title": "Access Policy"
+            },
+            "required": false,
+            "description": "Exact match on access policy ('any', 'discoverable', 'hidden')."
+          },
+          {
+            "in": "query",
+            "name": "name",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring match on the name.",
+              "q": "name__icontains",
+              "title": "Name"
+            },
+            "required": false,
+            "description": "Case-insensitive substring match on the name."
+          },
+          {
+            "in": "query",
+            "name": "username",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring match on the username.",
+              "q": "username__icontains",
+              "title": "Username"
+            },
+            "required": false,
+            "description": "Case-insensitive substring match on the username."
+          },
+          {
+            "in": "query",
+            "name": "created_by",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Numeric id of the user who created the secret.",
+              "q": "created_by_id",
+              "title": "Created By"
+            },
+            "required": false,
+            "description": "Numeric id of the user who created the secret."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Expand"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "1-based page number.",
+              "examples": [
+                1
+              ],
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "1-based page number.",
+            "examples": [
+              1
+            ]
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 50,
+              "description": "Items per page. Values above 200 are silently clamped to 200.",
+              "examples": [
+                50
+              ],
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Items per page. Values above 200 are silently clamped to 200.",
+            "examples": [
+              50
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedSecretSchema"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists the secrets visible to you (same visibility as the legacy `/api/`): access policy `any` and `discoverable` secrets, plus any shared directly with you; deleted secrets are excluded. Each item carries `data_readable`, telling you whether you may decrypt it.\n\n- **Required scope**: `secrets:read`\n- **Pagination**: `page`/`page_size` (default 50, max 200)\n- **Filters**: `q`, `status`, `content_type`, `access_policy`, `name`, `username`, `created_by` (combine with AND)\n- **Sort**: `?sort=key,-key2` with keys created_at, last_changed_at, last_read_at, name (default `name`)\n- **Expand**: created_by (one level deep)\n- **Related**: `get_secret`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "create_secret",
+        "summary": "Create a secret",
+        "parameters": [],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Creates a secret with metadata and an initial payload (`secret_data`, write-only). The shape of `secret_data` depends on `content_type` (same vocabulary as the payload-read endpoints, with `file_content` base64-encoded). The creator is automatically granted a permanent share, matching the legacy `/api/` behaviour. Returns the full secret.\n\n- **Required scope**: `secrets:write` (does not grant `secrets:data:read`)\n- **Validation**: 422 if `secret_data` does not match `content_type` (e.g. missing credit-card fields, or a file without `filename`/`file_content`)\n- **Related**: `update_secret`, `get_secret`",
+        "tags": [
+          "secrets"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}": {
+      "get": {
+        "operationId": "get_secret",
+        "summary": "Get a secret",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Expand"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretSchema"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns a single secret by its `hashid`. Enforces the same access rules as the legacy `/api/`: an invisible secret returns 404, a visible-but-unreadable secret returns 403.\n\n- **Required scope**: `secrets:read`\n- **Expand**: created_by (one level deep)\n- **Related**: `list_secrets`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "patch": {
+        "operationId": "update_secret",
+        "summary": "Update a secret",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SecretSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Updates a secret's metadata and/or payload. Every field is optional; only provided fields change. `content_type` is immutable: sending a different value is rejected with 422. When `secret_data` is provided it is validated against the existing content type and saved as a new payload revision (re-using an existing revision when the plaintext is unchanged).\n\n- **Required scope**: `secrets:write` (does not grant `secrets:data:read`)\n- **Permissions**: an invisible secret returns 404, a visible-but-unwritable secret returns 403 (same gate as v1's update path)\n- **Related**: `create_secret`, `get_secret`",
+        "tags": [
+          "secrets"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SecretUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "delete_secret",
+        "summary": "Delete a secret",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Soft-deletes a secret: its `status` becomes `deleted` and it disappears from the default list/visibility (the row is never hard-deleted, preserving history and audit trail).\n\n- **Required scope**: `secrets:write` (does not grant `secrets:data:read`)\n- **Permissions**: an invisible secret returns 404, a visible-but-unwritable secret returns 403\n- **Related**: `update_secret`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}/data": {
+      "get": {
+        "operationId": "get_secret_data",
+        "summary": "Read a secret's current payload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PasswordPayload"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CreditCardPayload"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FilePayload"
+                    }
+                  ],
+                  "title": "Response"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Decrypts and returns the current payload of a secret. The response shape depends on the secret's `content_type`: a password returns `{password, otp_key_data}`, a credit card returns its card fields, and a file returns `{filename, file_content}` with the contents base64-encoded (v2 uses `file_content`, fixing v1's `file` key).\n\n- **Required scope**: `secrets:data:read` (never implied by `secrets:read`/`secrets:write`)\n- **Side effects**: Reading the payload is audited: it records the calling user in the payload's `accessed_by` set, updates `last_read`, and writes a secret-read entry to the audit log (a dedicated elevated-read category when a superuser reads a secret they only see via superuser privileges).\n- **Related**: `get_secret`, `get_secret_revision_data`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}/revisions/{revision_hashid}/data": {
+      "get": {
+        "operationId": "get_secret_revision_data",
+        "summary": "Read a specific revision's payload",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "revision_hashid",
+            "schema": {
+              "title": "Revision Hashid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PasswordPayload"
+                    },
+                    {
+                      "$ref": "#/components/schemas/CreditCardPayload"
+                    },
+                    {
+                      "$ref": "#/components/schemas/FilePayload"
+                    }
+                  ],
+                  "title": "Response"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Decrypts and returns the payload of a specific revision (a `SecretChange`) of a secret, identified by `revision_hashid`. Returns 404 if the revision does not belong to the given secret. The response shape matches `get_secret_data`.\n\n- **Required scope**: `secrets:data:read` (never implied by `secrets:read`/`secrets:write`)\n- **Side effects**: Reading the payload is audited: it records the calling user in the payload's `accessed_by` set, updates `last_read`, and writes a secret-read entry to the audit log (a dedicated elevated-read category when a superuser reads a secret they only see via superuser privileges).\n- **Related**: `get_secret_data`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}/otp": {
+      "get": {
+        "operationId": "get_secret_otp",
+        "summary": "Read a secret's current OTP token",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OtpToken"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Computes and returns the current one-time password (TOTP) token for a password secret that has an OTP key configured. Returns 422 if the secret has no OTP key.\n\n- **Required scope**: `secrets:data:read` (never implied by `secrets:read`/`secrets:write`)\n- **Side effects**: Reading the payload is audited: it records the calling user in the payload's `accessed_by` set, updates `last_read`, and writes a secret-read entry to the audit log (a dedicated elevated-read category when a superuser reads a secret they only see via superuser privileges). The decrypted OTP key is cached in your session, so repeatedly refreshing the token within one session (cookie-retaining clients) does not multiply audit log entries.\n- **Related**: `get_secret_data`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}/shares": {
+      "get": {
+        "operationId": "list_secret_shares",
+        "summary": "List a secret's shares",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "user",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Numeric id of the user the share is granted to.",
+              "q": "user_id",
+              "title": "User"
+            },
+            "required": false,
+            "description": "Numeric id of the user the share is granted to."
+          },
+          {
+            "in": "query",
+            "name": "group",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Numeric id of the group the share is granted to.",
+              "q": "group_id",
+              "title": "Group"
+            },
+            "required": false,
+            "description": "Numeric id of the group the share is granted to."
+          },
+          {
+            "in": "query",
+            "name": "is_expired",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter on whether the share has expired.",
+              "title": "Is Expired"
+            },
+            "required": false,
+            "description": "Filter on whether the share has expired."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Expand"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "1-based page number.",
+              "examples": [
+                1
+              ],
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "1-based page number.",
+            "examples": [
+              1
+            ]
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 50,
+              "description": "Items per page. Values above 200 are silently clamped to 200.",
+              "examples": [
+                50
+              ],
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Items per page. Values above 200 are silently clamped to 200.",
+            "examples": [
+              50
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedShareSchema"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists the shares of a secret: who (a user or a group) has been granted access, by whom, and until when. Each item carries a computed `is_expired`. Visibility follows the same gate as `get_secret` (an invisible secret returns 404).\n\n- **Required scope**: `secrets:read`\n- **Pagination**: `page`/`page_size` (default 50, max 200)\n- **Filters**: `user`, `group`, `is_expired` (combine with AND)\n- **Sort**: `?sort=key,-key2` with keys granted_at (default `-granted_at`)\n- **Expand**: granted_by, group, user (one level deep)\n- **Related**: `create_secret_share`, `delete_secret_share`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "operationId": "create_secret_share",
+        "summary": "Share a secret with a user or group",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareSchema"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Grants access to a secret to exactly one user or one group. Set exactly one of `user`/`group` (both or neither is rejected with 422). An existing active share for the same user/group is rejected (422); an expired share for the same target is replaced. Mirrors the legacy `/api/` semantics, including audit logging (a dedicated superuser category when a superuser shares a secret they only reach via superuser privileges).\n\n- **Required scope**: `shares:write` (never implied by `secrets:write`)\n- **Permissions**: you must have share access to the secret (otherwise 403)\n- **Related**: `list_secret_shares`, `delete_secret_share`",
+        "tags": [
+          "secrets"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareCreateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}/shares/{share_id}": {
+      "delete": {
+        "operationId": "delete_secret_share",
+        "summary": "Remove a share",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "share_id",
+            "schema": {
+              "title": "Share Id",
+              "type": "integer"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Removes a share, revoking the granted access. Returns 404 if the share does not belong to the given secret. Mirrors the legacy `/api/` audit logging, including a dedicated superuser category when a superuser removes a share via superuser privileges.\n\n- **Required scope**: `shares:write` (never implied by `secrets:write`)\n- **Permissions**: you must have share access to the secret (otherwise 403)\n- **Related**: `list_secret_shares`, `create_secret_share`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}/revisions": {
+      "get": {
+        "operationId": "list_secret_revisions",
+        "summary": "List a secret's revision history",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "actor",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Numeric id of the user who made the change.",
+              "q": "actor_id",
+              "title": "Actor"
+            },
+            "required": false,
+            "description": "Numeric id of the user who made the change."
+          },
+          {
+            "in": "query",
+            "name": "created_after",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only revisions created at or after this timestamp.",
+              "q": "created__gte",
+              "title": "Created After"
+            },
+            "required": false,
+            "description": "Only revisions created at or after this timestamp."
+          },
+          {
+            "in": "query",
+            "name": "created_before",
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only revisions created at or before this timestamp.",
+              "q": "created__lte",
+              "title": "Created Before"
+            },
+            "required": false,
+            "description": "Only revisions created at or before this timestamp."
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Sort"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Expand"
+            },
+            "required": false
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "1-based page number.",
+              "examples": [
+                1
+              ],
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "1-based page number.",
+            "examples": [
+              1
+            ]
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 50,
+              "description": "Items per page. Values above 200 are silently clamped to 200.",
+              "examples": [
+                50
+              ],
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Items per page. Values above 200 are silently clamped to 200.",
+            "examples": [
+              50
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedRevisionSchema"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists a secret's history as a chain of revisions (SecretChange rows), newest first. Each revision carries the metadata snapshot at that point in time, the actor, a `parent_hashid` linking to the previous revision, an optional `restored_from_hashid`, and a `payload` reference. Payloads are deduplicated, so several revisions may share one `payload.hashid`. Decrypted payload *content* is served separately by `get_secret_revision_data` (`secrets:data:read`). Visibility follows the same gate as `get_secret` (an invisible secret returns 404).\n\n- **Required scope**: `secrets:read`\n- **Pagination**: `page`/`page_size` (default 50, max 200)\n- **Filters**: `actor`, `created_after`, `created_before` (combine with AND)\n- **Sort**: `?sort=key,-key2` with keys created_at (default `-created_at`)\n- **Expand**: actor (one level deep)\n- **Related**: `get_secret_revision`, `get_secret_revision_data`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/secrets/{hashid}/revisions/{revision_hashid}": {
+      "get": {
+        "operationId": "get_secret_revision",
+        "summary": "Read a single revision",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "hashid",
+            "schema": {
+              "title": "Hashid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "revision_hashid",
+            "schema": {
+              "title": "Revision Hashid",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "expand",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Expand"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RevisionSchema"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Returns a single revision (a SecretChange) of a secret, identified by `revision_hashid`. Returns 404 if the revision does not belong to the given secret. The shape matches an item of `list_secret_revisions`. Decrypted payload content stays behind `get_secret_revision_data` (`secrets:data:read`).\n\n- **Required scope**: `secrets:read`\n- **Expand**: actor (one level deep)\n- **Related**: `list_secret_revisions`, `get_secret_revision_data`",
+        "tags": [
+          "secrets"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/v2/users/{user_id}/pending-secrets": {
+      "get": {
+        "operationId": "list_user_pending_secrets",
+        "summary": "List a user's pending secrets",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Case-insensitive substring match on the secret name.",
+              "q": "name__icontains",
+              "title": "Q"
+            },
+            "required": false,
+            "description": "Case-insensitive substring match on the secret name."
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "schema": {
+              "default": 1,
+              "description": "1-based page number.",
+              "examples": [
+                1
+              ],
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "1-based page number.",
+            "examples": [
+              1
+            ]
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "schema": {
+              "default": 50,
+              "description": "Items per page. Values above 200 are silently clamped to 200.",
+              "examples": [
+                50
+              ],
+              "minimum": 1,
+              "title": "Page Size",
+              "type": "integer"
+            },
+            "required": false,
+            "description": "Items per page. Values above 200 are silently clamped to 200.",
+            "examples": [
+              50
+            ]
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PagedPendingSecret"
+                }
+              }
+            }
+          },
+          "416": {
+            "description": "Requested Range Not Satisfiable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "418": {
+            "description": "I'm a Teapot",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "451": {
+            "description": "Unavailable For Legal Reasons",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "425": {
+            "description": "Too Early",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "402": {
+            "description": "Payment Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "405": {
+            "description": "Method Not Allowed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "406": {
+            "description": "Not Acceptable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "407": {
+            "description": "Proxy Authentication Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "408": {
+            "description": "Request Timeout",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "410": {
+            "description": "Gone",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "411": {
+            "description": "Length Required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorDetail"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lists the secrets a user must rotate when they leave: secrets that need changing (`status = needs_changing`, `needs_changing_on_leave = true`) whose current payload the user has read at some point (access-history based, so current group membership is irrelevant). The v2 home of v1's `/api/users/<username>/pending-secrets/`, addressed by numeric user id.\n\n- **Required scope**: `users:read` — **and** the calling token must belong to a superuser (this offboarding view exposes secrets across all users; the superuser gate is the v1-parity authorization). A non-superuser token holder gets 403 even with the scope.\n- **Pagination**: `page`/`page_size` (default 50, max 200)\n- **Filters**: `q` (case-insensitive substring match on the secret name)\n- Returns 404 for an unknown user id.",
+        "tags": [
+          "users"
+        ],
+        "security": [
+          {
+            "BearerAuth": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "MeResponse": {
+        "description": "Identity of the calling token and its user.",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserRef",
+            "description": "The user this token belongs to.",
+            "examples": [
+              {
+                "full_name": "John Doe",
+                "id": 42,
+                "username": "jdoe"
+              }
+            ]
+          },
+          "token": {
+            "$ref": "#/components/schemas/TokenInfo",
+            "description": "The token used to authenticate this request.",
+            "examples": [
+              {
+                "expires_at": "2026-12-31",
+                "name": "CI deploy key",
+                "prefix": "Yx3kP0aBcDeF",
+                "scopes": [
+                  "secrets:read",
+                  "secrets:data:read"
+                ]
+              }
+            ]
+          }
+        },
+        "required": [
+          "user",
+          "token"
+        ],
+        "title": "MeResponse",
+        "type": "object"
+      },
+      "TokenInfo": {
+        "description": "Metadata about the API token authenticating the current request.",
+        "properties": {
+          "name": {
+            "description": "Human-readable label given when the token was issued.",
+            "examples": [
+              "CI deploy key"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "prefix": {
+            "description": "Public token prefix (the part before the dot in the bearer token).",
+            "examples": [
+              "Yx3kP0aBcDeF"
+            ],
+            "title": "Prefix",
+            "type": "string"
+          },
+          "scopes": {
+            "description": "Scopes granted to this token.",
+            "examples": [
+              [
+                "secrets:read",
+                "secrets:data:read"
+              ]
+            ],
+            "items": {
+              "type": "string"
+            },
+            "title": "Scopes",
+            "type": "array"
+          },
+          "expires_at": {
+            "description": "Date on which this token expires.",
+            "examples": [
+              "2026-12-31"
+            ],
+            "format": "date",
+            "title": "Expires At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "prefix",
+          "scopes",
+          "expires_at"
+        ],
+        "title": "TokenInfo",
+        "type": "object"
+      },
+      "UserRef": {
+        "description": "Slim reference to a user; expandable to the full User schema where documented.",
+        "properties": {
+          "id": {
+            "description": "Stable numeric identifier of the user.",
+            "examples": [
+              42
+            ],
+            "title": "Id",
+            "type": "integer"
+          },
+          "username": {
+            "description": "Login name of the user.",
+            "examples": [
+              "jdoe"
+            ],
+            "title": "Username",
+            "type": "string"
+          },
+          "full_name": {
+            "description": "Display name of the user (first and last name; may be empty).",
+            "examples": [
+              "John Doe"
+            ],
+            "title": "Full Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "full_name"
+        ],
+        "title": "UserRef",
+        "type": "object"
+      },
+      "ErrorDetail": {
+        "description": "Error envelope used by every 4xx/5xx response.",
+        "properties": {
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {},
+                "type": "array"
+              }
+            ],
+            "description": "Human-readable error message, or a list of field-level error objects for validation errors.",
+            "examples": [
+              "Missing required scope: secrets:read"
+            ],
+            "title": "Detail"
+          }
+        },
+        "required": [
+          "detail"
+        ],
+        "title": "ErrorDetail",
+        "type": "object"
+      },
+      "PasswordSuggestion": {
+        "description": "A freshly generated password suggestion.",
+        "properties": {
+          "password": {
+            "description": "A password generated from the configured password-generator settings.",
+            "examples": [
+              "xQ7!fP2$mLr9"
+            ],
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password"
+        ],
+        "title": "PasswordSuggestion",
+        "type": "object"
+      },
+      "Input": {
+        "properties": {
+          "page": {
+            "default": 1,
+            "description": "1-based page number.",
+            "examples": [
+              1
+            ],
+            "minimum": 1,
+            "title": "Page",
+            "type": "integer"
+          },
+          "page_size": {
+            "default": 50,
+            "description": "Items per page. Values above 200 are silently clamped to 200.",
+            "examples": [
+              50
+            ],
+            "minimum": 1,
+            "title": "Page Size",
+            "type": "integer"
+          }
+        },
+        "title": "Input",
+        "type": "object"
+      },
+      "SecretFilters": {
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Full-text/substring search across the secrets visible to you.",
+            "title": "Q"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exact match on status ('ok', 'needs_changing', 'deleted').",
+            "title": "Status"
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exact match on content type ('password', 'credit_card', 'file').",
+            "title": "Content Type"
+          },
+          "access_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Exact match on access policy ('any', 'discoverable', 'hidden').",
+            "title": "Access Policy"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Case-insensitive substring match on the name.",
+            "q": "name__icontains",
+            "title": "Name"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Case-insensitive substring match on the username.",
+            "q": "username__icontains",
+            "title": "Username"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Numeric id of the user who created the secret.",
+            "q": "created_by_id",
+            "title": "Created By"
+          }
+        },
+        "title": "SecretFilters",
+        "type": "object"
+      },
+      "PagedSecretSchema": {
+        "properties": {
+          "count": {
+            "description": "Total number of items across all pages.",
+            "examples": [
+              123
+            ],
+            "title": "Count",
+            "type": "integer"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the next page, or null on the last page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=3"
+            ],
+            "title": "Next"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the previous page, or null on the first page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=1"
+            ],
+            "title": "Previous"
+          },
+          "results": {
+            "description": "The items on this page.",
+            "items": {
+              "$ref": "#/components/schemas/SecretSchema"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "next",
+          "previous",
+          "results"
+        ],
+        "title": "PagedSecretSchema",
+        "type": "object"
+      },
+      "PayloadRef": {
+        "description": "Slim reference to a payload (an encrypted secret revision).\n\nA payload is the deduplicated encrypted blob behind a secret: saving the same plaintext\ntwice reuses one payload row, so several revisions in a secret's history may share the\nsame payload (and thus the same `hashid`). Decrypt the current payload via\n`GET /v2/secrets/{hashid}/data`, or a historical one via\n`GET /v2/secrets/{hashid}/revisions/{revision_hashid}/data`.",
+        "properties": {
+          "hashid": {
+            "description": "Stable identifier of the payload (the secret revision holding the encrypted blob).",
+            "examples": [
+              "k3mZpqR7"
+            ],
+            "title": "Hashid",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When this payload was first created (model field `created`).",
+            "examples": [
+              "2026-01-15T09:30:00Z"
+            ],
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "set_by": {
+            "$ref": "#/components/schemas/UserRef",
+            "description": "The user who set this payload (model field `set_by`).",
+            "examples": [
+              {
+                "full_name": "John Doe",
+                "id": 42,
+                "username": "jdoe"
+              }
+            ]
+          }
+        },
+        "required": [
+          "hashid",
+          "created_at",
+          "set_by"
+        ],
+        "title": "PayloadRef",
+        "type": "object"
+      },
+      "SecretSchema": {
+        "description": "A secret: its metadata and a reference to its current payload.\n\nThe decrypted payload is never part of this resource; fetch it separately via the\ncurrent payload's `/data` endpoint (requires the `secrets:data:read` scope).",
+        "properties": {
+          "hashid": {
+            "description": "Stable identifier of the secret (the same id the legacy /api/ used).",
+            "examples": [
+              "8xKq2mLp"
+            ],
+            "title": "Hashid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Human-readable name of the secret.",
+            "examples": [
+              "Production database"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional URL the secret applies to.",
+            "examples": [
+              "https://db.example.com"
+            ],
+            "title": "Url"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional username stored with the secret.",
+            "examples": [
+              "dbadmin"
+            ],
+            "title": "Username"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional free-text description.",
+            "examples": [
+              "Read-write credentials for the prod cluster."
+            ],
+            "title": "Description"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Original filename for file secrets; null for passwords and credit cards.",
+            "examples": [
+              "service-account.json"
+            ],
+            "title": "Filename"
+          },
+          "content_type": {
+            "description": "Kind of secret. One of 'password', 'credit_card', 'file' (model field `content_type`; v1's 'cc' is renamed to 'credit_card').",
+            "examples": [
+              "password"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "access_policy": {
+            "description": "Who may discover and read the secret. One of 'any', 'discoverable', 'hidden'.",
+            "examples": [
+              "discoverable"
+            ],
+            "title": "Access Policy",
+            "type": "string"
+          },
+          "status": {
+            "description": "Lifecycle status. One of 'ok', 'needs_changing', 'deleted'.",
+            "examples": [
+              "ok"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "needs_changing_on_leave": {
+            "description": "Whether this secret must be rotated when a person with access leaves.",
+            "examples": [
+              true
+            ],
+            "title": "Needs Changing On Leave",
+            "type": "boolean"
+          },
+          "created_at": {
+            "description": "When the secret was created (model field `created`).",
+            "examples": [
+              "2026-01-15T09:30:00Z"
+            ],
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "last_changed_at": {
+            "description": "When the secret metadata was last changed (model field `last_changed`).",
+            "examples": [
+              "2026-02-01T11:00:00Z"
+            ],
+            "format": "date-time",
+            "title": "Last Changed At",
+            "type": "string"
+          },
+          "last_read_at": {
+            "description": "When the secret payload was last read (model field `last_read`).",
+            "examples": [
+              "2026-03-10T14:20:00Z"
+            ],
+            "format": "date-time",
+            "title": "Last Read At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ],
+            "description": "The user who created the secret. Slim reference by default; full User with ?expand=created_by.",
+            "examples": [
+              {
+                "full_name": "John Doe",
+                "id": 42,
+                "username": "jdoe"
+              }
+            ],
+            "title": "Created By"
+          },
+          "current_payload": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PayloadRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Reference to the secret's current payload (v1 `current_revision`), or null if it has none yet.",
+            "examples": [
+              {
+                "created_at": "2026-01-15T09:30:00Z",
+                "hashid": "k3mZpqR7",
+                "set_by": {
+                  "full_name": "John Doe",
+                  "id": 42,
+                  "username": "jdoe"
+                }
+              }
+            ]
+          },
+          "data_readable": {
+            "description": "Whether the calling user may decrypt this secret's payload (their own permissions, independent of token scope).",
+            "examples": [
+              true
+            ],
+            "title": "Data Readable",
+            "type": "boolean"
+          },
+          "web_url": {
+            "description": "Absolute URL of the secret in the TeamVault web UI.",
+            "examples": [
+              "https://teamvault.example.com/secrets/8xKq2mLp/"
+            ],
+            "title": "Web Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hashid",
+          "name",
+          "url",
+          "username",
+          "description",
+          "filename",
+          "content_type",
+          "access_policy",
+          "status",
+          "needs_changing_on_leave",
+          "created_at",
+          "last_changed_at",
+          "last_read_at",
+          "created_by",
+          "current_payload",
+          "data_readable",
+          "web_url"
+        ],
+        "title": "SecretSchema",
+        "type": "object"
+      },
+      "User": {
+        "description": "Full user resource; the expansion target for a UserRef.",
+        "properties": {
+          "id": {
+            "description": "Stable numeric identifier of the user.",
+            "examples": [
+              42
+            ],
+            "title": "Id",
+            "type": "integer"
+          },
+          "username": {
+            "description": "Login name of the user.",
+            "examples": [
+              "jdoe"
+            ],
+            "title": "Username",
+            "type": "string"
+          },
+          "full_name": {
+            "description": "Display name of the user (first and last name; may be empty).",
+            "examples": [
+              "John Doe"
+            ],
+            "title": "Full Name",
+            "type": "string"
+          },
+          "email": {
+            "description": "Email address of the user (may be empty).",
+            "examples": [
+              "john.doe@example.com"
+            ],
+            "title": "Email",
+            "type": "string"
+          },
+          "is_active": {
+            "description": "Whether the user account is active.",
+            "examples": [
+              true
+            ],
+            "title": "Is Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "username",
+          "full_name",
+          "email",
+          "is_active"
+        ],
+        "title": "User",
+        "type": "object"
+      },
+      "SecretCreateRequest": {
+        "additionalProperties": false,
+        "description": "Payload for creating a secret. The shape of `secret_data` depends on `content_type`.",
+        "properties": {
+          "name": {
+            "description": "Human-readable name of the secret.",
+            "examples": [
+              "Production database"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "content_type": {
+            "description": "Kind of secret. One of 'password', 'credit_card', 'file'. Immutable after creation.",
+            "examples": [
+              "password"
+            ],
+            "title": "Content Type",
+            "type": "string"
+          },
+          "secret_data": {
+            "additionalProperties": true,
+            "description": "The write-only payload. Shape depends on `content_type`: password -> {password, optional otp_key_data}; credit_card -> {holder, number, expiration_month, expiration_year, security_code, optional password}; file -> {filename, file_content (base64)}.",
+            "examples": [
+              {
+                "password": "s3cr3t-p@ssw0rd"
+              }
+            ],
+            "title": "Secret Data",
+            "type": "object"
+          },
+          "access_policy": {
+            "default": "discoverable",
+            "description": "Who may discover and read the secret. One of 'any', 'discoverable', 'hidden'.",
+            "examples": [
+              "discoverable"
+            ],
+            "title": "Access Policy",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional URL the secret applies to.",
+            "examples": [
+              "https://db.example.com"
+            ],
+            "title": "Url"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional username stored with the secret.",
+            "examples": [
+              "dbadmin"
+            ],
+            "title": "Username"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional free-text description.",
+            "examples": [
+              "Read-write credentials for the prod cluster."
+            ],
+            "title": "Description"
+          },
+          "needs_changing_on_leave": {
+            "default": true,
+            "description": "Whether this secret must be rotated when a person with access leaves.",
+            "examples": [
+              true
+            ],
+            "title": "Needs Changing On Leave",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "content_type",
+          "secret_data"
+        ],
+        "title": "SecretCreateRequest",
+        "type": "object"
+      },
+      "SecretUpdateRequest": {
+        "additionalProperties": false,
+        "description": "Payload for updating a secret. Every field is optional; only provided fields change.\n\n`content_type` is immutable: sending a value different from the secret's current content type\nis rejected with 422.",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Human-readable name of the secret.",
+            "examples": [
+              "Production database"
+            ],
+            "title": "Name"
+          },
+          "content_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Immutable. Sending a value different from the secret's content type is rejected (422).",
+            "examples": [
+              "password"
+            ],
+            "title": "Content Type"
+          },
+          "secret_data": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "New write-only payload (same shape rules as create, matched to the secret's content type).",
+            "examples": [
+              {
+                "password": "s3cr3t-p@ssw0rd"
+              }
+            ],
+            "title": "Secret Data"
+          },
+          "access_policy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who may discover and read the secret. One of 'any', 'discoverable', 'hidden'.",
+            "examples": [
+              "discoverable"
+            ],
+            "title": "Access Policy"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional URL the secret applies to.",
+            "examples": [
+              "https://db.example.com"
+            ],
+            "title": "Url"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional username stored with the secret.",
+            "examples": [
+              "dbadmin"
+            ],
+            "title": "Username"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional free-text description.",
+            "examples": [
+              "Read-write credentials for the prod cluster."
+            ],
+            "title": "Description"
+          },
+          "needs_changing_on_leave": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether this secret must be rotated when a person with access leaves.",
+            "examples": [
+              true
+            ],
+            "title": "Needs Changing On Leave"
+          }
+        },
+        "title": "SecretUpdateRequest",
+        "type": "object"
+      },
+      "CreditCardPayload": {
+        "description": "Decrypted payload of a credit card secret.",
+        "properties": {
+          "holder": {
+            "description": "Name of the card holder.",
+            "examples": [
+              "Jane Doe"
+            ],
+            "title": "Holder",
+            "type": "string"
+          },
+          "expiration_month": {
+            "description": "Two-digit expiration month.",
+            "examples": [
+              "12"
+            ],
+            "title": "Expiration Month",
+            "type": "string"
+          },
+          "expiration_year": {
+            "description": "Four-digit expiration year.",
+            "examples": [
+              "2030"
+            ],
+            "title": "Expiration Year",
+            "type": "string"
+          },
+          "number": {
+            "description": "The card number.",
+            "examples": [
+              "4111111111111111"
+            ],
+            "title": "Number",
+            "type": "string"
+          },
+          "security_code": {
+            "description": "The card security code (CVC/CVV).",
+            "examples": [
+              "123"
+            ],
+            "title": "Security Code",
+            "type": "string"
+          },
+          "password": {
+            "description": "Optional card PIN or password (may be empty).",
+            "examples": [
+              ""
+            ],
+            "title": "Password",
+            "type": "string"
+          }
+        },
+        "required": [
+          "holder",
+          "expiration_month",
+          "expiration_year",
+          "number",
+          "security_code",
+          "password"
+        ],
+        "title": "CreditCardPayload",
+        "type": "object"
+      },
+      "FilePayload": {
+        "description": "Decrypted payload of a file secret.\n\nUnlike v1 (which returned the bytes under a `file` key), v2 returns them under `file_content`.",
+        "properties": {
+          "filename": {
+            "description": "Original filename of the stored file.",
+            "examples": [
+              "service-account.json"
+            ],
+            "title": "Filename",
+            "type": "string"
+          },
+          "file_content": {
+            "description": "Base64-encoded file contents.",
+            "examples": [
+              "aGVsbG8tZnJvbS1ieXRlcw=="
+            ],
+            "title": "File Content",
+            "type": "string"
+          }
+        },
+        "required": [
+          "filename",
+          "file_content"
+        ],
+        "title": "FilePayload",
+        "type": "object"
+      },
+      "PasswordPayload": {
+        "description": "Decrypted payload of a password secret.",
+        "properties": {
+          "password": {
+            "description": "The decrypted password.",
+            "examples": [
+              "s3cr3t-p@ssw0rd"
+            ],
+            "title": "Password",
+            "type": "string"
+          },
+          "otp_key_data": {
+            "description": "The stored otpauth OTP key data, or an empty string if the secret has no OTP configured.",
+            "examples": [
+              "otpauth://totp/Example?secret=JBSWY3DPEHPK3PXP&digits=6"
+            ],
+            "title": "Otp Key Data",
+            "type": "string"
+          }
+        },
+        "required": [
+          "password",
+          "otp_key_data"
+        ],
+        "title": "PasswordPayload",
+        "type": "object"
+      },
+      "OtpToken": {
+        "description": "A freshly computed one-time password (TOTP) token.",
+        "properties": {
+          "otp": {
+            "description": "The current OTP token.",
+            "examples": [
+              "123456"
+            ],
+            "title": "Otp",
+            "type": "string"
+          }
+        },
+        "required": [
+          "otp"
+        ],
+        "title": "OtpToken",
+        "type": "object"
+      },
+      "ShareFilters": {
+        "additionalProperties": false,
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Numeric id of the user the share is granted to.",
+            "q": "user_id",
+            "title": "User"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Numeric id of the group the share is granted to.",
+            "q": "group_id",
+            "title": "Group"
+          },
+          "is_expired": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Filter on whether the share has expired.",
+            "title": "Is Expired"
+          }
+        },
+        "title": "ShareFilters",
+        "type": "object"
+      },
+      "Group": {
+        "description": "Full group resource; the expansion target for a GroupRef.\n\nTeamVault stores no group attributes beyond id and name, so the expanded Group has the same\nshape as a GroupRef. It exists as a distinct schema so `?expand=group` is documented and so the\nrepresentation can grow without a breaking change if richer group data is added later.",
+        "properties": {
+          "id": {
+            "description": "Stable numeric identifier of the group.",
+            "examples": [
+              7
+            ],
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Name of the group.",
+            "examples": [
+              "ops"
+            ],
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "Group",
+        "type": "object"
+      },
+      "GroupRef": {
+        "description": "Slim reference to a group; expandable to the full Group schema where documented.",
+        "properties": {
+          "id": {
+            "description": "Stable numeric identifier of the group.",
+            "examples": [
+              7
+            ],
+            "title": "Id",
+            "type": "integer"
+          },
+          "name": {
+            "description": "Name of the group.",
+            "examples": [
+              "ops"
+            ],
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "GroupRef",
+        "type": "object"
+      },
+      "PagedShareSchema": {
+        "properties": {
+          "count": {
+            "description": "Total number of items across all pages.",
+            "examples": [
+              123
+            ],
+            "title": "Count",
+            "type": "integer"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the next page, or null on the last page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=3"
+            ],
+            "title": "Next"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the previous page, or null on the first page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=1"
+            ],
+            "title": "Previous"
+          },
+          "results": {
+            "description": "The items on this page.",
+            "items": {
+              "$ref": "#/components/schemas/ShareSchema"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "next",
+          "previous",
+          "results"
+        ],
+        "title": "PagedShareSchema",
+        "type": "object"
+      },
+      "ShareSchema": {
+        "description": "A grant of access to a secret, given to exactly one user or one group.\n\nExactly one of `user`/`group` is set; the other is null. Slim references by default;\nexpand `user`, `group`, and/or `granted_by` to full objects with `?expand=`.",
+        "properties": {
+          "id": {
+            "description": "Stable numeric identifier of the share.",
+            "examples": [
+              123
+            ],
+            "title": "Id",
+            "type": "integer"
+          },
+          "user": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The user this share grants access to, or null for a group share. Slim reference by default; full User with ?expand=user.",
+            "examples": [
+              {
+                "full_name": "John Doe",
+                "id": 42,
+                "username": "jdoe"
+              }
+            ],
+            "title": "User"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GroupRef"
+              },
+              {
+                "$ref": "#/components/schemas/Group"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The group this share grants access to, or null for a user share. Slim reference by default; expand=group returns the same {id, name} shape (TeamVault stores no further group data).",
+            "examples": [
+              {
+                "id": 7,
+                "name": "ops"
+              }
+            ],
+            "title": "Group"
+          },
+          "granted_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "$ref": "#/components/schemas/User"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The user who created this share, or null for system-created shares (e.g. the secret creator's automatic self-share). Slim reference by default; full User with ?expand=granted_by.",
+            "examples": [
+              {
+                "full_name": "John Doe",
+                "id": 42,
+                "username": "jdoe"
+              }
+            ],
+            "title": "Granted By"
+          },
+          "grant_description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free-text reason recorded when the share was created (may be null).",
+            "examples": [
+              "On-call access for incident #4711"
+            ],
+            "title": "Grant Description"
+          },
+          "granted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the share was created (model field `granted_on`; renamed to `granted_at` in v2).",
+            "examples": [
+              "2026-01-15T09:30:00Z"
+            ],
+            "title": "Granted At"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the share expires, or null for a permanent share (model field `granted_until`; renamed to `expires_at` in v2).",
+            "examples": [
+              "2026-02-15T09:30:00Z"
+            ],
+            "title": "Expires At"
+          },
+          "is_expired": {
+            "description": "Whether the share has expired (its `expires_at` is in the past).",
+            "examples": [
+              false
+            ],
+            "title": "Is Expired",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "user",
+          "group",
+          "granted_by",
+          "grant_description",
+          "granted_at",
+          "expires_at",
+          "is_expired"
+        ],
+        "title": "ShareSchema",
+        "type": "object"
+      },
+      "ShareCreateRequest": {
+        "additionalProperties": false,
+        "description": "Payload for sharing a secret with exactly one user or one group.\n\nSet exactly one of `user`/`group` (both or neither is rejected with 422). `expires_at` is\noptional; omit it (or send null) for a permanent share.",
+        "properties": {
+          "user": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Numeric id of the user to share with. Set this or `group`, never both.",
+            "examples": [
+              42
+            ],
+            "title": "User"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Numeric id of the group to share with. Set this or `user`, never both.",
+            "examples": [
+              7
+            ],
+            "title": "Group"
+          },
+          "grant_description": {
+            "description": "Free-text reason for granting access; recorded on the share and in the audit log.",
+            "examples": [
+              "On-call access for incident #4711"
+            ],
+            "title": "Grant Description",
+            "type": "string"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional expiry timestamp (model field `granted_until`; renamed to `expires_at` in v2). Omit or null for a permanent share.",
+            "examples": [
+              "2026-02-15T09:30:00Z"
+            ],
+            "title": "Expires At"
+          }
+        },
+        "required": [
+          "grant_description"
+        ],
+        "title": "ShareCreateRequest",
+        "type": "object"
+      },
+      "RevisionFilters": {
+        "additionalProperties": false,
+        "properties": {
+          "actor": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Numeric id of the user who made the change.",
+            "q": "actor_id",
+            "title": "Actor"
+          },
+          "created_after": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only revisions created at or after this timestamp.",
+            "q": "created__gte",
+            "title": "Created After"
+          },
+          "created_before": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Only revisions created at or before this timestamp.",
+            "q": "created__lte",
+            "title": "Created Before"
+          }
+        },
+        "title": "RevisionFilters",
+        "type": "object"
+      },
+      "PagedRevisionSchema": {
+        "properties": {
+          "count": {
+            "description": "Total number of items across all pages.",
+            "examples": [
+              123
+            ],
+            "title": "Count",
+            "type": "integer"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the next page, or null on the last page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=3"
+            ],
+            "title": "Next"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the previous page, or null on the first page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=1"
+            ],
+            "title": "Previous"
+          },
+          "results": {
+            "description": "The items on this page.",
+            "items": {
+              "$ref": "#/components/schemas/RevisionSchema"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "next",
+          "previous",
+          "results"
+        ],
+        "title": "PagedRevisionSchema",
+        "type": "object"
+      },
+      "RevisionSchema": {
+        "description": "One entry in a secret's history: a `SecretChange` row.\n\nA revision captures the secret's metadata snapshot at a point in time plus a reference to the\npayload (`SecretRevision`) that was current then. Payloads are deduplicated, so several\nrevisions may share one `payload.hashid` (e.g. after a restore or a metadata-only edit). The\ndecrypted payload content is never part of this resource; fetch it via\n`GET /v2/secrets/{hashid}/revisions/{revision_hashid}/data` (requires `secrets:data:read`).",
+        "properties": {
+          "hashid": {
+            "description": "Stable identifier of the revision (the SecretChange hashid). Use it at the `/revisions/{revision_hashid}/data` endpoint to decrypt this revision.",
+            "examples": [
+              "c7Lm9Qr2"
+            ],
+            "title": "Hashid",
+            "type": "string"
+          },
+          "created_at": {
+            "description": "When this revision was recorded (model field `created`).",
+            "examples": [
+              "2026-01-15T09:30:00Z"
+            ],
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "actor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "$ref": "#/components/schemas/User"
+              }
+            ],
+            "description": "The user who made this change. Slim reference by default; full User with ?expand=actor.",
+            "examples": [
+              {
+                "full_name": "John Doe",
+                "id": 42,
+                "username": "jdoe"
+              }
+            ],
+            "title": "Actor"
+          },
+          "parent_hashid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Hashid of the previous revision in the linear history chain (model field `parent`), or null for the first revision.",
+            "examples": [
+              "b3Kp8Wn1"
+            ],
+            "title": "Parent Hashid"
+          },
+          "restored_from_hashid": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "If this revision was created by restoring an earlier one, the hashid of that source revision (model field `restored_from`); otherwise null.",
+            "examples": [
+              "a1Jq5Vm0"
+            ],
+            "title": "Restored From Hashid"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/PayloadRef",
+            "description": "Reference to the payload that was current at this revision (model field `revision`). Payloads are deduplicated, so several revisions may share one payload hashid.",
+            "examples": [
+              {
+                "created_at": "2026-01-15T09:30:00Z",
+                "hashid": "k3mZpqR7",
+                "set_by": {
+                  "full_name": "John Doe",
+                  "id": 42,
+                  "username": "jdoe"
+                }
+              }
+            ]
+          },
+          "name": {
+            "description": "Secret name at this revision.",
+            "examples": [
+              "Production database"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Secret description at this revision.",
+            "examples": [
+              "Read-write credentials for the prod cluster."
+            ],
+            "title": "Description"
+          },
+          "username": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Secret username at this revision.",
+            "examples": [
+              "dbadmin"
+            ],
+            "title": "Username"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Secret URL at this revision.",
+            "examples": [
+              "https://db.example.com"
+            ],
+            "title": "Url"
+          },
+          "filename": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Secret filename at this revision (file secrets only).",
+            "examples": [
+              "service-account.json"
+            ],
+            "title": "Filename"
+          },
+          "access_policy": {
+            "description": "Access policy at this revision. One of 'any', 'discoverable', 'hidden'.",
+            "examples": [
+              "discoverable"
+            ],
+            "title": "Access Policy",
+            "type": "string"
+          },
+          "status": {
+            "description": "Lifecycle status at this revision. One of 'ok', 'needs_changing', 'deleted'.",
+            "examples": [
+              "ok"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "needs_changing_on_leave": {
+            "description": "Whether the secret required rotation on leave at this revision.",
+            "examples": [
+              true
+            ],
+            "title": "Needs Changing On Leave",
+            "type": "boolean"
+          },
+          "scrubbed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When this revision had its metadata scrubbed by a superuser, or null if it was never scrubbed. When set, the snapshot fields above reflect the post-scrub state.",
+            "examples": [
+              "2026-04-01T08:00:00Z"
+            ],
+            "title": "Scrubbed At"
+          },
+          "scrubbed_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UserRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The superuser who scrubbed this revision, or null if it was never scrubbed.",
+            "examples": [
+              {
+                "full_name": "Site Admin",
+                "id": 1,
+                "username": "admin"
+              }
+            ]
+          }
+        },
+        "required": [
+          "hashid",
+          "created_at",
+          "actor",
+          "parent_hashid",
+          "restored_from_hashid",
+          "payload",
+          "name",
+          "description",
+          "username",
+          "url",
+          "filename",
+          "access_policy",
+          "status",
+          "needs_changing_on_leave",
+          "scrubbed_at",
+          "scrubbed_by"
+        ],
+        "title": "RevisionSchema",
+        "type": "object"
+      },
+      "PendingSecretFilters": {
+        "additionalProperties": false,
+        "properties": {
+          "q": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Case-insensitive substring match on the secret name.",
+            "q": "name__icontains",
+            "title": "Q"
+          }
+        },
+        "title": "PendingSecretFilters",
+        "type": "object"
+      },
+      "PagedPendingSecret": {
+        "properties": {
+          "count": {
+            "description": "Total number of items across all pages.",
+            "examples": [
+              123
+            ],
+            "title": "Count",
+            "type": "integer"
+          },
+          "next": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the next page, or null on the last page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=3"
+            ],
+            "title": "Next"
+          },
+          "previous": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Absolute URL of the previous page, or null on the first page.",
+            "examples": [
+              "https://teamvault.example.com/api/v2/secrets/?page=1"
+            ],
+            "title": "Previous"
+          },
+          "results": {
+            "description": "The items on this page.",
+            "items": {
+              "$ref": "#/components/schemas/PendingSecret"
+            },
+            "title": "Results",
+            "type": "array"
+          }
+        },
+        "required": [
+          "count",
+          "next",
+          "previous",
+          "results"
+        ],
+        "title": "PagedPendingSecret",
+        "type": "object"
+      },
+      "PendingSecret": {
+        "description": "A secret a user must rotate on leaving: it needs changing and the user has read it.",
+        "properties": {
+          "hashid": {
+            "description": "Stable identifier of the secret (the same identifier the legacy `/api/` used).",
+            "examples": [
+              "k3mZpqR7"
+            ],
+            "title": "Hashid",
+            "type": "string"
+          },
+          "name": {
+            "description": "Human-readable name of the secret.",
+            "examples": [
+              "Production database password"
+            ],
+            "title": "Name",
+            "type": "string"
+          },
+          "status": {
+            "description": "Secret status, always 'needs_changing' for a pending secret.",
+            "examples": [
+              "needs_changing"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "web_url": {
+            "description": "Absolute URL of the secret in the TeamVault web UI.",
+            "examples": [
+              "https://teamvault.example.com/secrets/k3mZpqR7/"
+            ],
+            "title": "Web Url",
+            "type": "string"
+          },
+          "last_changed_at": {
+            "description": "When the secret was last changed (v1 `last_changed`).",
+            "examples": [
+              "2026-01-15T09:30:00Z"
+            ],
+            "format": "date-time",
+            "title": "Last Changed At",
+            "type": "string"
+          },
+          "last_read_at": {
+            "description": "When the secret was last read by anyone (v1 `last_read`).",
+            "examples": [
+              "2026-02-20T14:05:00Z"
+            ],
+            "format": "date-time",
+            "title": "Last Read At",
+            "type": "string"
+          },
+          "last_shared": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "When the secret was most recently shared (max of its shares' `granted_on`); null if never.",
+            "examples": [
+              "2026-01-10T08:00:00Z"
+            ],
+            "title": "Last Shared"
+          }
+        },
+        "required": [
+          "hashid",
+          "name",
+          "status",
+          "web_url",
+          "last_changed_at",
+          "last_read_at",
+          "last_shared"
+        ],
+        "title": "PendingSecret",
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  },
+  "servers": []
+}

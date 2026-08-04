@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'django_bootstrap5',
     'huey.contrib.djhuey',
+    'ninja',  # for the export_openapi_schema management command
     'rest_framework',
     'social_django',
     'teamvault.apps.accounts.AccountsConfig',
@@ -74,6 +75,7 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'teamvault.middleware.htmx_message_middleware',
+    'teamvault.middleware.v1_deprecation_headers_middleware',
 ]
 
 ROOT_URLCONF = 'teamvault.urls'

@@ -1,4 +1,5 @@
 const path = require('path');
+const rspack = require('@rspack/core');
 const BundleTracker = require('webpack-bundle-tracker');
 
 /** @type {import('@rspack/core').Configuration} */
@@ -41,6 +42,21 @@ module.exports = {
     new BundleTracker({
       path: path.resolve(__dirname, 'teamvault'),
       filename: 'webpack-stats.json',
+    }),
+    // Stoplight Elements is loaded directly by the API docs template
+    // (teamvault/templates/api/v2/docs.html), not through an entry point,
+    // so copy the prebuilt bundle under stable, unhashed names.
+    new rspack.CopyRspackPlugin({
+      patterns: [
+        {
+          from: 'node_modules/@stoplight/elements/web-components.min.js',
+          to: 'stoplight-elements.min.js',
+        },
+        {
+          from: 'node_modules/@stoplight/elements/styles.min.css',
+          to: 'stoplight-elements.min.css',
+        },
+      ],
     }),
   ],
   resolve: {
