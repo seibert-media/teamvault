@@ -3,6 +3,10 @@ from django.urls import path
 
 from .views import (
     get_user_avatar_partial,
+    group_detail,
+    group_detail_from_request,
+    groups,
+    search_group,
     search_user,
     user_activate,
     user_detail,
@@ -69,6 +73,26 @@ urlpatterns = (
         user_activate,
         {'deactivate': True},
         name='accounts.user-deactivate',
+    ),
+    path(
+        'groups/',
+        groups,
+        name='accounts.group-list',
+    ),
+    path(
+        'groups/search/',
+        search_group,
+        name='accounts.search-group',
+    ),
+    path(
+        'groups/detail/',
+        group_detail_from_request,
+        name='accounts.group-detail-from-request',
+    ),
+    path(
+        'groups/<str:groupname>/',
+        group_detail,
+        name='accounts.group-detail',
     ),
     path(
         'settings/',

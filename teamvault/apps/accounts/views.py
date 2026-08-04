@@ -4,6 +4,7 @@ from functools import cached_property
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models import Max, Q
 from django.http import (
@@ -294,3 +295,52 @@ def get_user_avatar_partial(request):
         return {}
     user = User.objects.get(username=username)
     return render(request, 'accounts/_avatar.html', {'user': user, 'tooltip_title': username})
+
+
+class GroupList(PageSizeMixin, ListView):
+    context_object_name = 'groups'
+    model = Group
+    paginate_by = 25
+    template_name = 'accounts/group_list.html'
+
+    def get_queryset(self):
+        return self.model.objects.order_by('name')
+
+
+groups = user_passes_test(lambda u: u.is_superuser)(GroupList.as_view())
+
+
+class GroupDetail(DetailView):
+    context_object_name = 'group'
+    model = Group
+    slug_field = 'name'
+    slug_url_kwarg = 'groupname'
+    template_name = 'accounts/group_detail.html'
+
+
+group_detail = user_passes_test(lambda u: u.is_superuser)(GroupDetail.as_view())
+
+
+def search_group(request):
+    if not request.user.is_superuser:
+        return {}
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return {}
+    groups_queryset = Group.objects.filter(name__icontains=q)[:15]
+    results: list[dict[str, str]] = [
+        {
+            'name': group.name,
+        }
+        for group in groups_queryset
+    ]
+    return JsonResponse({'results': results})
+
+
+@user_passes_test(lambda u: u.is_superuser)
+def group_detail_from_request(request):
+    groupname = request.GET.get('name', '').strip()
+    if not groupname:
+        return HttpResponseBadRequest(_('Groupname is required'))
+    group = get_object_or_404(Group, name=groupname)
+    return HttpResponseRedirect(reverse('accounts.group-detail', kwargs={'groupname': group}))
