@@ -344,3 +344,25 @@ def group_detail_from_request(request):
         return HttpResponseBadRequest(_('Groupname is required'))
     group = get_object_or_404(Group, name=groupname)
     return HttpResponseRedirect(reverse('accounts.group-detail', kwargs={'groupname': group}))
+
+
+class GroupMemberList(PageSizeMixin, ListView):
+    context_object_name = 'group_members'
+    paginate_by = 10
+    template_name = 'accounts/group_members.html#group-members'
+
+    @cached_property
+    def group_object(self):
+        return get_object_or_404(Group, name=self.kwargs['groupname'])
+
+    def get_queryset(self):
+        return self.group_object.user_set.order_by('username')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['group'] = self.group_object
+
+        return ctx
+
+
+group_members = user_passes_test(lambda u: u.is_superuser)(GroupMemberList.as_view())

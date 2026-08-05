@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load smart_pagination %}
+
+{% block content %}
+{% partialdef group-members inline %}
+    <div class="d-flex flex-column gap-2">
+        {% for user in group_members %}
+            <a class="d-flex align-items-center gap-2 text-decoration-none"
+               href="{% url 'accounts.user-detail' username=user.username %}">
+              {% include "accounts/_avatar.html" with user=user %}
+              {{ user.username }}
+            </a>
+        {% empty %}
+            {% trans "No members" %}
+        {% endfor %}
+    </div>
+    <div hx-boost="true" hx-target="#group-members-wrapper" hx-push-url="false">
+        {% url 'accounts.group-members' group.name as members_url %}
+        {% include "pagination.html" with url=members_url target="#group-members-wrapper" %}
+    </div>
+{% endpartialdef %}
+{% endblock %}

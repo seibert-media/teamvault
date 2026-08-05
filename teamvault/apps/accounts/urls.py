@@ -5,6 +5,7 @@ from .views import (
     get_user_avatar_partial,
     group_detail,
     group_detail_from_request,
+    group_members,
     groups,
     search_group,
     search_user,
@@ -88,6 +89,11 @@ urlpatterns = (
         'groups/detail/',
         group_detail_from_request,
         name='accounts.group-detail-from-request',
+    ),
+    path(
+        'groups/<str:groupname>/members/',
+        group_members,
+        name='accounts.group-members',
     ),
     path(
         'groups/<str:groupname>/',

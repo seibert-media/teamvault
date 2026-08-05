@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block title %}{% trans "Group Details" %}{% endblock %}
+
+{% block content %}
+    <div class="container">
+        <div class="row">
+            <div class="col-md-12">
+                <h1>{% trans "Group Details" %}</h1>
+                <br><br>
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card">
+                    <table class="table table-hover mb-0">
+                        <tr>
+                            <td>{% trans "Groupname" %}</td>
+                            <td>{{ group.name }}</td>
+                        </tr>
+                        <tr>
+                            <td>{% trans "Membercount" %}</td>
+                            <td>{{ group.user_set.count }} </td>
+                        </tr>
+                        <tr>
+                            <td>{% trans "Users" %}</td>
+                            <td id="group-members-wrapper"
+                                hx-get="{% url 'accounts.group-members' group.name %}"
+                                hx-trigger="load" hx-swap="innerHTML">
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
