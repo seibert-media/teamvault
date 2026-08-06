@@ -26,7 +26,7 @@ from teamvault.apps.secrets.utils import META_FIELDS, apply_snapshot_to_secret, 
 @dataclass
 class HistoryEntry:
     ts: datetime
-    kind: Literal['payload', 'meta', 'restore']
+    kind: Literal['payload', 'meta', 'payload_and_meta', 'restore']
     user: str
     name: str
     changes: list[dict[str, str]]
@@ -61,7 +61,7 @@ class RevisionService:
         *,
         secret: Secret,
         actor,  # settings.AUTH_USER_MODEL
-        payload: dict[str, Any],
+        payload: dict[str, Any] | None = None,
         skip_acl: bool = False,
     ) -> SecretRevision:
         """Create or reuse a payload revision, set it current, and record
@@ -71,10 +71,14 @@ class RevisionService:
             raise PermissionDenied('User has no write access to secret payload')
 
         # 1. Build (or fetch) the revision representing _payload_
-        revision = cls._build_revision(secret=secret, actor=actor, payload=payload)
-        payload_changed = revision.plaintext_data_sha256 != (
-            secret.current_revision.plaintext_data_sha256 if secret.current_revision_id else None
-        )
+        if payload is not None:
+            revision = cls._build_revision(secret=secret, actor=actor, payload=payload)
+            payload_changed = revision.plaintext_data_sha256 != (
+                secret.current_revision.plaintext_data_sha256 if secret.current_revision_id else None
+            )
+        else:
+            revision = secret.current_revision
+            payload_changed = False
 
         previous_change = SecretChange.objects.filter(secret=secret).order_by('-created').first()
         incoming_snapshot = copy_meta_from_secret(secret)
@@ -88,7 +92,7 @@ class RevisionService:
         secret.current_revision = revision
         secret.last_changed = now()
         secret.last_read = now()
-        # Only clear NEEDS_CHANGING when payload actually changes
+        # 3. Only clear NEEDS_CHANGING when payload actually changes
         if payload_changed and secret.status == SecretStatus.NEEDS_CHANGING:
             secret.status = SecretStatus.OK
         secret.save(update_fields=['current_revision', 'last_changed', 'last_read', 'status'])
@@ -126,7 +130,6 @@ class RevisionService:
 
         return revision
 
-    @classmethod
     @classmethod
     @transaction.atomic
     def restore_to_change(
@@ -260,7 +263,14 @@ class RevisionService:
             meta_changes = cls._get_meta_diff(ch, parent)
 
             # Determine kind
-            kind = 'restore' if ch.restored_from_id else ('payload' if payload_changes else 'meta')
+            if ch.restored_from_id:
+                kind = 'restore'
+            elif payload_changes and meta_changes:
+                kind = 'payload_and_meta'
+            elif payload_changes:
+                kind = 'payload'
+            elif meta_changes:
+                kind = 'meta'
 
             # Merge changes: payload first for readability
             merged = []
@@ -447,8 +457,3 @@ class RevisionService:
                         })
 
             return diffs or [{'label': 'Payload', 'old': '∅', 'new': 'Changed'}]
-
-    @staticmethod
-    def _is_current_payload(revision: SecretRevision, secret: Secret) -> bool:
-        """Check if this revision is the current payload."""
-        return revision.id == secret.current_revision_id
