@@ -278,7 +278,6 @@ def configure_ldap_auth(config, settings):
     # carries the immutable group identifier. Without it, we fall back to django-auth-ldap's
     # default name-based mirroring.
     settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR = get_from_config(config, 'auth_ldap', 'attr_group_entry_uuid', None)
-    settings.AUTH_LDAP_AUTO_RENAME_GROUPS = bool(settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR)
 
     settings.AUTH_LDAP_USER_SEARCH = LDAPSearch(
         config.get('auth_ldap', 'user_base_dn'),
