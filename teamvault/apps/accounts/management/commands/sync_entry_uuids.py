@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django_auth_ldap.config import LDAPSearch
 from teamvault.apps.accounts.backends import _get_attr, _get_ldap_connection
+from teamvault.apps.accounts.management.commands._ldap_sync import ldap_sync_enabled
 
 User = get_user_model()
 
@@ -11,12 +12,7 @@ class Command(BaseCommand):
     help = 'Sets User.entry_uuid for users that do not have one yet.'
 
     def handle(self, *args, **options):  # noqa: ARG002
-        if not getattr(settings, 'LDAP_AUTH_ENABLED', False):
-            self.stderr.write('LDAP auth is not enabled.')
-            return
-
-        if not getattr(settings, 'AUTH_LDAP_SERVER_URI', None):
-            self.stderr.write('Missing AUTH_LDAP_SERVER_URI in settings.')
+        if not ldap_sync_enabled(self):
             return
 
         entry_uuid_attr = settings.AUTH_LDAP_USER_ATTR_MAP.get('entry_uuid', 'entryUUID')

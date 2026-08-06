@@ -274,6 +274,10 @@ def configure_ldap_auth(config, settings):
 
     settings.AUTH_LDAP_USERNAME_ATTR = get_from_config(config, 'auth_ldap', 'attr_username', 'uid')
     entry_uuid_attr = get_from_config(config, 'auth_ldap', 'attr_entry_uuid', 'entryUUID')
+    # Group rename propagation is opt-in: the admin must declare the LDAP attribute that
+    # carries the immutable group identifier. Without it, we fall back to django-auth-ldap's
+    # default name-based mirroring.
+    settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR = get_from_config(config, 'auth_ldap', 'attr_group_entry_uuid', None)
 
     settings.AUTH_LDAP_USER_SEARCH = LDAPSearch(
         config.get('auth_ldap', 'user_base_dn'),
@@ -281,10 +285,14 @@ def configure_ldap_auth(config, settings):
         get_from_config(config, 'auth_ldap', 'user_search_filter', '(cn=%(user)s)'),
         ['*', settings.AUTH_LDAP_USERNAME_ATTR, entry_uuid_attr],
     )
+    group_search_attrlist = ['*']
+    if settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR:
+        group_search_attrlist.append(settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR)
     settings.AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
         config.get('auth_ldap', 'group_base_dn'),
         SCOPE_SUBTREE,
         get_from_config(config, 'auth_ldap', 'group_search_filter', '(objectClass=group)'),
+        group_search_attrlist,
     )
 
     settings.AUTH_LDAP_GROUP_TYPE = MemberDNGroupType('member')
@@ -305,8 +313,6 @@ def configure_ldap_auth(config, settings):
     settings.AUTH_LDAP_ALWAYS_UPDATE_USER = True
     settings.AUTH_LDAP_FIND_GROUP_PERMS = False
     settings.AUTH_LDAP_MIRROR_GROUPS = True
-    settings.AUTH_LDAP_CACHE_GROUPS = True
-    settings.AUTH_LDAP_GROUP_CACHE_TIMEOUT = 900
 
     settings.AUTH_LDAP_CONNECTION_OPTIONS = {}
     settings.AUTH_LDAP_GLOBAL_OPTIONS = {}
@@ -496,6 +502,10 @@ salt = {hashid_salt}
 #attr_entry_uuid = entryUUID
 #group_base_dn = ou=groups,dc=example,dc=com
 ##group_search_filter = (objectClass=group)
+## Setting attr_group_entry_uuid enables LDAP group rename propagation: groups
+## are linked to LDAP by this attribute and renamed locally when LDAP renames them.
+## Leave commented to keep django-auth-ldap's default name-based group mirroring.
+##attr_group_entry_uuid = entryUUID
 ##require_group = cn=employees,ou=groups,dc=example,dc=com
 ##attr_email = mail
 ##attr_first_name = givenName

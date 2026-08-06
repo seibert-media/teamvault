@@ -1,5 +1,7 @@
+import json
 import os
 import unittest
+from json import JSONDecodeError
 from pathlib import Path
 
 from django.conf import settings
@@ -29,13 +31,25 @@ class PlaywrightTestCase(StaticLiveServerTestCase):
         # Tests must run against a real frontend bundle, otherwise inline
         # scripts that depend on jQuery / select2 will fail and report
         # false positives.
-        if not (Path(settings.PROJECT_ROOT) / 'webpack-stats.json').exists():
+        webpack_stats_file = Path(settings.PROJECT_ROOT) / 'webpack-stats.json'
+        if not webpack_stats_file.exists():
             raise unittest.SkipTest('webpack-stats.json missing. Run `bun run build` first')
+        try:
+            with Path.open(webpack_stats_file) as f:
+                webpack_stats_data = json.load(f)
+                webpack_stats_status = webpack_stats_data.get('status', 'unreadable')
+                if webpack_stats_status != 'done':
+                    raise unittest.SkipTest(
+                        f'webpack-stats.json: "status" is {webpack_stats_status} but should be "done". '
+                        f'Run `bun run build` to recreate'
+                    )
+        except JSONDecodeError as e:
+            raise unittest.SkipTest('webpack-stats.json unreadable. Run `bun run build` first') from e
 
         os.environ['DJANGO_ALLOW_ASYNC_UNSAFE'] = 'true'
         super().setUpClass()
         cls.playwright = sync_playwright().start()
-        # Force the full Chromium binary so the suite works whether or not
+        # Force the full Chromium binary so the suite works whether
         # chrome-headless-shell was installed (we run `playwright install
         # --no-shell` in CI to keep the install footprint small).
         cls.browser = cls.playwright.chromium.launch(
