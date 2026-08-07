@@ -1,3 +1,4 @@
+import logging
 import pathlib
 from base64 import b64decode, b64encode
 from configparser import ConfigParser
@@ -5,6 +6,7 @@ from gettext import gettext as _
 from os import cpu_count, environ, umask
 from secrets import choice
 from string import ascii_letters, digits, punctuation
+from typing import override
 from urllib.parse import urlparse
 
 from cryptography.fernet import Fernet
@@ -15,6 +17,20 @@ class UnconfiguredSettingsError(Exception):
     def __str__(self):
         return _('missing config file at {} (set env var TEAMVAULT_CONFIG_FILE to use a different path)').format(
             environ['TEAMVAULT_CONFIG_FILE']
+        )
+
+
+class LDAPAuthFailureFilter(logging.Filter):
+    def __init__(self, min_loglevel=logging.INFO):
+        super().__init__()
+        self.min_loglevel = min_loglevel
+
+    @override
+    def filter(self, record):
+        return (
+            'Authentication failed for' in record.getMessage()
+            or 'Rejecting empty password for' in record.getMessage()
+            or record.levelno >= self.min_loglevel
         )
 
 
@@ -332,11 +348,16 @@ def configure_ldap_auth(config, settings):
 
 
 def configure_logging(config):
-    level = 'INFO'
+    tv_logger_level = 'INFO'
+    ldap_logger_level = 'INFO'
 
     insecure_debug = get_from_config(config, 'teamvault', 'insecure_debug_mode', 'no').lower()
     if insecure_debug in {'1', 'enabled', 'true', 'yes'}:
-        level = 'DEBUG'
+        tv_logger_level = 'DEBUG'
+
+    log_auth_failures = get_from_config(config, 'teamvault', 'log_auth_failures_mode', 'no').lower()
+    if log_auth_failures in {'1', 'enabled', 'true', 'yes'}:
+        ldap_logger_level = 'DEBUG'
 
     LOGGING = {
         'version': 1,
@@ -344,6 +365,12 @@ def configure_logging(config):
         'formatters': {
             'console': {
                 'format': '[%(asctime)s] %(levelname)s %(module)s: %(message)s',
+            },
+        },
+        'filters': {
+            'LDAPAuthFailureFilter': {
+                '()': 'teamvault.apps.settings.config.LDAPAuthFailureFilter',
+                'min_loglevel': logging.getLevelName(tv_logger_level),
             },
         },
         'handlers': {
@@ -360,11 +387,12 @@ def configure_logging(config):
             },
             'django_auth_ldap': {
                 'handlers': ['console'],
-                'level': level,
+                'level': ldap_logger_level,
+                'filters': ['LDAPAuthFailureFilter'],
             },
             'teamvault': {
                 'handlers': ['console'],
-                'level': level,
+                'level': tv_logger_level,
             },
         },
     }
@@ -444,6 +472,8 @@ base_url = https://example.com
 fernet_key = {teamvault_key}
 # do not enable this in production
 insecure_debug_mode = disabled
+# enable DEBUG-level logging for failed LDAP authentication attempts including failure reason
+log_auth_failures_mode = disabled
 # file uploads larger than this number of bytes will have their connection reset
 max_file_size = 5242880
 session_cookie_age = 3600
