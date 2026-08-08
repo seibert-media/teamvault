@@ -4,13 +4,14 @@
 
 {% block content %}
 {% partialdef group-members inline %}
-    <div class="d-flex flex-column gap-2">
+    <div class="list-group d-flex flex-column gap-2">
         {% for user in group_members %}
-            <a class="d-flex align-items-center gap-2 text-decoration-none"
+            <a class="list-group-item-action d-flex align-items-center gap-2"
                href="{% url 'accounts.user-detail' username=user.username %}">
-              {% include "accounts/_avatar.html" with user=user %}
-              {{ user.username }}
+                {% include "accounts/_avatar.html" with user=user %}
+                {{ user.username }}
             </a>
+            <hr class="text-body-tertiary my-0">
         {% empty %}
             {% trans "No members" %}
         {% endfor %}
