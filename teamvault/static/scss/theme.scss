@@ -43,3 +43,11 @@ $badge-font-weight: 400;
 .fs-xs {
   font-size: 0.75rem;
 }
+
+.table-layout-fixed {
+  table-layout: fixed;
+
+  td:first-child {
+    width: 35%;
+  }
+}
