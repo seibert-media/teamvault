@@ -15,7 +15,7 @@
             {% trans "No members" %}
         {% endfor %}
     </div>
-    <div hx-boost="true" hx-target="#group-members-wrapper" hx-push-url="false">
+    <div hx-target="#group-members-wrapper" hx-push-url="false">
         {% url 'accounts.group-members' group.name as members_url %}
         {% include "pagination.html" with url=members_url target="#group-members-wrapper" %}
     </div>

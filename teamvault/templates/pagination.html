@@ -5,15 +5,24 @@
         <div class="col d-flex align-items-center justify-content-between">
             {% if page_sizes %}
                 <div class="me-3">
-                    <select name="page_size" class="form-select form-select-sm" style="width: auto;" {% if target %}
-                            hx-get="{{ url|default:'' }}" hx-include="[name='q']" hx-trigger="change"
+                    <select name="page_size" class="form-select form-select-sm" style="width: auto;"
+                        {% if target %}
+                            hx-get="{{ url|default:'' }}"
+                            hx-include="[name='q']"
+                            hx-trigger="change"
                             hx-target="{{ target }}"
-                            hx-swap="innerHTML" hx-push-url="false" {% else %}
-                            onchange="var p=new URLSearchParams(window.location.search);p.set('page_size',this.value);p.delete('page');window.location.search=p.toString();"
-                    {% endif %}>
+                            hx-swap="innerHTML"
+                            hx-push-url="false"
+                        {% else %}
+                            onchange="let p=new URLSearchParams(window.location.search);p.set('page_size',this.value);p.delete('page');window.location.search=p.toString();"
+                        {% endif %}>
                         {% for size in page_sizes %}
                             <option value="{{ size }}"
-                                    {% if paginator.per_page == size %}selected{% endif %}>{{ size }}</option>
+                                {% if paginator.per_page == size %}
+                                    selected
+                                {% endif %}>
+                                {{ size }}
+                            </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -23,8 +32,15 @@
                     {% if page_obj.has_previous %}
                         <li class="page-item">
                             <a class="page-link"
-                               href="{{ url|default:"" }}{% querystring request.GET page=page_obj.previous_page_number %}"
-                               aria-label="Previous">
+                                href="{{ url|default:"" }}{% querystring request.GET page=page_obj.previous_page_number %}"
+                                aria-label="Previous"
+                                {% if target %}
+                                    hx-get="{{ url|default:"" }}{% querystring request.GET page=page_obj.previous_page_number %}"
+                                    hx-trigger="click"
+                                    hx-target="{{ target }}"
+                                    hx-swap="innerHTML"
+                                    hx-push-url="false"
+                                {% endif %}>
                                 <i class="fa fa-chevron-left" aria-hidden="true"></i>
                             </a>
                         </li>
@@ -42,7 +58,15 @@
                             </li>
                         {% else %}
                             <li class="page-item">
-                                <a class="page-link" href="{{ url|default:"" }}{% querystring request.GET page=page %}">
+                                <a class="page-link"
+                                    href="{{ url|default:"" }}{% querystring request.GET page=page %}"
+                                    {% if target %}
+                                        hx-get="{{ url|default:"" }}{% querystring request.GET page=page %}"
+                                        hx-trigger="click"
+                                        hx-target="{{ target }}"
+                                        hx-swap="innerHTML"
+                                        hx-push-url="false"
+                                    {% endif %}>
                                     {{ page }}
                                 </a>
                             </li>
@@ -51,8 +75,15 @@
                     {% if page_obj.has_next %}
                         <li class="page-item">
                             <a class="page-link"
-                               href="{{ url|default:"" }}{% querystring request.GET page=page_obj.next_page_number %}"
-                               aria-label="Next">
+                                href="{{ url|default:"" }}{% querystring request.GET page=page_obj.next_page_number %}"
+                                aria-label="Next"
+                                {% if target %}
+                                    hx-get="{{ url|default:"" }}{% querystring request.GET page=page_obj.next_page_number %}"
+                                    hx-trigger="click"
+                                    hx-target="{{ target }}"
+                                    hx-swap="innerHTML"
+                                    hx-push-url="false"
+                               {% endif %}>
                                 <i class="fa fa-chevron-right" aria-hidden="true"></i>
                             </a>
                         </li>
