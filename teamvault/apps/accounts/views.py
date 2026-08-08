@@ -355,6 +355,13 @@ class GroupMemberList(PageSizeMixin, ListView):
     def group_object(self):
         return get_object_or_404(Group, name=self.kwargs['groupname'])
 
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('HX-Request') != 'true':
+            return HttpResponseRedirect(
+                reverse('accounts.group-detail', kwargs={'groupname': self.kwargs['groupname']})
+            )
+        return super().get(request, *args, **kwargs)
+
     def get_queryset(self):
         return self.group_object.user_set.order_by('username')
 
