@@ -101,7 +101,7 @@ export function init(config) {
       return;
     }
     if (otpField.value && !otpKeyData.value) {
-      let data = otpField.value;
+      let data = otpField.value.replace(/\s/g, '');
       if (!data.includes('?secret=')) {
         data = '?secret=' + data + '&';
       }
