@@ -33,6 +33,10 @@
                             <td>{{ user.last_login|date:"Y-m-d H:i:s e" }}</td>
                         </tr>
                         <tr>
+                            <td>{% trans "Groupcount" %}</td>
+                            <td>{{ user.groups.count }}</td>
+                        </tr>
+                        <tr>
                             <td>{% trans "Groups" %}</td>
                             <td id="user-groups-wrapper"
                                 hx-get="{% url 'accounts.user-groups' user.username %}"
