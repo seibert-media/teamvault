@@ -15,6 +15,7 @@ from django.http import (
 )
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, UpdateView
@@ -368,6 +369,10 @@ class GroupMemberList(PageSizeMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['group'] = self.group_object
+        # only count secrets that are currently shared with the group
+        ctx['count_of_secrets_shared_with_group'] = self.group_object.secret_share_data.filter(
+            Q(granted_until__isnull=True) | Q(granted_until__gt=now())
+        ).count()
 
         return ctx
 

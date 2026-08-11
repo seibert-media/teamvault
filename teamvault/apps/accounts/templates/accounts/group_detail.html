@@ -21,6 +21,10 @@
                             <td>{{ group.name }}</td>
                         </tr>
                         <tr>
+                            <td>{% trans "Secrets shared" %}</td>
+                            <td>{{ group.secret_share_data.count }}</td>
+                        </tr>
+                        <tr>
                             <td>{% trans "Membercount" %}</td>
                             <td>{{ group.user_set.count }}</td>
                         </tr>
