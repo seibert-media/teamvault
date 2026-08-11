@@ -298,6 +298,32 @@ def get_user_avatar_partial(request):
     return render(request, 'accounts/_avatar.html', {'user': user, 'tooltip_title': username})
 
 
+class UserGroupsList(PageSizeMixin, ListView):
+    context_object_name = 'user_groups'
+    paginate_by = 10
+    template_name = 'accounts/user_groups.html#user-groups'
+
+    @cached_property
+    def user_object(self):
+        return get_object_or_404(User, username=self.kwargs['username'])
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('HX-Request') != 'true':
+            return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': self.kwargs['username']}))
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.user_object.groups.order_by('name')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['user'] = self.user_object
+        return ctx
+
+
+user_groups = user_passes_test(lambda u: u.is_superuser)(UserGroupsList.as_view())
+
+
 class GroupList(PageSizeMixin, ListView):
     context_object_name = 'groups'
     model = Group
@@ -373,7 +399,6 @@ class GroupMemberList(PageSizeMixin, ListView):
         ctx['count_of_secrets_shared_with_group'] = self.group_object.secret_share_data.filter(
             Q(granted_until__isnull=True) | Q(granted_until__gt=now())
         ).count()
-
         return ctx
 
 

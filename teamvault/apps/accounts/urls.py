@@ -12,6 +12,7 @@ from .views import (
     user_activate,
     user_detail,
     user_detail_from_request,
+    user_groups,
     user_pending_secrets,
     user_pending_secrets_csv,
     user_settings,
@@ -74,6 +75,11 @@ urlpatterns = (
         user_activate,
         {'deactivate': True},
         name='accounts.user-deactivate',
+    ),
+    path(
+        'users/<str:username>/groups/',
+        user_groups,
+        name='accounts.user-groups',
     ),
     path(
         'groups/',
