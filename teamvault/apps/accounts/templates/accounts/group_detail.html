@@ -13,19 +13,19 @@
         </div>
 
         <div class="row">
-            <div class="col-md-8">
+            <div class="col-md-10">
                 <div class="card">
-                    <table class="table mb-0 table-layout-fixed">
+                    <table class="table mb-0 key-value-table">
                         <tr>
                             <td>{% trans "Groupname" %}</td>
                             <td>{{ group.name }}</td>
                         </tr>
                         <tr>
                             <td>{% trans "Membercount" %}</td>
-                            <td>{{ group.user_set.count }} </td>
+                            <td>{{ group.user_set.count }}</td>
                         </tr>
                         <tr>
-                            <td>{% trans "Users" %}</td>
+                            <td>{% trans "Members" %}</td>
                             <td id="group-members-wrapper"
                                 hx-get="{% url 'accounts.group-members' group.name %}"
                                 hx-trigger="load"

@@ -44,10 +44,10 @@ $badge-font-weight: 400;
   font-size: 0.75rem;
 }
 
-.table-layout-fixed {
+.key-value-table {
   table-layout: fixed;
 
   td:first-child {
-    width: 35%;
+    width: 45%;
   }
 }
