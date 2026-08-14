@@ -126,6 +126,12 @@ class Secret(HashIDModel):
         # Django reverse relation from SharedSecretData.secret (related_name="share_data").
         share_data: 'RelatedManager[SharedSecretData]'
 
+        # Payload stashed by the API serializers and persisted by the API views, which
+        # test for it with hasattr() and delete it again. Declared, never assigned here:
+        # assigning a default would make that hasattr() always true.
+        # TODO: Move this out of Secret. Having a "hidden" payload here can bite us later.
+        _data: dict
+
     access_policy = models.PositiveSmallIntegerField(
         choices=AccessPolicy,
         default=AccessPolicy.DISCOVERABLE,

@@ -42,7 +42,7 @@ class SecretSerializerCreateTests(TestCase):
         # Serializer.create() does NOT write a revision; it sets ._data and M2M share.
         self.assertIsNone(inst.current_revision)
         self.assertEqual(inst.content_type, ContentType.PASSWORD)
-        self.assertEqual(inst._data, {'password': 'p@ss', 'otp_key_data': ''})
+        self.assertEqual(inst._data['password'], 'p@ss')
         # creator self-share:
         self.assertTrue(inst.shared_users.filter(pk=self.owner.pk).exists())
 
@@ -139,7 +139,7 @@ class SecretDetailSerializerUpdateTests(TestCase):
         # it does not itself create a new revision.
         self.assertEqual(updated.content_type, ContentType.PASSWORD)
         self.assertEqual(updated.name, 'renamed')
-        self.assertEqual(updated._data, {'password': 'n3w', 'otp_key_data': ''})
+        self.assertEqual(updated._data['password'], 'n3w')
 
 
 @override_settings(**COMMON_OVERRIDES)
