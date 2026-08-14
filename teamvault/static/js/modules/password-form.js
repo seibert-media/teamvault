@@ -82,6 +82,25 @@ export function init(config) {
     }
   });
 
+  // Users might type either a bare secret or a full otpauth:// URI.
+  // Let's normalize both the query string the backend actually parses,
+  // so the URI's label and issuer never end up glued to the parameters we append.
+  function buildOtpKeyData(rawValue) {
+    const raw = rawValue.trim();
+    const queryStart = raw.indexOf('?');
+    const params = new URLSearchParams(queryStart === -1 ? '' : raw.slice(queryStart + 1));
+    if (!params.get('secret')) {
+      params.set('secret', raw.replace(/\s/g, ''));
+    }
+    if (!params.get('digits')) {
+      params.set('digits', '6');
+    }
+    if (!params.get('algorithm')) {
+      params.set('algorithm', 'SHA1');
+    }
+    return '?' + params.toString();
+  }
+
   let qrDecodePending = false;
 
   document.addEventListener('submit', e => {
@@ -101,17 +120,7 @@ export function init(config) {
       return;
     }
     if (otpField.value && !otpKeyData.value) {
-      let data = otpField.value.replace(/\s/g, '');
-      if (!data.includes('?secret=')) {
-        data = '?secret=' + data + '&';
-      }
-      if (!data.includes('digits=')) {
-        data += 'digits=6&';
-      }
-      if (!data.includes('algorithm=')) {
-        data += 'algorithm=SHA1&';
-      }
-      otpKeyData.value = data;
+      otpKeyData.value = buildOtpKeyData(otpField.value);
     }
   });
 

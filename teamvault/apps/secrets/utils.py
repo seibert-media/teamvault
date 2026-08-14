@@ -1,4 +1,5 @@
 import base64
+import re
 import secrets
 import string
 from urllib.parse import parse_qs, urlparse
@@ -21,12 +22,30 @@ META_FIELDS = (
 )
 
 
-def extract_url_and_params(data):
-    data_as_url = urlparse(data)
-    data_params = parse_qs(data_as_url.query)
-    for key, value in data_params.items():
-        data_params[key] = value[0]
-    return data_as_url, data_params
+# What providers put between the blocks of a base32 secret so humans can read
+# it: whitespace, the block separators, and the zero-width/bidi characters web
+# pages insert so a long key wraps. Deliberately a blocklist — stripping
+# everything outside the base32 alphabet instead would turn a mistyped password
+# into a decodable secret, and the user would be locked out with no error.
+_OTP_SECRET_DECORATION = re.compile(r'[\s\u00ad\u200b-\u200f\u2060\ufeff\-_]')
+
+
+def normalize_otp_secret(secret: str) -> str:
+    """Reduce a displayed OTP secret to the bare base32 payload.
+
+    Trailing '=' has to go too: pyotp re-derives the padding from the
+    length, so an already-padded secret ends up double-padded and fails
+    to decode.
+    """
+    return _OTP_SECRET_DECORATION.sub('', secret).rstrip('=')
+
+
+def extract_otp_params(otp_key_data: str) -> dict:
+    """Parse an otp_key_data query string, with the secret normalized."""
+    params = {key: values[0] for key, values in parse_qs(urlparse(otp_key_data).query).items()}
+    if 'secret' in params:
+        params['secret'] = normalize_otp_secret(params['secret'])
+    return params
 
 
 def copy_meta_from_secret(secret: Secret) -> dict:
@@ -58,7 +77,7 @@ def apply_snapshot_to_secret(secret: Secret, change: SecretChange) -> list[str]:
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
     if secret.content_type == ContentType.PASSWORD:
-        cleaned_data_as_url, data_params = extract_url_and_params(cleaned_data['otp_key_data'])
+        data_params = extract_otp_params(cleaned_data['otp_key_data'])
         if cleaned_data.get('password'):
             plaintext_data['password'] = cleaned_data['password']
         for attr in ['secret', 'digits', 'algorithm']:
