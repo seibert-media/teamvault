@@ -39,10 +39,11 @@ class SecretSerializerCreateTests(TestCase):
 
         inst: Secret = ser.save(created_by=self.owner)
 
-        # Serializer.create() does NOT write a revision; it sets ._data and M2M share.
+        # Serializer.create() does NOT write a revision; it parses the payload for the
+        # view to persist, and sets the M2M share.
         self.assertIsNone(inst.current_revision)
         self.assertEqual(inst.content_type, ContentType.PASSWORD)
-        self.assertEqual(inst._data['password'], 'p@ss')
+        self.assertEqual(ser.plaintext_payload, {'password': 'p@ss'})
         # creator self-share:
         self.assertTrue(inst.shared_users.filter(pk=self.owner.pk).exists())
 
@@ -135,11 +136,11 @@ class SecretDetailSerializerUpdateTests(TestCase):
         self.assertTrue(ser.is_valid(), ser.errors)
         updated: Secret = ser.save()
 
-        # Serializer.update() keeps content_type unchanged and stashes new _data;
+        # Serializer.update() keeps content_type unchanged and parses the new payload;
         # it does not itself create a new revision.
         self.assertEqual(updated.content_type, ContentType.PASSWORD)
         self.assertEqual(updated.name, 'renamed')
-        self.assertEqual(updated._data['password'], 'n3w')
+        self.assertEqual(ser.plaintext_payload, {'password': 'n3w'})
 
 
 @override_settings(**COMMON_OVERRIDES)

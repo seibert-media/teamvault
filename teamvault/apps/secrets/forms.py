@@ -9,8 +9,7 @@ from django.utils.translation import gettext_lazy as _
 
 from teamvault.apps.secrets.enums import AccessPolicy
 from .models import Secret, SharedSecretData
-from .utils import extract_otp_params
-from .validators import is_valid_otp_secret
+from .utils import otp_payload_fields
 
 User = get_user_model()
 
@@ -141,14 +140,7 @@ class PasswordForm(SecretForm):
         if self.instance.pk is not None and not cleaned_otp_key_data:
             return cleaned_otp_key_data
 
-        try:
-            data_params = extract_otp_params(cleaned_otp_key_data)
-        except Exception as exc:
-            raise forms.ValidationError(
-                _('OTP key should have a format like this: ___?secret=___&digits=___ ...')
-            ) from exc
-        secret = data_params.get('secret', '')
-        is_valid_otp_secret(secret)
+        otp_payload_fields(cleaned_otp_key_data)  # raises if the key cannot produce codes
         return cleaned_otp_key_data
 
     class Meta:

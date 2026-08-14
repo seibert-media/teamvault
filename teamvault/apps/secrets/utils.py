@@ -6,9 +6,11 @@ from urllib.parse import parse_qs, urlparse
 
 from django.core.exceptions import ValidationError
 from django.core.files.uploadhandler import MemoryFileUploadHandler, SkipFile
+from django.utils.translation import gettext_lazy as _
 
 from teamvault.apps.secrets.enums import ContentType
 from teamvault.apps.secrets.models import Secret, SecretChange
+from teamvault.apps.secrets.validators import is_valid_otp_secret
 
 META_FIELDS = (
     'name',
@@ -48,6 +50,32 @@ def extract_otp_params(otp_key_data: str) -> dict:
     return params
 
 
+def otp_payload_fields(otp_key_data: str) -> dict:
+    """Map a pasted otp_key_data URI onto the payload fields we store.
+
+    Every write path goes through here, so the web form and the API normalize
+    and reject identically. Raises ValidationError on anything that could not
+    produce codes; callers that need a non-Django error translate it.
+    """
+    try:
+        params = extract_otp_params(otp_key_data)
+    except Exception as exc:
+        raise ValidationError(_('OTP key should have a format like this: ___?secret=___&digits=___ ...')) from exc
+
+    secret = params.get('secret', '')
+    is_valid_otp_secret(secret)
+    if not secret:
+        # Without a seed the remaining parameters cannot produce a code, so
+        # storing them would leave a revision that only looks like it has OTP.
+        return {}
+
+    fields = {'otp_key': secret}
+    for param in ('digits', 'algorithm'):
+        if params.get(param):
+            fields[param] = params[param]
+    return fields
+
+
 def copy_meta_from_secret(secret: Secret) -> dict:
     return {
         'name': secret.name,
@@ -77,15 +105,9 @@ def apply_snapshot_to_secret(secret: Secret, change: SecretChange) -> list[str]:
 def serialize_add_edit_data(cleaned_data, secret):
     plaintext_data = {}
     if secret.content_type == ContentType.PASSWORD:
-        data_params = extract_otp_params(cleaned_data['otp_key_data'])
         if cleaned_data.get('password'):
             plaintext_data['password'] = cleaned_data['password']
-        for attr in ['secret', 'digits', 'algorithm']:
-            if data_params.get(attr):
-                if attr == 'secret':
-                    plaintext_data['otp_key'] = data_params[attr]
-                else:
-                    plaintext_data[attr] = data_params[attr]
+        plaintext_data.update(otp_payload_fields(cleaned_data['otp_key_data']))
     elif secret.content_type == ContentType.FILE:
         file = cleaned_data.get('file')
         if not file:

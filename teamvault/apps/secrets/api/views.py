@@ -46,9 +46,12 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_update(self, serializer):
         instance = serializer.save()
-        if hasattr(instance, '_data'):
-            RevisionService.save_payload(secret=instance, actor=self.request.user, payload=instance._data)
-            del instance._data
+        if serializer.plaintext_payload is not None:
+            RevisionService.save_payload(
+                secret=instance,
+                actor=self.request.user,
+                payload=serializer.plaintext_payload,
+            )
 
 
 class SecretList(generics.ListCreateAPIView):
@@ -66,14 +69,13 @@ class SecretList(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
-        if hasattr(instance, '_data'):
+        if serializer.plaintext_payload is not None:
             RevisionService.save_payload(
                 secret=instance,
                 actor=self.request.user,
-                payload=instance._data,
+                payload=serializer.plaintext_payload,
                 skip_acl=True,
             )
-            del instance._data
 
 
 class SecretRevisionDetail(generics.RetrieveAPIView):
