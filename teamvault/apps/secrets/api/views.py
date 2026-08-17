@@ -2,12 +2,13 @@ from base64 import b64encode
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import Max
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
@@ -179,7 +180,12 @@ def otp_get(request, hashid):
     secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
     secret = secret_revision.secret
     secret.check_read_access(request.user)
-    otp = secret.get_otp(request)
+    try:
+        otp = secret.get_otp(request)
+    except DjangoValidationError as exc:
+        # This should only throw when an OTP has been set via the pre-fix API.
+        # All correctly set OTPs without "algorithm" still assume the SHA1 default.
+        raise ValidationError(exc.messages) from exc
     return Response(otp)
 
 

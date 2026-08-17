@@ -10,7 +10,7 @@ from django.utils.translation import gettext_lazy as _
 
 from teamvault.apps.secrets.enums import ContentType
 from teamvault.apps.secrets.models import Secret, SecretChange
-from teamvault.apps.secrets.validators import is_valid_otp_secret
+from teamvault.apps.secrets.validators import is_valid_otp_secret, normalize_otp_algorithm
 
 META_FIELDS = (
     'name',
@@ -70,9 +70,10 @@ def otp_payload_fields(otp_key_data: str) -> dict:
         return {}
 
     fields = {'otp_key': secret}
-    for param in ('digits', 'algorithm'):
-        if params.get(param):
-            fields[param] = params[param]
+    if params.get('digits'):
+        fields['digits'] = params['digits']
+    if params.get('algorithm'):
+        fields['algorithm'] = normalize_otp_algorithm(params['algorithm'])
     return fields
 
 

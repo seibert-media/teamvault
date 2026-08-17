@@ -25,6 +25,7 @@ from pyotp import TOTP
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from .exceptions import PermissionError
+from .validators import otp_digest
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
 
@@ -278,18 +279,17 @@ class Secret(HashIDModel):
         return plaintext_data
 
     def get_otp(self, request):
-        cached_otp_session_key = f'otp_key_data-{self.hashid}-{self.current_revision_id}'
-        if request.session.get(cached_otp_session_key):
-            data = request.session[cached_otp_session_key]
-        else:
+        cached_otp_session_key = f'otp-params-{self.hashid}-{self.current_revision_id}'
+        params: dict[str, t.Any] | None = request.session.get(cached_otp_session_key)
+        if not params:
             data = self.get_data(request.user)
-            request.session[cached_otp_session_key] = {
-                'otp_key': data['otp_key'],
+            params = {
+                'algorithm': data.get('algorithm'),
                 'digits': int(data.get('digits', 6)),
+                'otp_key': data['otp_key'],
             }
-        otp_key = data['otp_key']
-        digits = int(data.get('digits', 6))
-        totp = TOTP(otp_key, digits=digits)
+            request.session[cached_otp_session_key] = params
+        totp = TOTP(params['otp_key'], digits=params['digits'], digest=otp_digest(params['algorithm']))
         return totp.now()
 
     @classmethod
