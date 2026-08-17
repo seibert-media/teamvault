@@ -2,12 +2,12 @@ import uuid
 
 from ldap.filter import escape_filter_chars
 
-# matches GroupUUIDMapping.entry_uuid / User.entry_uuid
-ENTRY_UUID_MAX_LENGTH = 36
+# matches GroupUUIDMapping.ldap_uuid / User.ldap_uuid
+LDAP_UUID_MAX_LENGTH = 36
 BINARY_GUID_LENGTH = 16
 
 
-def canonicalize_entry_uuid(value):
+def canonicalize_ldap_uuid(value):
     """
     Normalize a raw LDAP unique-id attribute value to its canonical string form,
     or None if the value is unusable.
@@ -22,12 +22,12 @@ def canonicalize_entry_uuid(value):
             value = value.decode()
         except UnicodeDecodeError:
             return None
-    if not value or len(value) > ENTRY_UUID_MAX_LENGTH:
+    if not value or len(value) > LDAP_UUID_MAX_LENGTH:
         return None
     return value
 
 
-def entry_uuid_filter_term(attr, canonical):
+def ldap_uuid_filter_term(attr, canonical):
     """
     LDAP filter term matching the attribute against a canonical entry-uuid string.
 

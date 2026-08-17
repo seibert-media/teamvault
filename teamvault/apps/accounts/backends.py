@@ -28,16 +28,16 @@ def _get_attr(attrs, key):
 
 class UUIDLinkingLDAPBackend(LDAPBackend):
     """
-    Link existing users by LDAP entryUUID to keep identity stable across username changes.
-    Requires AUTH_LDAP_USER_ATTR_MAP['entry_uuid'] and AUTH_LDAP_USER_SEARCH to request entryUUID.
+    Link existing users by their immutable LDAP UUID to keep identity stable across username changes.
+    Requires AUTH_LDAP_USER_ATTR_MAP['ldap_uuid'] and AUTH_LDAP_USER_SEARCH to request that attribute.
     """
 
     def get_or_build_user(self, username, ldap_user) -> tuple[User, bool]:
-        entry_uuid_attr = settings.AUTH_LDAP_USER_ATTR_MAP.get('entry_uuid', 'entryUUID')
-        entry_uuid = _get_attr(ldap_user.attrs, entry_uuid_attr)
-        if entry_uuid:
+        ldap_uuid_attr = settings.AUTH_LDAP_USER_ATTR_MAP.get('ldap_uuid', 'entryUUID')
+        ldap_uuid = _get_attr(ldap_user.attrs, ldap_uuid_attr)
+        if ldap_uuid:
             try:
-                user = User.objects.get(entry_uuid=entry_uuid)
+                user = User.objects.get(ldap_uuid=ldap_uuid)
                 username_field = User.USERNAME_FIELD
                 if getattr(user, username_field) != username:
                     setattr(user, username_field, username)
@@ -48,39 +48,39 @@ class UUIDLinkingLDAPBackend(LDAPBackend):
         return super().get_or_build_user(username, ldap_user)
 
 
-def search_by_entry_uuid(entry_uuid):
+def search_by_ldap_uuid(ldap_uuid):
     connection = _get_ldap_connection()
-    entry_uuid_attr = settings.AUTH_LDAP_USER_ATTR_MAP.get('entry_uuid', 'entryUUID')
+    ldap_uuid_attr = settings.AUTH_LDAP_USER_ATTR_MAP.get('ldap_uuid', 'entryUUID')
     username_attr = getattr(settings, 'AUTH_LDAP_USERNAME_ATTR', 'uid')
     search = LDAPSearch(
         settings.AUTH_LDAP_USER_SEARCH.base_dn,
         settings.AUTH_LDAP_USER_SEARCH.scope,
-        f'({entry_uuid_attr}=%(entry_uuid)s)',
-        [username_attr, entry_uuid_attr],
+        f'({ldap_uuid_attr}=%(ldap_uuid)s)',
+        [username_attr, ldap_uuid_attr],
     )
-    return search.execute(connection, filterargs={'entry_uuid': entry_uuid})
+    return search.execute(connection, filterargs={'ldap_uuid': ldap_uuid})
 
 
 def search_by_mail(mail):
     connection = _get_ldap_connection()
     mail_attr = settings.AUTH_LDAP_USER_ATTR_MAP['email']
     username_attr = getattr(settings, 'AUTH_LDAP_USERNAME_ATTR', 'uid')
-    entry_uuid_attr = settings.AUTH_LDAP_USER_ATTR_MAP.get('entry_uuid', 'entryUUID')
+    ldap_uuid_attr = settings.AUTH_LDAP_USER_ATTR_MAP.get('ldap_uuid', 'entryUUID')
     search = LDAPSearch(
         settings.AUTH_LDAP_USER_SEARCH.base_dn,
         settings.AUTH_LDAP_USER_SEARCH.scope,
         f'({mail_attr}=%(mail)s)',
-        [username_attr, entry_uuid_attr],
+        [username_attr, ldap_uuid_attr],
     )
     return search.execute(connection, filterargs={'mail': mail})
 
 
-def social_auth_link_user_via_ldap_entryuuid(backend, details: dict[str, Any], user=None, *_args, **_kwargs):
+def social_auth_link_user_via_ldap_uuid(backend, details: dict[str, Any], user=None, *_args, **_kwargs):
     """
     Enforce: social logins are only allowed for users that exist in LDAP.
     - Find LDAP entry by social email.
     - If not found -> deny login.
-    - If found -> populate local User from LDAP (links by entryUUID via backend).
+    - If found -> populate local User from LDAP (links by LDAP UUID via backend).
     - Return that user so PSA associates the social account with it.
     """
     ldap_backend = UUIDLinkingLDAPBackend()
@@ -104,15 +104,15 @@ def social_auth_link_user_via_ldap_entryuuid(backend, details: dict[str, Any], u
             raise AuthForbidden(backend)
         return {'user': linked}
 
-    entry_uuid = getattr(user, 'entry_uuid', None)
-    if not entry_uuid:
+    ldap_uuid = getattr(user, 'ldap_uuid', None)
+    if not ldap_uuid:
         uid = getattr(user, User.USERNAME_FIELD)
         refreshed = ldap_backend.populate_user(uid)
         if not refreshed:
             raise AuthForbidden(backend)
         return {'user': refreshed}
 
-    results = search_by_entry_uuid(entry_uuid)
+    results = search_by_ldap_uuid(ldap_uuid)
     if results:
         _dn, attrs = results[0]
         uid = _get_attr(attrs, username_attr)

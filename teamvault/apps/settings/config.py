@@ -139,9 +139,7 @@ def configure_google_auth(config, settings):
     ]
 
     if config.has_section('auth_ldap'):
-        settings.SOCIAL_AUTH_PIPELINE.append(
-            'teamvault.apps.accounts.backends.social_auth_link_user_via_ldap_entryuuid'
-        )
+        settings.SOCIAL_AUTH_PIPELINE.append('teamvault.apps.accounts.backends.social_auth_link_user_via_ldap_uuid')
         settings.SOCIAL_AUTH_PIPELINE.extend([
             'social_core.pipeline.user.get_username',
             # Create the record that associates the social account with the user.
@@ -183,7 +181,7 @@ def configure_google_auth(config, settings):
     settings.SOCIAL_AUTH_GOOGLE_OAUTH2_USE_UNIQUE_USER_ID = True
 
     # LDAP compatibility settings
-    # When LDAP is enabled, social auth user creation is handled via entry_uuid linking.
+    # When LDAP is enabled, social auth user creation is handled via ldap_uuid linking.
 
 
 def configure_gunicorn(config):
@@ -273,21 +271,28 @@ def configure_ldap_auth(config, settings):
     settings.AUTH_LDAP_BIND_PASSWORD = config.get('auth_ldap', 'password')
 
     settings.AUTH_LDAP_USERNAME_ATTR = get_from_config(config, 'auth_ldap', 'attr_username', 'uid')
-    entry_uuid_attr = get_from_config(config, 'auth_ldap', 'attr_entry_uuid', 'entryUUID')
+    # attr_entry_uuid is the legacy spelling of attr_user_uuid and stays accepted.
+    user_uuid_attr = get_from_config(
+        config,
+        'auth_ldap',
+        'attr_user_uuid',
+        get_from_config(config, 'auth_ldap', 'attr_entry_uuid', 'entryUUID'),
+    )
+    settings.AUTH_LDAP_USER_UUID_ATTR = user_uuid_attr
     # Group rename propagation is opt-in: the admin must declare the LDAP attribute that
     # carries the immutable group identifier. Without it, we fall back to django-auth-ldap's
     # default name-based mirroring.
-    settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR = get_from_config(config, 'auth_ldap', 'attr_group_entry_uuid', None)
+    settings.AUTH_LDAP_GROUP_UUID_ATTR = get_from_config(config, 'auth_ldap', 'attr_group_uuid', None)
 
     settings.AUTH_LDAP_USER_SEARCH = LDAPSearch(
         config.get('auth_ldap', 'user_base_dn'),
         SCOPE_SUBTREE,
         get_from_config(config, 'auth_ldap', 'user_search_filter', '(cn=%(user)s)'),
-        ['*', settings.AUTH_LDAP_USERNAME_ATTR, entry_uuid_attr],
+        ['*', settings.AUTH_LDAP_USERNAME_ATTR, user_uuid_attr],
     )
     group_search_attrlist = ['*']
-    if settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR:
-        group_search_attrlist.append(settings.AUTH_LDAP_GROUP_ENTRY_UUID_ATTR)
+    if settings.AUTH_LDAP_GROUP_UUID_ATTR:
+        group_search_attrlist.append(settings.AUTH_LDAP_GROUP_UUID_ATTR)
     settings.AUTH_LDAP_GROUP_SEARCH = LDAPSearch(
         config.get('auth_ldap', 'group_base_dn'),
         SCOPE_SUBTREE,
@@ -302,14 +307,14 @@ def configure_ldap_auth(config, settings):
         'email': get_from_config(config, 'auth_ldap', 'attr_email', 'mail'),
         'first_name': get_from_config(config, 'auth_ldap', 'attr_first_name', 'givenName'),
         'last_name': get_from_config(config, 'auth_ldap', 'attr_last_name', 'sn'),
-        'entry_uuid': entry_uuid_attr,
+        'ldap_uuid': user_uuid_attr,
     }
     settings.AUTH_LDAP_USER_FLAGS_BY_GROUP = {
         'is_staff': config.get('auth_ldap', 'admin_group'),
         'is_superuser': config.get('auth_ldap', 'admin_group'),
     }
 
-    settings.AUTH_LDAP_USER_ATTRLIST = ['*', entry_uuid_attr]
+    settings.AUTH_LDAP_USER_ATTRLIST = ['*', user_uuid_attr]
     settings.AUTH_LDAP_ALWAYS_UPDATE_USER = True
     settings.AUTH_LDAP_FIND_GROUP_PERMS = False
     settings.AUTH_LDAP_MIRROR_GROUPS = True
@@ -499,13 +504,15 @@ salt = {hashid_salt}
 #user_base_dn = ou=users,dc=example,dc=com
 ##user_search_filter = (cn=%%(user)s)
 #attr_username = uid
-#attr_entry_uuid = entryUUID
+## The LDAP attribute holding an immutable unique id: entryUUID (RFC 4530, OpenLDAP
+## and most others) or objectGUID (Active Directory).
+#attr_user_uuid = entryUUID
 #group_base_dn = ou=groups,dc=example,dc=com
 ##group_search_filter = (objectClass=group)
-## Setting attr_group_entry_uuid enables LDAP group rename propagation: groups
+## Setting attr_group_uuid enables LDAP group rename propagation: groups
 ## are linked to LDAP by this attribute and renamed locally when LDAP renames them.
 ## Leave commented to keep django-auth-ldap's default name-based group mirroring.
-##attr_group_entry_uuid = entryUUID
+##attr_group_uuid = entryUUID
 ##require_group = cn=employees,ou=groups,dc=example,dc=com
 ##attr_email = mail
 ##attr_first_name = givenName

@@ -161,11 +161,11 @@ def upgrade(_pargs):
     print('\n### Updating search index...\n')
     execute_from_command_line(['', 'update_search_index'])
 
-    if getattr(settings, 'LDAP_AUTH_ENABLED', False) and getattr(settings, 'AUTH_LDAP_GROUP_ENTRY_UUID_ATTR', None):
-        print('\n### Backfilling LDAP group entryUUIDs...\n')
+    if getattr(settings, 'LDAP_AUTH_ENABLED', False) and getattr(settings, 'AUTH_LDAP_GROUP_UUID_ATTR', None):
+        print('\n### Backfilling LDAP group UUIDs...\n')
         try:
-            execute_from_command_line(['', 'sync_group_entry_uuids'])
+            execute_from_command_line(['', 'sync_group_uuids'])
         except ldap.LDAPError as exc:
             # the backfill needs a reachable LDAP server; the upgrade must not
             print(f'\n### WARNING: LDAP group backfill failed ({exc!r}).')
-            print('### Run "teamvault plumbing sync_group_entry_uuids" manually once LDAP is reachable.\n')
+            print('### Run "teamvault plumbing sync_group_uuids" manually once LDAP is reachable.\n')

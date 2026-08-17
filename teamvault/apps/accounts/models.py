@@ -6,22 +6,22 @@ from django.utils.translation import gettext_lazy as _
 
 class User(AbstractUser):
     # TODO: Merge this with UserProfile model
-    entry_uuid = models.CharField(max_length=36, default='', blank=True)
+    ldap_uuid = models.CharField(max_length=36, default='', blank=True)
 
 
 class GroupUUIDMapping(models.Model):
     """
-    Side table linking Django auth.Group rows to their LDAP entryUUID,
-    enabling group renames in LDAP to propagate to Django without
+    Side table linking Django auth.Group rows to their immutable LDAP UUID
+    (entryUUID, objectGUID, ...), enabling group renames in LDAP to propagate to Django without
     breaking memberships, shares, or default-sharing-group references.
     auth.Group is not swappable, so a 1:1 side table is the cleanest fit.
     """
 
     group = models.OneToOneField(Group, on_delete=models.CASCADE, related_name='uuid_mapping')
-    entry_uuid = models.CharField(max_length=36, unique=True)
+    ldap_uuid = models.CharField(max_length=36, unique=True)
 
     def __str__(self):
-        return f'{self.group.name} ({self.entry_uuid})'
+        return f'{self.group.name} ({self.ldap_uuid})'
 
 
 class UserProfile(models.Model):

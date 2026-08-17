@@ -13,15 +13,15 @@ from teamvault.apps.accounts.models import GroupUUIDMapping
 GUID = uuid.UUID('12345678-1234-5678-9abc-123456789abc')
 
 
-def info(name, entry_uuid):
+def info(name, ldap_uuid):
     dn = f'cn={name},ou=Groups,dc=test'
-    return dn, {'cn': [name], 'entryUUID': [entry_uuid]}
+    return dn, {'cn': [name], 'entryUUID': [ldap_uuid]}
 
 
 @override_settings(
     LDAP_AUTH_ENABLED=True,
     AUTH_LDAP_SERVER_URI='ldap://ldap.test',
-    AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID',
+    AUTH_LDAP_GROUP_UUID_ATTR='entryUUID',
     AUTH_LDAP_GROUP_SEARCH=LDAPSearch('ou=groups,dc=test', ldap.SCOPE_SUBTREE, '(objectClass=groupOfNames)'),
     AUTH_LDAP_GROUP_TYPE=GroupOfNamesType(),
 )
@@ -32,10 +32,10 @@ class SyncGroupEntryUUIDsCommandTests(TestCase):
         connection.search_s.return_value = group_infos
         stdout, stderr = StringIO(), StringIO()
         with patch(
-            'teamvault.apps.accounts.management.commands.sync_group_entry_uuids._get_ldap_connection',
+            'teamvault.apps.accounts.management.commands.sync_group_uuids._get_ldap_connection',
             return_value=connection,
         ):
-            call_command('sync_group_entry_uuids', stdout=stdout, stderr=stderr)
+            call_command('sync_group_uuids', stdout=stdout, stderr=stderr)
         return stdout.getvalue(), stderr.getvalue()
 
     def test_creates_mapping_for_unmapped_group(self):
@@ -43,7 +43,7 @@ class SyncGroupEntryUUIDsCommandTests(TestCase):
 
         self._call([info('engineering', 'uuid-eng')])
 
-        self.assertEqual(GroupUUIDMapping.objects.get(group=group).entry_uuid, 'uuid-eng')
+        self.assertEqual(GroupUUIDMapping.objects.get(group=group).ldap_uuid, 'uuid-eng')
 
     def test_skips_ambiguous_ldap_names(self):
         Group.objects.create(name='dup')
@@ -58,7 +58,7 @@ class SyncGroupEntryUUIDsCommandTests(TestCase):
 
         self._call([('cn=ad-team,ou=Groups,dc=test', {'cn': ['ad-team'], 'entryUUID': [GUID.bytes_le]})])
 
-        self.assertEqual(GroupUUIDMapping.objects.get(group=group).entry_uuid, str(GUID))
+        self.assertEqual(GroupUUIDMapping.objects.get(group=group).ldap_uuid, str(GUID))
 
     def test_skips_unusable_uuid_values(self):
         Group.objects.create(name='broken')

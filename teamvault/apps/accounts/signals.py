@@ -8,7 +8,7 @@ from django.contrib.auth.models import Group
 from django.db import transaction
 from django_auth_ldap.config import LDAPSearch
 
-from teamvault.apps.accounts.ldap_uuid import canonicalize_entry_uuid, entry_uuid_filter_term
+from teamvault.apps.accounts.ldap_uuid import canonicalize_ldap_uuid, ldap_uuid_filter_term
 from teamvault.apps.accounts.models import GroupUUIDMapping, UserProfile
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
@@ -23,15 +23,15 @@ class _SyncPlan:
 
     merges: list = field(default_factory=list)  # (collider, target, new_name)
     renames: list = field(default_factory=list)  # (group, new_name)
-    rebinds: list = field(default_factory=list)  # (mapping, new_entry_uuid)
-    mappings: list = field(default_factory=list)  # (group_name, entry_uuid)
+    rebinds: list = field(default_factory=list)  # (mapping, new_ldap_uuid)
+    mappings: list = field(default_factory=list)  # (group_name, ldap_uuid)
 
     def __bool__(self):
         return bool(self.merges or self.renames or self.rebinds or self.mappings)
 
 
-def _collect_ldap_groups(ldap_user, *, entry_uuid_attr):
-    """Return {entry_uuid: name} from the raw LDAP group infos cached on the ldap_user."""
+def _collect_ldap_groups(ldap_user, *, ldap_uuid_attr):
+    """Return {ldap_uuid: name} from the raw LDAP group infos cached on the ldap_user."""
     # django-auth-ldap exposes group infos only via the underscore API:
     # `group_names` / `group_dns` drop attribute payloads, so we reach for the cached raw
     # infos. If a future upgrade renames these, the import-time error will be loud.
@@ -43,19 +43,19 @@ def _collect_ldap_groups(ldap_user, *, entry_uuid_attr):
     for group_info in group_infos:
         _dn, attrs = group_info
         name = group_type.group_name_from_info(group_info)
-        raw = attrs.get(entry_uuid_attr) or attrs.get(entry_uuid_attr.encode())
+        raw = attrs.get(ldap_uuid_attr) or attrs.get(ldap_uuid_attr.encode())
         if not (name and raw):
             continue
-        entry_uuid = canonicalize_entry_uuid(raw[0])
-        if entry_uuid is None:
+        ldap_uuid = canonicalize_ldap_uuid(raw[0])
+        if ldap_uuid is None:
             logger.error(
                 'LDAP group "%s" has an unusable %s value (%r); skipping it for this sync',
                 name,
-                entry_uuid_attr,
+                ldap_uuid_attr,
                 raw[0],
             )
             continue
-        ldap_groups[entry_uuid] = name
+        ldap_groups[ldap_uuid] = name
 
     return ldap_groups
 
@@ -93,10 +93,10 @@ def _merge_unmapped_collider(*, collider, target, new_name):
     )
 
 
-def _current_ldap_name(ldap_user, *, entry_uuid, entry_uuid_attr):
+def _current_ldap_name(ldap_user, *, ldap_uuid, ldap_uuid_attr):
     """Return the group's current name in LDAP, or None if the UUID no longer exists there."""
     base = settings.AUTH_LDAP_GROUP_SEARCH
-    term = entry_uuid_filter_term(entry_uuid_attr, entry_uuid)
+    term = ldap_uuid_filter_term(ldap_uuid_attr, ldap_uuid)
     search = LDAPSearch(base.base_dn, base.scope, f'(&{base.filterstr}{term})', base.attrlist)
     results = search.execute(ldap_user.connection)
     if not results:
@@ -104,7 +104,7 @@ def _current_ldap_name(ldap_user, *, entry_uuid, entry_uuid_attr):
     return settings.AUTH_LDAP_GROUP_TYPE.group_name_from_info(results[0])
 
 
-def _resolve_collisions(planned_renames, *, ldap_user, entry_uuid_attr, merges):
+def _resolve_collisions(planned_renames, *, ldap_user, ldap_uuid_attr, merges):
     """
     Make every planned rename applicable: schedule merges (into `merges`) for unmapped
     colliders (name-based duplicates of the same logical LDAP group) plus a stale-rename
@@ -135,13 +135,11 @@ def _resolve_collisions(planned_renames, *, ldap_user, entry_uuid_attr, merges):
             # A mapped collider is a different logical group so we can never merge it.
             # Ask LDAP for its current name so both groups end up correct in the same pass.
             try:
-                current_name = _current_ldap_name(
-                    ldap_user, entry_uuid=mapping.entry_uuid, entry_uuid_attr=entry_uuid_attr
-                )
+                current_name = _current_ldap_name(ldap_user, ldap_uuid=mapping.ldap_uuid, ldap_uuid_attr=ldap_uuid_attr)
             except ldap.LDAPError:
                 logger.warning(
                     'LDAP lookup for group UUID %s failed; skipping rename of group "%s" (id %s) to "%s"',
-                    mapping.entry_uuid,
+                    mapping.ldap_uuid,
                     target.name,
                     target.pk,
                     collider.name,
@@ -150,14 +148,14 @@ def _resolve_collisions(planned_renames, *, ldap_user, entry_uuid_attr, merges):
                 continue
 
             if current_name is None:
-                # truncated to fit auth_group.name's max_length of 150; entry_uuid is at most 36 chars
-                placeholder = f'{collider.name[:107]}_{mapping.entry_uuid}_stale'
+                # truncated to fit auth_group.name's max_length of 150; ldap_uuid is at most 36 chars
+                placeholder = f'{collider.name[:107]}_{mapping.ldap_uuid}_stale'
                 logger.warning(
                     'Group "%s" (id %s) is mapped to LDAP UUID %s, which no longer exists in LDAP; '
                     'renaming it to "%s" to free the name',
                     collider.name,
                     collider.pk,
-                    mapping.entry_uuid,
+                    mapping.ldap_uuid,
                     placeholder,
                 )
                 planned.append((collider, placeholder))
@@ -216,32 +214,32 @@ def _apply_renames(renames):
         )
 
 
-def _plan_group_sync(ldap_groups, *, ldap_user, entry_uuid_attr):
+def _plan_group_sync(ldap_groups, *, ldap_user, ldap_uuid_attr):
     existing_mappings = {
-        m.entry_uuid: m for m in GroupUUIDMapping.objects.filter(entry_uuid__in=ldap_groups).select_related('group')
+        m.ldap_uuid: m for m in GroupUUIDMapping.objects.filter(ldap_uuid__in=ldap_groups).select_related('group')
     }
 
     plan = _SyncPlan()
     planned_renames = [
-        (mapping.group, ldap_groups[entry_uuid])
-        for entry_uuid, mapping in existing_mappings.items()
-        if mapping.group.name != ldap_groups[entry_uuid]
+        (mapping.group, ldap_groups[ldap_uuid])
+        for ldap_uuid, mapping in existing_mappings.items()
+        if mapping.group.name != ldap_groups[ldap_uuid]
     ]
     if planned_renames:
         plan.renames = _resolve_collisions(
-            planned_renames, ldap_user=ldap_user, entry_uuid_attr=entry_uuid_attr, merges=plan.merges
+            planned_renames, ldap_user=ldap_user, ldap_uuid_attr=ldap_uuid_attr, merges=plan.merges
         )
 
     # groups whose current name will be free once the renames are applied
     repurposed_pks = {group.pk for group, _new_name in plan.renames}
     claimed_names = {new_name for _group, new_name in plan.renames}
-    for entry_uuid, name in ldap_groups.items():
-        if entry_uuid in existing_mappings:
+    for ldap_uuid, name in ldap_groups.items():
+        if ldap_uuid in existing_mappings:
             continue
         if name in claimed_names:
             logger.warning(
                 'Skipping LDAP group with UUID %s: another group in this sync already claims the name "%s"',
-                entry_uuid,
+                ldap_uuid,
                 name,
             )
             continue
@@ -249,51 +247,51 @@ def _plan_group_sync(ldap_groups, *, ldap_user, entry_uuid_attr):
 
         group = Group.objects.filter(name=name).first()
         if group is None or group.pk in repurposed_pks:
-            plan.mappings.append((name, entry_uuid))
+            plan.mappings.append((name, ldap_uuid))
             continue
 
         mapping = GroupUUIDMapping.objects.filter(group=group).select_related('group').first()
         if mapping is None:
             # pre-existing group from name-based mirroring; adopt it
-            plan.mappings.append((name, entry_uuid))
+            plan.mappings.append((name, ldap_uuid))
             continue
 
         # the name is held by a group mapped to a different UUID
         try:
-            current_name = _current_ldap_name(ldap_user, entry_uuid=mapping.entry_uuid, entry_uuid_attr=entry_uuid_attr)
+            current_name = _current_ldap_name(ldap_user, ldap_uuid=mapping.ldap_uuid, ldap_uuid_attr=ldap_uuid_attr)
         except ldap.LDAPError:
             logger.warning(
                 'LDAP lookup for group UUID %s failed; skipping new LDAP group with UUID %s and name "%s"',
-                mapping.entry_uuid,
-                entry_uuid,
+                mapping.ldap_uuid,
+                ldap_uuid,
                 name,
             )
             continue
 
         if current_name is None:
             # the same-named LDAP group was deleted and re-created: same logical group, new UUID
-            plan.rebinds.append((mapping, entry_uuid))
+            plan.rebinds.append((mapping, ldap_uuid))
             continue
 
         if current_name == name:
             logger.warning(
                 'Skipping new LDAP group with UUID %s: LDAP holds another live group (UUID %s) with the name "%s"',
-                entry_uuid,
-                mapping.entry_uuid,
+                ldap_uuid,
+                mapping.ldap_uuid,
                 name,
             )
             continue
 
         # the mapped group was renamed in LDAP; move it to its current name to free this one
         freeing = _resolve_collisions(
-            [(group, current_name)], ldap_user=ldap_user, entry_uuid_attr=entry_uuid_attr, merges=plan.merges
+            [(group, current_name)], ldap_user=ldap_user, ldap_uuid_attr=ldap_uuid_attr, merges=plan.merges
         )
         if (group, current_name) not in freeing:
             continue
         plan.renames.extend(freeing)
         repurposed_pks.update(freed_group.pk for freed_group, _new_name in freeing)
         claimed_names.update(new_name for _freed_group, new_name in freeing)
-        plan.mappings.append((name, entry_uuid))
+        plan.mappings.append((name, ldap_uuid))
 
     return plan
 
@@ -304,13 +302,13 @@ def _apply_group_sync(plan):
     if plan.renames:
         _apply_renames(plan.renames)
 
-    for mapping, entry_uuid in plan.rebinds:
-        old_entry_uuid = mapping.entry_uuid
-        mapping.entry_uuid = entry_uuid
-        mapping.save(update_fields=['entry_uuid'])
+    for mapping, ldap_uuid in plan.rebinds:
+        old_ldap_uuid = mapping.ldap_uuid
+        mapping.ldap_uuid = ldap_uuid
+        mapping.save(update_fields=['ldap_uuid'])
         log(
-            f'Rebound group "{mapping.group.name}" (id {mapping.group.pk}) from LDAP UUID {old_entry_uuid}, '
-            f'which no longer exists in LDAP, to {entry_uuid}',
+            f'Rebound group "{mapping.group.name}" (id {mapping.group.pk}) from LDAP UUID {old_ldap_uuid}, '
+            f'which no longer exists in LDAP, to {ldap_uuid}',
             category=AuditLogCategoryChoices.MISCELLANEOUS,
             group=mapping.group,
         )
@@ -319,9 +317,9 @@ def _apply_group_sync(plan):
     # creating the same brand-new mapping. Name conflicts with existing mappings were
     # resolved explicitly during planning.
     new_mappings = []
-    for name, entry_uuid in plan.mappings:
+    for name, ldap_uuid in plan.mappings:
         group, _created = Group.objects.get_or_create(name=name)
-        new_mappings.append(GroupUUIDMapping(group=group, entry_uuid=entry_uuid))
+        new_mappings.append(GroupUUIDMapping(group=group, ldap_uuid=ldap_uuid))
     GroupUUIDMapping.objects.bulk_create(new_mappings, ignore_conflicts=True)
 
 
@@ -335,21 +333,21 @@ def sync_group_uuids_before_mirror(sender, user, ldap_user, **kwargs):  # noqa: 
     are held during network I/O on the login path.
 
     Requires:
-     - AUTH_LDAP_GROUP_ENTRY_UUID_ATTR set (opt-in toggle for this feature,
+     - AUTH_LDAP_GROUP_UUID_ATTR set (opt-in toggle for this feature,
        checked here because the receiver is connected unconditionally)
      - AUTH_LDAP_GROUP_SEARCH attrlist includes that attr (configure_ldap_auth handles it)
      - AUTH_LDAP_ALWAYS_UPDATE_USER = True (so the signal always fires)
      - AUTH_LDAP_MIRROR_GROUPS = True
     """
-    entry_uuid_attr = getattr(settings, 'AUTH_LDAP_GROUP_ENTRY_UUID_ATTR', None)
-    if not entry_uuid_attr:
+    ldap_uuid_attr = getattr(settings, 'AUTH_LDAP_GROUP_UUID_ATTR', None)
+    if not ldap_uuid_attr:
         return
 
-    ldap_groups = _collect_ldap_groups(ldap_user, entry_uuid_attr=entry_uuid_attr)
+    ldap_groups = _collect_ldap_groups(ldap_user, ldap_uuid_attr=ldap_uuid_attr)
     if not ldap_groups:
         return
 
-    plan = _plan_group_sync(ldap_groups, ldap_user=ldap_user, entry_uuid_attr=entry_uuid_attr)
+    plan = _plan_group_sync(ldap_groups, ldap_user=ldap_user, ldap_uuid_attr=ldap_uuid_attr)
     if not plan:
         return
 

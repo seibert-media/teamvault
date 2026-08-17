@@ -19,7 +19,7 @@ from teamvault.apps.secrets.tests.utils import make_user, new_secret
 
 
 class FakeLDAPConnection:
-    """Answers by-UUID group searches from a {entry_uuid: name} directory."""
+    """Answers by-UUID group searches from a {ldap_uuid: name} directory."""
 
     def __init__(self, directory):
         self.directory = directory
@@ -27,9 +27,9 @@ class FakeLDAPConnection:
 
     def search_s(self, base, scope, filterstr, attrlist=None):  # noqa: ARG002
         self.filterstrs.append(filterstr)
-        entry_uuid = re.search(r'\(entryUUID=([^)\\]+)\)', filterstr).group(1)
-        if entry_uuid in self.directory:
-            return [info(self.directory[entry_uuid], entry_uuid)]
+        ldap_uuid = re.search(r'\(entryUUID=([^)\\]+)\)', filterstr).group(1)
+        if ldap_uuid in self.directory:
+            return [info(self.directory[ldap_uuid], ldap_uuid)]
         return []
 
 
@@ -45,9 +45,9 @@ def fake_ldap_user(group_infos, directory=None):
     )
 
 
-def info(name, entry_uuid):
+def info(name, ldap_uuid):
     dn = f'cn={name},ou=Groups,dc=test'
-    return dn, {'cn': [name], 'entryUUID': [entry_uuid]}
+    return dn, {'cn': [name], 'entryUUID': [ldap_uuid]}
 
 
 def fire(group_infos, directory=None):
@@ -57,7 +57,7 @@ def fire(group_infos, directory=None):
 GUID = uuid.UUID('12345678-1234-5678-9abc-123456789abc')
 
 
-@override_settings(AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID')
+@override_settings(AUTH_LDAP_GROUP_UUID_ATTR='entryUUID')
 class SyncGroupUUIDsBeforeMirrorTests(TestCase):
     @staticmethod
     def _fire(group_infos):
@@ -73,23 +73,23 @@ class SyncGroupUUIDsBeforeMirrorTests(TestCase):
         self._fire([info('engineering', 'uuid-eng')])
 
         group = Group.objects.get(name='engineering')
-        mapping = GroupUUIDMapping.objects.get(entry_uuid='uuid-eng')
+        mapping = GroupUUIDMapping.objects.get(ldap_uuid='uuid-eng')
         self.assertEqual(mapping.group, group)
 
     def test_renames_group_when_ldap_name_changes(self):
         group = Group.objects.create(name='old-name')
-        GroupUUIDMapping.objects.create(group=group, entry_uuid='uuid-1')
+        GroupUUIDMapping.objects.create(group=group, ldap_uuid='uuid-1')
 
         self._fire([info('new-name', 'uuid-1')])
 
         group.refresh_from_db()
         self.assertEqual(group.name, 'new-name')
-        self.assertEqual(GroupUUIDMapping.objects.get(entry_uuid='uuid-1').group.pk, group.pk)
+        self.assertEqual(GroupUUIDMapping.objects.get(ldap_uuid='uuid-1').group.pk, group.pk)
         self.assertEqual(Group.objects.count(), 1)
 
     def test_rename_creates_audit_log_entry(self):
         group = Group.objects.create(name='old-name')
-        GroupUUIDMapping.objects.create(group=group, entry_uuid='uuid-1')
+        GroupUUIDMapping.objects.create(group=group, ldap_uuid='uuid-1')
 
         self._fire([info('new-name', 'uuid-1')])
 
@@ -97,7 +97,7 @@ class SyncGroupUUIDsBeforeMirrorTests(TestCase):
 
     def test_rename_succeeds_despite_group_named_like_temp_placeholder(self):
         group = Group.objects.create(name='old-name')
-        GroupUUIDMapping.objects.create(group=group, entry_uuid='uuid-1')
+        GroupUUIDMapping.objects.create(group=group, ldap_uuid='uuid-1')
         decoy = Group.objects.create(name=f'_teamvault_rename_{group.pk}')
 
         self._fire([info('new-name', 'uuid-1')])
@@ -112,13 +112,13 @@ class SyncGroupUUIDsBeforeMirrorTests(TestCase):
 
         self._fire([info('legacy', 'uuid-legacy')])
 
-        self.assertEqual(GroupUUIDMapping.objects.get(entry_uuid='uuid-legacy').group.pk, legacy.pk)
+        self.assertEqual(GroupUUIDMapping.objects.get(ldap_uuid='uuid-legacy').group.pk, legacy.pk)
         self.assertEqual(Group.objects.filter(name='legacy').count(), 1)
 
     def test_canonicalizes_binary_guid_value(self):
         self._fire([('cn=ad-team,ou=Groups,dc=test', {'cn': ['ad-team'], 'entryUUID': [GUID.bytes_le]})])
 
-        mapping = GroupUUIDMapping.objects.get(entry_uuid=str(GUID))
+        mapping = GroupUUIDMapping.objects.get(ldap_uuid=str(GUID))
         self.assertEqual(mapping.group.name, 'ad-team')
 
     def test_skips_group_with_unusable_uuid_value(self):
@@ -129,7 +129,7 @@ class SyncGroupUUIDsBeforeMirrorTests(TestCase):
             ])
 
         self.assertFalse(Group.objects.filter(name='broken').exists())
-        self.assertTrue(GroupUUIDMapping.objects.filter(entry_uuid='uuid-intact').exists())
+        self.assertTrue(GroupUUIDMapping.objects.filter(ldap_uuid='uuid-intact').exists())
 
     def test_skips_entry_without_uuid(self):
         self._fire([('cn=x,ou=Groups,dc=test', {'cn': ['x']})])
@@ -147,7 +147,7 @@ class SyncGroupUUIDsBeforeMirrorTests(TestCase):
         self.assertEqual(GroupUUIDMapping.objects.count(), 2)
 
     def test_noop_when_feature_disabled(self):
-        with override_settings(AUTH_LDAP_GROUP_ENTRY_UUID_ATTR=None):
+        with override_settings(AUTH_LDAP_GROUP_UUID_ATTR=None):
             self._fire([info('engineering', 'uuid-eng')])
 
         self.assertFalse(GroupUUIDMapping.objects.exists())
@@ -155,15 +155,15 @@ class SyncGroupUUIDsBeforeMirrorTests(TestCase):
 
 
 @override_settings(
-    AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID',
+    AUTH_LDAP_GROUP_UUID_ATTR='entryUUID',
     AUTH_LDAP_GROUP_SEARCH=LDAPSearch('ou=groups,dc=test', ldap.SCOPE_SUBTREE, '(objectClass=groupOfNames)'),
     AUTH_LDAP_GROUP_TYPE=GroupOfNamesType(),
 )
 class RenameCollisionTests(TestCase):
     @staticmethod
-    def _mapped_group(name, entry_uuid):
+    def _mapped_group(name, ldap_uuid):
         group = Group.objects.create(name=name)
-        GroupUUIDMapping.objects.create(group=group, entry_uuid=entry_uuid)
+        GroupUUIDMapping.objects.create(group=group, ldap_uuid=ldap_uuid)
         return group
 
     def test_merges_unmapped_collider_into_mapped_group(self):
@@ -312,7 +312,7 @@ class RenameCollisionTests(TestCase):
 
 
 @override_settings(
-    AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID',
+    AUTH_LDAP_GROUP_UUID_ATTR='entryUUID',
     AUTH_LDAP_GROUP_SEARCH=LDAPSearch('ou=groups,dc=test', ldap.SCOPE_SUBTREE, '(objectClass=groupOfNames)'),
     AUTH_LDAP_GROUP_TYPE=GroupOfNamesType(),
 )
@@ -320,9 +320,9 @@ class NewUUIDConflictTests(TestCase):
     """A new LDAP UUID whose name hits a Django group already mapped to a different UUID."""
 
     @staticmethod
-    def _mapped_group(name, entry_uuid):
+    def _mapped_group(name, ldap_uuid):
         group = Group.objects.create(name=name)
-        GroupUUIDMapping.objects.create(group=group, entry_uuid=entry_uuid)
+        GroupUUIDMapping.objects.create(group=group, ldap_uuid=ldap_uuid)
         return group
 
     def test_rebinds_mapping_when_ldap_group_was_recreated(self):
@@ -331,8 +331,8 @@ class NewUUIDConflictTests(TestCase):
         fire([info('team', 'uuid-new')], directory={})
 
         mapping = GroupUUIDMapping.objects.get(group=group)
-        self.assertEqual(mapping.entry_uuid, 'uuid-new')
-        self.assertFalse(GroupUUIDMapping.objects.filter(entry_uuid='uuid-old').exists())
+        self.assertEqual(mapping.ldap_uuid, 'uuid-new')
+        self.assertFalse(GroupUUIDMapping.objects.filter(ldap_uuid='uuid-old').exists())
         self.assertEqual(Group.objects.count(), 1)
         self.assertTrue(LogEntry.objects.filter(group=group).exists())
 
@@ -343,9 +343,9 @@ class NewUUIDConflictTests(TestCase):
 
         group.refresh_from_db()
         self.assertEqual(group.name, 'team-renamed')
-        self.assertEqual(GroupUUIDMapping.objects.get(group=group).entry_uuid, 'uuid-old')
+        self.assertEqual(GroupUUIDMapping.objects.get(group=group).ldap_uuid, 'uuid-old')
         fresh = Group.objects.get(name='team')
-        self.assertEqual(GroupUUIDMapping.objects.get(group=fresh).entry_uuid, 'uuid-new')
+        self.assertEqual(GroupUUIDMapping.objects.get(group=fresh).ldap_uuid, 'uuid-new')
 
     def test_skips_new_uuid_when_live_group_still_owns_name(self):
         group = self._mapped_group('team', 'uuid-old')
@@ -353,8 +353,8 @@ class NewUUIDConflictTests(TestCase):
         with self.assertLogs('teamvault.apps.accounts.signals', level='WARNING'):
             fire([info('team', 'uuid-new')], directory={'uuid-old': 'team'})
 
-        self.assertEqual(GroupUUIDMapping.objects.get(group=group).entry_uuid, 'uuid-old')
-        self.assertFalse(GroupUUIDMapping.objects.filter(entry_uuid='uuid-new').exists())
+        self.assertEqual(GroupUUIDMapping.objects.get(group=group).ldap_uuid, 'uuid-old')
+        self.assertFalse(GroupUUIDMapping.objects.filter(ldap_uuid='uuid-new').exists())
         self.assertEqual(Group.objects.count(), 1)
 
     def test_first_uuid_wins_for_duplicate_names_in_one_sync(self):
@@ -363,7 +363,7 @@ class NewUUIDConflictTests(TestCase):
 
         self.assertEqual(Group.objects.count(), 1)
         mapping = GroupUUIDMapping.objects.get()
-        self.assertEqual(mapping.entry_uuid, 'uuid-1')
+        self.assertEqual(mapping.ldap_uuid, 'uuid-1')
 
     def test_ldap_error_during_liveness_check_skips_uuid(self):
         group = self._mapped_group('team', 'uuid-old')
@@ -373,12 +373,12 @@ class NewUUIDConflictTests(TestCase):
         with self.assertLogs('teamvault.apps.accounts.signals', level='WARNING'):
             sync_group_uuids_before_mirror(sender=Mock(), user=Mock(), ldap_user=ldap_user)
 
-        self.assertEqual(GroupUUIDMapping.objects.get(group=group).entry_uuid, 'uuid-old')
-        self.assertFalse(GroupUUIDMapping.objects.filter(entry_uuid='uuid-new').exists())
+        self.assertEqual(GroupUUIDMapping.objects.get(group=group).ldap_uuid, 'uuid-old')
+        self.assertFalse(GroupUUIDMapping.objects.filter(ldap_uuid='uuid-new').exists())
 
 
 @override_settings(
-    AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID',
+    AUTH_LDAP_GROUP_UUID_ATTR='entryUUID',
     AUTH_LDAP_GROUP_SEARCH=LDAPSearch('ou=groups,dc=test', ldap.SCOPE_SUBTREE, '(objectClass=groupOfNames)'),
     AUTH_LDAP_GROUP_TYPE=GroupOfNamesType(),
 )
@@ -387,9 +387,9 @@ class TransactionBoundaryTests(TransactionTestCase):
         # LDAP is remote network I/O; doing it inside the atomic block would hold row
         # locks on auth_group for the duration of the calls on every login.
         mapped = Group.objects.create(name='old-name')
-        GroupUUIDMapping.objects.create(group=mapped, entry_uuid='uuid-1')
+        GroupUUIDMapping.objects.create(group=mapped, ldap_uuid='uuid-1')
         other = Group.objects.create(name='new-name')
-        GroupUUIDMapping.objects.create(group=other, entry_uuid='uuid-2')
+        GroupUUIDMapping.objects.create(group=other, ldap_uuid='uuid-2')
         ldap_user = fake_ldap_user([info('new-name', 'uuid-1')], {'uuid-2': 'renamed-elsewhere'})
 
         searched_in_atomic_block = []
@@ -411,10 +411,10 @@ class TransactionBoundaryTests(TransactionTestCase):
         self.assertNotIn(True, searched_in_atomic_block)
 
 
-@override_settings(AUTH_LDAP_GROUP_ENTRY_UUID_ATTR='entryUUID')
+@override_settings(AUTH_LDAP_GROUP_UUID_ATTR='entryUUID')
 class SignalConnectionTests(TestCase):
     def test_receiver_connected_to_populate_user(self):
         populate_user.send(sender=Mock, user=Mock(), ldap_user=fake_ldap_user([info('engineering', 'uuid-eng')]))
 
         self.assertTrue(Group.objects.filter(name='engineering').exists())
-        self.assertTrue(GroupUUIDMapping.objects.filter(entry_uuid='uuid-eng').exists())
+        self.assertTrue(GroupUUIDMapping.objects.filter(ldap_uuid='uuid-eng').exists())
