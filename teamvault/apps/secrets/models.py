@@ -121,7 +121,7 @@ class Secret(HashIDModel):
     HASHID_NAMESPACE = 'Secret'
 
     if t.TYPE_CHECKING:
-        from django.db.models.manager import RelatedManager
+        from django.db.models.fields.related_descriptors import RelatedManager
 
         # Django reverse relation from SharedSecretData.secret (related_name="share_data").
         share_data: 'RelatedManager[SharedSecretData]'
