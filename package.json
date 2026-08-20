@@ -26,7 +26,7 @@
     "@rspack/core": "^2.0.1",
     "@rspack/dev-server": "^2.0.1",
     "sass-embedded": "^1.99.0",
-    "sass-loader": "^16.0.7",
+    "sass-loader": "^17.0.0",
     "webpack-bundle-tracker": "^3.2.3",
     "webpack-merge": "^6.0.1"
   },
