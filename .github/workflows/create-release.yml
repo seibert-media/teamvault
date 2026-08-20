@@ -40,22 +40,15 @@ jobs:
           packages: libldap2-dev libsasl2-dev
 
       - name: Set up bun
-        id: bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
         with:
           bun-version: latest
 
-      - name: Restore bun cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: ~/.bun/install/cache
-          key: ${{ runner.os }}-bun-${{ steps.bun.outputs.bun-version }}-${{ hashFiles('bun.lockb') }}
-          restore-keys: |
-            ${{ runner.os }}-bun-
-
+      # No dependency caches in this workflow: the frontend bundle and wheel
+      # published from here should never be built from restorable cache state.
       - name: Frontend Install Dependencies and Build
         run: |
-          bun install
+          bun install --frozen-lockfile
           bun run build
         working-directory: ${{ github.workspace }}
 
@@ -73,6 +66,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v9.0.0 # immutable
+        with:
+          enable-cache: false
 
       - name: Update version
         run: |
