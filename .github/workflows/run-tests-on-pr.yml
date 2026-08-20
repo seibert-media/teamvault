@@ -91,6 +91,9 @@ jobs:
         uses: astral-sh/setup-uv@ae62891fec2bb8e7d6c99fc78c9fec3a63790f8d # v10.0.0
         with:
           enable-cache: true
+          # setup-uv only puts the python version into the cache key via its own
+          # python-version input; without this suffix all matrix jobs share one key
+          cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: |
             **/uv.lock
             **/pyproject.toml
@@ -100,15 +103,6 @@ jobs:
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-
-      - name: Cache venv
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-        with:
-          path: |
-            .venv
-          key: uv-venv-${{ runner.os }}-py${{ matrix.python-version }}-${{ hashFiles('**/uv.lock', '**/pyproject.toml') }}
-          restore-keys: |
-            uv-venv-${{ runner.os }}-py${{ matrix.python-version }}-
 
       - name: Install dependencies
         working-directory: ${{ github.workspace }}
