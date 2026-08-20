@@ -71,7 +71,6 @@ module.exports = {
             loader: 'sass-loader',
             options: {
               sassOptions: {
-                api: 'modern-compiler',
                 quietDeps: true,
                 silenceDeprecations: ['import'],
               },
