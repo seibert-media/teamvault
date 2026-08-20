@@ -1,19 +1,14 @@
-import {zxcvbn, zxcvbnOptions} from '@zxcvbn-ts/core'
+import type {Match, Matcher, MatchEstimated, MatchExtended, MatchOptions, Options,} from '@zxcvbn-ts/core'
+import {MatcherBaseClass, ZxcvbnFactory} from '@zxcvbn-ts/core'
 import * as zxcvbnCommonPackage from '@zxcvbn-ts/language-common'
 import * as zxcvbnEnPackage from '@zxcvbn-ts/language-en'
-import type {
-    MatchEstimated,
-    MatchExtended,
-    Matcher,
-    Match,
-} from '@zxcvbn-ts/core/dist/types'
 
 
 const minLengthMatcher: Matcher = {
-    Matching: class MatchMinLength {
+    Matching: class MatchMinLength extends MatcherBaseClass {
         minLength = 12  // TODO: Make this configurable via settings
 
-        match({password}: { password: string }) {
+        match({password}: MatchOptions) {
             const matches: Match[] = []
             if (password.length != 0 && password.length < this.minLength) {
                 matches.push({
@@ -26,7 +21,7 @@ const minLengthMatcher: Matcher = {
             return matches
         }
     },
-    feedback(match: MatchEstimated, isSoleMatch: boolean) {
+    feedback(options: Options, match: MatchEstimated, isSoleMatch?: boolean) {
         return {
             warning: 'Your password is not long enough',
             suggestions: [],
@@ -40,14 +35,13 @@ const minLengthMatcher: Matcher = {
 
 
 export function initZxcvbn() {
-    zxcvbnOptions.addMatcher('minLength', minLengthMatcher)
-    zxcvbnOptions.setOptions({
+    const factory = new ZxcvbnFactory({
         translations: zxcvbnEnPackage.translations,
         graphs: zxcvbnCommonPackage.adjacencyGraphs,
         dictionary: {
             ...zxcvbnCommonPackage.dictionary,
             ...zxcvbnEnPackage.dictionary,
         },
-    })
-    return zxcvbn
+    }, {minLength: minLengthMatcher})
+    return (password: string) => factory.check(password)
 }
