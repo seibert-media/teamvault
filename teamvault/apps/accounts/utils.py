@@ -11,10 +11,18 @@ from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretDa
 
 logger = logging.getLogger(__name__)
 
+HTTP_TIMEOUT = 10  # seconds; avatar fetches must not stall the auth pipeline
+
 
 def save_gravatar(user, *_args, **_kwargs):
     email_hash = md5(user.email.strip().lower().encode('utf-8')).hexdigest()
-    resp = requests.get(f'https://gravatar.com/avatar/{email_hash}?s=200&r=g&d=mp')
+    try:
+        resp = requests.get(
+            f'https://gravatar.com/avatar/{email_hash}?s=200&r=g&d=mp', timeout=HTTP_TIMEOUT
+        )
+    except requests.RequestException:
+        logger.warning('Fetching Gravatar avatar failed for user %s', user)
+        return
     if resp.ok:
         user_settings = UserProfileModel.objects.get_or_create(user=user)[0]
         user_settings.avatar = b64encode(resp.content)
@@ -22,7 +30,11 @@ def save_gravatar(user, *_args, **_kwargs):
 
 
 def save_google_avatar(response, user, *_args, **_kwargs):
-    resp = requests.get(response['picture'])
+    try:
+        resp = requests.get(response['picture'], timeout=HTTP_TIMEOUT)
+    except requests.RequestException:
+        logger.warning('Fetching Google avatar failed for user %s', user)
+        return
     if resp.ok:
         user_settings = UserProfileModel.objects.get_or_create(user=user)[0]
         user_settings.avatar = b64encode(resp.content)
