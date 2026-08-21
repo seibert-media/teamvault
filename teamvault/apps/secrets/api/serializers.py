@@ -4,7 +4,7 @@ from typing import override
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
-from django.core.exceptions import PermissionDenied
+from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
 from django.db import models
 from django.http import Http404
 from django.utils.timezone import now
@@ -15,6 +15,7 @@ from rest_framework.reverse import reverse
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType as ContentTypeEnum, SecretStatus
 from ..models import Secret, SecretRevision, SharedSecretData
+from ..utils import otp_payload_fields
 
 User = get_user_model()
 
@@ -51,7 +52,12 @@ STANDARD_FIELDS = {'access_policy', 'name', 'description', 'username', 'url'}
 
 
 def serialize_password(secret_data):
-    return {'password': secret_data['password'], 'otp_key_data': secret_data.get('otp_key_data', '')}
+    payload = {'password': secret_data['password']}
+    try:
+        payload.update(otp_payload_fields(secret_data.get('otp_key_data', '')))
+    except DjangoValidationError as exc:
+        raise serializers.ValidationError({'otp_key_data': exc.messages}) from exc
+    return payload
 
 
 def serialize_cc(secret_data):
@@ -153,6 +159,11 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         write_only=True,
     )
 
+    # Decrypted payload parsed out of `secret_data`. Writing the revision needs the
+    # actor, which only the view has, so the view reads this after save() and hands
+    # it to RevisionService. None means the request carried no new payload.
+    plaintext_payload: dict | None = None
+
     def create(self, validated_data):
         try:
             content_type = validated_data.pop('content_type')
@@ -172,7 +183,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
         # transform string repr into integers
         instance.content_type = REPR_CONTENT_TYPE[content_type]
-        instance._data = data
+        self.plaintext_payload = data
         instance.shared_users.add(instance.created_by)
         return instance
 
@@ -241,13 +252,12 @@ class SecretDetailSerializer(SecretSerializer):
         required=False,
     )
 
-    @staticmethod
-    def update(instance: Secret, validated_data):
+    def update(self, instance: Secret, validated_data):
         secret_data = validated_data.get('secret_data')
         if secret_data:
             data = _extract_data(secret_data, instance.content_type)
             if data:
-                instance._data = data
+                self.plaintext_payload = data
 
         for k, v in validated_data.items():
             if k in STANDARD_FIELDS:

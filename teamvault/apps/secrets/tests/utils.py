@@ -2,6 +2,7 @@ from base64 import b64encode
 
 from cryptography.fernet import Fernet
 from django.contrib.auth import get_user_model
+from pyotp import TOTP
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from teamvault.apps.secrets.models import (
@@ -33,6 +34,25 @@ _DEFAULT_PAYLOADS = {
     },
     ContentType.FILE: {'file_content': b64encode(b'hello-from-bytes').decode('ascii')},
 }
+
+
+OTP_SECRET = 'JBSWY3DPEHPK3PXP'
+
+
+def grouped_otp_secret(separator: str = ' ', secret: str = OTP_SECRET) -> str:
+    """Render a secret the way providers display it: in blocks of four."""
+    return separator.join(secret[i : i + 4] for i in range(0, len(secret), 4))
+
+
+def otp_codes_during(secret: str, started: float, finished: float, **totp_kwargs) -> set[str]:
+    """Return the codes a TOTP over `secret` could have produced between two `time.time()` readings.
+
+    Comparing against a single freshly generated code is flaky, because the 30
+    second window can roll over mid-request. Bracketing the request keeps the
+    assertion exact instead of loosening it to a tolerance.
+    """
+    totp = TOTP(secret, **totp_kwargs)
+    return {totp.at(int(timestamp)) for timestamp in (started, finished)}
 
 
 def make_user(username: str, superuser=False):

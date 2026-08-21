@@ -1,5 +1,11 @@
 export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement) {
   const response = await fetch(secret_url+"/otp");
+  if (!response.ok) {
+    // e.g. a secret stored with an algorithm we cannot generate codes for
+    inputElement.textContent = " - ";
+    window.notyf.error("Could not generate a code for this secret.");
+    return;
+  }
   const otp = await response.json();
   let newFieldData = otp.slice(0, 3) + "<span class='separator mx-1'></span>" + otp.slice(3);
   inputElement.innerHTML = newFieldData;
