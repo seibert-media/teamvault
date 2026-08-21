@@ -97,7 +97,7 @@
 }
 
 .search-modal-result-action-link {
-  box-sizing: border-box;
+  @extend .fa-boxed;
 
   &:hover {
     background: var(--bs-secondary-bg-subtle);

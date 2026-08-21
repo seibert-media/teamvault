@@ -9,3 +9,11 @@
 .list-group-item .fa {
   vertical-align: middle
 }
+
+// bootstraps _reboot.scss sets a global box-sizing: border-box,
+// which clashes with the fontawesome v7 icons when used with padding/border
+// around them, like the .secret-extra-icon.
+.fa-boxed {
+  --fa-width: 1em;
+  box-sizing: content-box;
+}
