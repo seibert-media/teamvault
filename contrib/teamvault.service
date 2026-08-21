@@ -1,0 +1,16 @@
+[Unit]
+Description=TeamVault
+After=postgresql.service
+Wants=postgresql.service
+
+[Service]
+User=teamvault
+Group=teamvault
+RuntimeDirectory=teamvault
+Environment=XDG_RUNTIME_DIR=/run/teamvault
+ExecStart=/usr/local/bin/teamvault run
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

@@ -1,5 +1,6 @@
 import logging
 import pathlib
+import tempfile
 from base64 import b64decode, b64encode
 from configparser import ConfigParser
 from gettext import gettext as _
@@ -50,10 +51,11 @@ def configure_data_dir(config):
                 config=environ['TEAMVAULT_CONFIG_FILE'],
             )
         )
-    test_file = data_dir / '.teamvault_write_test'
     try:
-        test_file.touch()
-        test_file.unlink()
+        # unique name so that concurrent processes (e.g. gunicorn and huey)
+        # can't delete each other's test file mid-check.
+        with tempfile.NamedTemporaryFile(dir=data_dir, prefix='.teamvault_write_test'):
+            pass
     except OSError as exc:
         raise RuntimeError(
             _('data_dir {path} is not writable (set in {config})').format(

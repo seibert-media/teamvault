@@ -1,0 +1,14 @@
+[Unit]
+Description=TeamVault huey task consumer
+After=postgresql.service
+Wants=postgresql.service
+
+[Service]
+User=teamvault
+Group=teamvault
+ExecStart=/usr/local/bin/teamvault run_huey
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target
