@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.staticfiles',
     'django_bootstrap5',
+    'django_filters',
     'huey.contrib.djhuey',
     'rest_framework',
     'social_django',
