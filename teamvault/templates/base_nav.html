@@ -17,7 +17,7 @@
                 <div class="btn-group btn-group-sm">
                     <a href="{% url 'secrets.secret-add' content_type='password' %}"
                        class="btn btn-accent text-nowrap">
-                        <i class="fa fa-plus-circle fa-fw"></i> {% trans "Add Password" %}
+                        <i class="fa fa-plus-circle"></i> {% trans "Add Password" %}
                     </a>
                     <button type="button" class="btn btn-accent dropdown-toggle dropdown-toggle-split"
                             data-bs-toggle="dropdown" aria-expanded="false">
@@ -27,12 +27,12 @@
                     <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" role="menu">
                         <li>
                             <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='cc' %}">
-                                <i class="fa fa-credit-card fa-fw"></i> {% trans "Add Credit Card" %}
+                                <i class="fa fa-credit-card"></i> {% trans "Add Credit Card" %}
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item" href="{% url 'secrets.secret-add' content_type='file' %}">
-                                <i class="fa fa-upload fa-fw"></i> {% trans "Upload File" %}
+                                <i class="fa fa-upload"></i> {% trans "Upload File" %}
                             </a>
                         </li>
                     </ul>
@@ -45,7 +45,7 @@
                         class="btn btn-tertiary d-flex w-100 justify-content-between" aria-label="Search"
                         data-bs-toggle="modal"
                         data-bs-target="#search-modal">
-                    <span><i class="fa fa-search fa-fw"></i> {% translate "Search" %}</span>
+                    <span><i class="fa fa-search"></i> {% translate "Search" %}</span>
                     <span>
                         <kbd class="bg-transparent border border-secondary">
                             {% translate "CTRL" %}<span class="mx-1">/</span>⌘
@@ -63,7 +63,7 @@
                                 role="button"
                                 data-bs-toggle="dropdown"
                                 aria-expanded="false">
-                            <i class="fa fa-gear fa-fw"></i>
+                            <i class="fa fa-gear"></i>
                             {% translate "Administration" %}
                         </button>
                         <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" aria-labelledby="adminmenu"
@@ -71,14 +71,14 @@
                             <li>
                                 <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                    href="{% url 'audit.log' %}">
-                                    <i class="fa fa-users-line fa-fw"></i> {% trans "Audit log" %}
+                                    <i class="fa fa-users-line"></i> {% trans "Audit log" %}
                                 </a>
                             </li>
                             <li class="dropdown-divider"></li>
                             <li>
                                 <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                    href="{% url 'accounts.user-list' %}">
-                                    <i class="fa fa-users fa-fw"></i> {% trans "Users" %}
+                                    <i class="fa fa-users"></i> {% trans "Users" %}
                                 </a>
                             </li>
                         </ul>
@@ -93,7 +93,7 @@
                         data-theme-toggle
                         aria-expanded="false"
                         title="{% trans "Change Theme" %}">
-                    <i class="fa fa-fw fa-xl text-white lh-1" id="theme-icon"></i>
+                    <i class="fa fa-xl text-white lh-1" id="theme-icon"></i>
                     <span class="fa-stack" id="theme-icon-auto" style="display:none; font-size: 0.75em;">
                         <i class="fas fa-certificate fa-stack-2x" style="color: #ffffff;"></i>
                         <strong class="fa-stack-1x fa-inverse" style="color: #2e1a47; font-family: sans-serif;">A</strong>
@@ -114,13 +114,13 @@
                         <li>
                             <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                href="{% url 'accounts.user-settings' %}">
-                                <i class="fa fa-sliders fa-fw"></i> {% trans "Settings" %}
+                                <i class="fa fa-sliders"></i> {% trans "Settings" %}
                             </a>
                         </li>
                         <li>
                             <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                href="{% url 'secrets.secret-list' %}?created_by={{ request.user.pk }}">
-                                <i class="fa fa-user-lock fa-fw"></i> {% trans "My Secrets" %}
+                                <i class="fa fa-user-lock"></i> {% trans "My Secrets" %}
                             </a>
                         </li>
                         <li class="dropdown-divider"></li>
@@ -128,7 +128,7 @@
                             <form method="post" action="{% url 'accounts.logout' %}">
                                 {% csrf_token %}
                                 <button class="dropdown-item align-items-center d-inline-flex gap-2" type="submit">
-                                    <i class="fa fa-arrow-right-from-bracket fa-fw"></i> {% trans "Sign out" %}
+                                    <i class="fa fa-arrow-right-from-bracket"></i> {% trans "Sign out" %}
                                 </button>
                             </form>
                         </li>

@@ -17,7 +17,7 @@ User = get_user_model()
 def add_tooltip(label, tooltip_message):
     return format_html(
         '{} '
-        '<i class="fa fa-exclamation-circle fa-fw opacity-75"'
+        '<i class="fa fa-exclamation-circle opacity-75"'
         ' data-bs-toggle="tooltip" data-bs-placement="top" title="{}">'
         '</i>',
         label,
@@ -34,7 +34,7 @@ class Icons(enum.Enum):
 
     @property
     def html(self):
-        return f'<i class="fa fa-fw {self.value}"></i> '
+        return f'<i class="fa {self.value}"></i> '
 
 
 class ContentTypeChoice(IntegerChoices):

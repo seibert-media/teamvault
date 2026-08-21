@@ -47,7 +47,7 @@
             <div class="col-md-4 mt-md-0 mt-3">
                 <div class="mb-3">
                     <a href="{% url 'audit.log' %}?actor={{ user.username }}" class="btn btn-lg btn-light">
-                        <i class="fa fa-address-card fa-fw" aria-hidden="true"></i>
+                        <i class="fa fa-address-card" aria-hidden="true"></i>
                         {% trans "View audit log" %}
                     </a>
                 </div>
@@ -55,13 +55,13 @@
                     {% if user.is_active %}
                         <button type="button" class="btn btn-danger btn-lg" data-bs-toggle="modal"
                                 data-bs-target="#modal-deactivate">
-                            <i class="fa fa-lock fa-fw"></i>
+                            <i class="fa fa-lock"></i>
                             {% trans "Deactivate" %}
                         </button>
                     {% else %}
                         <button type="button" class="btn btn-success btn-lg" data-bs-toggle="modal"
                                 data-bs-target="#modal-reactivate">
-                            <i class="fa fa-lock-open fa-fw"></i>
+                            <i class="fa fa-lock-open"></i>
                             {% trans "Reactivate" %}
                         </button>
                     {% endif %}
@@ -106,13 +106,13 @@
                         {% csrf_token %}
                         <div class="modal-body">
                             <div class="alert alert-warning">
-                                <i class="fa fa-info-circle fa-fw"></i>
+                                <i class="fa fa-info-circle"></i>
                                 {% trans "Any secrets accessed by this user will be marked for changing." %}
                             </div>
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-danger"><i
-                                    class="fa fa-lock fa-fw"></i> {% trans "Deactivate" %}
+                                    class="fa fa-lock"></i> {% trans "Deactivate" %}
                             </button>
                         </div>
                     </form>
@@ -138,7 +138,7 @@
                         </div>
                         <div class="modal-footer">
                             <button type="submit" class="btn btn-success"><i
-                                    class="fa fa-lock-open fa-fw"></i> {% trans "Reactivate" %}
+                                    class="fa fa-lock-open"></i> {% trans "Reactivate" %}
                             </button>
                         </div>
                     </form>

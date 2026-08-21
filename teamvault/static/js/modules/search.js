@@ -3,7 +3,7 @@ import DOMPurify from 'dompurify';
 import * as bootstrap from 'bootstrap';
 import {scrollIfNeeded} from '../utils';
 
-const SEARCH_ITEM_HTML = `<div class="col-auto me-1"><i class="fa fa-fw" data-search-icon></i></div>
+const SEARCH_ITEM_HTML = `<div class="col-auto me-1"><i class="fa" data-search-icon></i></div>
 <div class="col-10 search-modal-result-content">
     <span class="search-modal-result-content-title text-truncate" data-search-title></span>
     <span class="search-modal-result-content-extras text-muted" data-search-meta></span>
@@ -118,7 +118,7 @@ export function initSearch() {
         if (data.value.locked) {
           item.querySelector('.search-modal-result-action').insertAdjacentHTML(
             'afterbegin',
-            '<i class="fa fa-lock fa-fw text-danger"></i>',
+            '<i class="fa fa-lock text-danger"></i>',
           );
         }
       },
