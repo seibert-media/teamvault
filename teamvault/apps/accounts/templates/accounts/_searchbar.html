@@ -1,0 +1,18 @@
+{% load i18n %}
+
+<div class="fs-search d-flex align-items-center border border-2 rounded-3 my-3 w-50"
+     tabindex="0" role="search">
+    <label for="{{ id }}" class="d-flex align-items-center flex-grow-1 ps-3">
+        <i class="fa fa-search search-icon" aria-hidden="true"></i>
+        <input type="search" id="{{ id }}" name="q"
+               class="form-control bg-transparent border-0 ps-2 shadow-none focus-visible:outline-none"
+               placeholder="{{ placeholder }}"
+               value="{{ request.GET.q|default:'' }}"
+               autocomplete="off"
+               hx-get="{{ url }}"
+               hx-include="[name='page_size']"
+               hx-trigger="keyup changed delay:500ms, search"
+               hx-target="{{ target }}"
+               hx-swap="innerHTML">
+    </label>
+</div>

@@ -390,7 +390,12 @@ class GroupMemberList(PageSizeMixin, ListView):
         return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
-        return self.group_object.user_set.order_by('username')
+        qs = self.group_object.user_set.order_by('username')
+        query = self.request.GET.get('q', '').strip()
+        if query:
+            return qs.filter(username__icontains=query)
+
+        return qs
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
