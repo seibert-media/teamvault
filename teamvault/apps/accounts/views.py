@@ -343,6 +343,14 @@ class GroupDetail(DetailView):
     slug_field = 'name'
     slug_url_kwarg = 'groupname'
     template_name = 'accounts/group_detail.html'
+    
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # only count secrets that are currently shared with the group
+        ctx['count_of_secrets_shared_with_group'] = self.object.secret_share_data.filter(
+            Q(granted_until__isnull=True) | Q(granted_until__gt=now())
+        ).count()
+        return ctx
 
 
 group_detail = user_passes_test(lambda u: u.is_superuser)(GroupDetail.as_view())
@@ -400,10 +408,6 @@ class GroupMemberList(PageSizeMixin, ListView):
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         ctx['group'] = self.group_object
-        # only count secrets that are currently shared with the group
-        ctx['count_of_secrets_shared_with_group'] = self.group_object.secret_share_data.filter(
-            Q(granted_until__isnull=True) | Q(granted_until__gt=now())
-        ).count()
         return ctx
 
 
