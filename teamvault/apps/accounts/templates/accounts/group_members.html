@@ -3,23 +3,45 @@
 {% load smart_pagination %}
 
 {% block content %}
-{% partialdef group-members inline %}
-    <div class="list-group list-group-flush">
-        {% for user in group_members %}
-            <a class="list-group-item list-group-item-action d-flex align-items-center gap-2 px-0"
-               href="{% url 'accounts.user-detail' username=user.username %}">
-                {% include "accounts/_avatar.html" with user=user %}
-                {{ user.username }}
-            </a>
-        {% empty %}
-            <div class="list-group-item px-0 py-0">
-                {% trans "No members" %}
-            </div>
-        {% endfor %}
-    </div>
-    <div hx-target="#group-members-wrapper" hx-push-url="false">
-        {% url 'accounts.group-members' group.name as members_url %}
-        {% include "pagination.html" with url=members_url target="#group-members-wrapper" %}
-    </div>
-{% endpartialdef %}
+    {% partialdef group-members inline %}
+        <table class="table table-hover fixed-table member-table">
+            <thead>
+            <tr>
+                <th>{% trans 'User' %}</th>
+                <th>{% trans 'Last login' %}</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for user in group_members %}
+                <tr>
+                    <td>
+                        <a class="d-flex align-items-center gap-2 px-0"
+                           href="{% url 'accounts.user-detail' username=user.username %}">
+                            {% include "accounts/_avatar.html" with user=user %}
+                            <div class="d-flex flex-column">
+                                <span>{{ user.username }}</span>
+                                <span class="text-muted small">{{ user.email }}</span>
+                            </div>
+                        </a>
+                    </td>
+                    <td>
+                        <span class="text-muted">{{ user.last_login }}</span>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="2">
+                        <div class="px-0">
+                            {% trans "No members" %}
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        <div hx-target="#group-members-wrapper" hx-push-url="false">
+            {% url 'accounts.group-members' group.name as members_url %}
+            {% include "pagination.html" with url=members_url target="#group-members-wrapper" %}
+        </div>
+    {% endpartialdef %}
 {% endblock %}
