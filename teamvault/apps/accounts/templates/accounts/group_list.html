@@ -12,7 +12,7 @@
                     </h1>
                 </div>
                 <div class="col text-end align-self-center ps-3">
-                    <div class="groupsearch d-flex align-items-center border border-2 rounded-3 ps-3" tabindex="0" role="search" id="groupsearch-div">
+                    <div class="groupsearch d-flex align-items-center border border-2 rounded-3 ps-3" role="search" id="groupsearch-div">
                         <label for="group-list-search">
                             <i class="fa fa-search search-icon" aria-hidden="true"></i>
                         </label>
@@ -69,10 +69,6 @@
                     .then(json => callback(json.results))
                     .catch(() => callback());
             },
-            onLoad: function () {
-                const dropdownEl = this.dropdown;
-                (htmx.default || htmx).process(dropdownEl);
-            },
 
             render: {
                 option(data, escape) {
@@ -80,18 +76,16 @@
                                 <div class="col-auto ts-option-name-field">${escape(data.name)}</div>
                             </div>`;
                 },
-                item(data, escape) {
-                    return `<div>${escape(data.name)}</div>`;
-                }
             }
         });
 
         ts.on('item_add', (value) => {
-            window.location.href = `{% url 'accounts.group-detail-from-request' %}?name=${value}`;
+            ts.clear();
+            window.location.href = ts.options[value].url;
         });
 
         const groupSearchBar = document.getElementById('groupsearch-div');
-        const inputEl = groupSearchBar.children[2].children[0].children[0]
+        const inputEl = groupSearchBar.querySelector('input');
         groupSearchBar.addEventListener('click', _ => {
             if (document.activeElement === inputEl) return;
             inputEl.focus();

@@ -4,14 +4,12 @@ from django.urls import path
 from .views import (
     get_user_avatar_partial,
     group_detail,
-    group_detail_from_request,
     group_members,
     groups,
     search_group,
     search_user,
     user_activate,
     user_detail,
-    user_detail_from_request,
     user_groups,
     user_pending_secrets,
     user_pending_secrets_csv,
@@ -39,11 +37,6 @@ urlpatterns = (
         'users/avatar/',
         get_user_avatar_partial,
         name='accounts.user.avatar',
-    ),
-    path(
-        'users/detail/',
-        user_detail_from_request,
-        name='accounts.user-detail-from-request',
     ),
     path(
         'users/search/',
@@ -90,11 +83,6 @@ urlpatterns = (
         'groups/search/',
         search_group,
         name='accounts.search-group',
-    ),
-    path(
-        'groups/detail/',
-        group_detail_from_request,
-        name='accounts.group-detail-from-request',
     ),
     path(
         'groups/<str:groupname>/members/',

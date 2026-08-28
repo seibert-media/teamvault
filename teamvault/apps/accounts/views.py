@@ -9,7 +9,6 @@ from django.db import transaction
 from django.db.models import Max, Q
 from django.http import (
     HttpResponse,
-    HttpResponseBadRequest,
     HttpResponseRedirect,
     JsonResponse,
 )
@@ -132,15 +131,6 @@ class UserPendingSecretsView(PageSizeMixin, ListView):
 
 
 user_pending_secrets = user_passes_test(lambda u: u.is_superuser)(UserPendingSecretsView.as_view())
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def user_detail_from_request(request):
-    username = request.GET.get('username', '').strip()
-    if not username:
-        return HttpResponseBadRequest(_('Username is required'))
-    user = get_object_or_404(User, username=username)
-    return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': user}))
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -282,6 +272,7 @@ def search_user(request):
         {
             'username': user.username,
             'cn': user.get_full_name() or user.username,
+            'url': reverse('accounts.user-detail', kwargs={'username': user.username}),
         }
         for user in users_queryset
     ]
@@ -366,19 +357,11 @@ def search_group(request):
     results: list[dict[str, str]] = [
         {
             'name': group.name,
+            'url': reverse('accounts.group-detail', kwargs={'groupname': group.name}),
         }
         for group in groups_queryset
     ]
     return JsonResponse({'results': results})
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def group_detail_from_request(request):
-    groupname = request.GET.get('name', '').strip()
-    if not groupname:
-        return HttpResponseBadRequest(_('Groupname is required'))
-    group = get_object_or_404(Group, name=groupname)
-    return HttpResponseRedirect(reverse('accounts.group-detail', kwargs={'groupname': group}))
 
 
 class GroupMemberList(PageSizeMixin, ListView):
