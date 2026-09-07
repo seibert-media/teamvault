@@ -334,7 +334,7 @@ class GroupDetail(DetailView):
     slug_field = 'name'
     slug_url_kwarg = 'groupname'
     template_name = 'accounts/group_detail.html'
-    
+
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         # only count secrets that are currently shared with the group
@@ -395,3 +395,38 @@ class GroupMemberList(PageSizeMixin, ListView):
 
 
 group_members = user_passes_test(lambda u: u.is_superuser)(GroupMemberList.as_view())
+
+
+class GroupSecretList(PageSizeMixin, ListView):
+    context_object_name = 'group_secrets'
+    paginate_by = 25
+    template_name = 'accounts/group_secrets.html#group-secrets'
+
+    @cached_property
+    def group_object(self):
+        return get_object_or_404(Group, name=self.kwargs['groupname'])
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('HX-Request') != 'true':
+            return HttpResponseRedirect(
+                reverse('accounts.group-detail', kwargs={'groupname': self.kwargs['groupname']})
+            )
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = self.group_object.secret_share_data.filter(
+            Q(granted_until__isnull=True) | Q(granted_until__gt=now())
+        ).order_by('secret__name')
+        query = self.request.GET.get('q', '').strip()
+        if query:
+            return qs.filter(secret__name__icontains=query)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['group'] = self.group_object
+        return ctx
+
+
+group_secrets = user_passes_test(lambda u: u.is_superuser)(GroupSecretList.as_view())
