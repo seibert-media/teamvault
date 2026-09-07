@@ -1,11 +1,13 @@
 from datetime import date
 from typing import override
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from django import forms
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
 from django.forms.widgets import RadioSelect
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
 from teamvault.apps.secrets.enums import AccessPolicy
@@ -176,6 +178,20 @@ class SecretShareForm(forms.ModelForm):
         required=False,
         widget=forms.DateTimeInput(),
     )
+
+    def clean_granted_until(self):
+        value = self.cleaned_data.get('granted_until')
+        if not value:
+            return value
+        tz_name = self.data.get('user_timezone', '')
+        if tz_name:
+            try:
+                tz = ZoneInfo(tz_name)
+            except (ValueError, ZoneInfoNotFoundError):
+                return value
+            naive = timezone.make_naive(value, timezone.get_current_timezone())
+            return timezone.make_aware(naive, tz)
+        return value
 
     def clean(self):
         cleaned_data = super().clean()
