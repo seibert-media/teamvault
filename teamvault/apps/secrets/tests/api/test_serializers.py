@@ -2,6 +2,7 @@ from django.contrib.auth.models import Group
 from django.test import TestCase, override_settings
 from rest_framework.exceptions import ValidationError
 from rest_framework.test import APIRequestFactory
+
 from teamvault.apps.secrets.api.serializers import (
     SecretDetailSerializer,
     SecretRevisionSerializer,
@@ -11,7 +12,6 @@ from teamvault.apps.secrets.api.serializers import (
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType
 from teamvault.apps.secrets.models import AccessPermissionTypes, Secret, SharedSecretData
 from teamvault.apps.secrets.services.revision import RevisionService
-
 from ..utils import COMMON_OVERRIDES, make_user, new_secret
 
 
