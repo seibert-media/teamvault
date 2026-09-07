@@ -51,8 +51,24 @@ REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number',
 STANDARD_FIELDS = {'access_policy', 'name', 'description', 'username', 'url'}
 
 
-def serialize_password(secret_data):
-    payload = {'password': secret_data['password']}
+def get_required_payload_fields(secret_data, *fields) -> dict:
+    missing = [field for field in fields if field not in secret_data]
+    if missing:
+        raise serializers.ValidationError({'secret_data': {field: [_('This field is required.')] for field in missing}})
+    return {field: secret_data[field] for field in fields}
+
+
+def serialize_password(secret_data, partial: bool = False):
+    """
+    Allows partial updates via PATCH so that we can update the payload
+    without needing *all* off the payload.
+
+    So updating only the OTP key is
+    PATCH `{'otp_key_data': XYZ}`
+    instead of
+    POST `{'password': 'the_same_password', 'otp_key_data': XYZ}`.
+    """
+    payload = {} if partial and 'password' not in secret_data else get_required_payload_fields(secret_data, 'password')
     try:
         payload.update(otp_payload_fields(secret_data.get('otp_key_data', '')))
     except DjangoValidationError as exc:
@@ -61,27 +77,25 @@ def serialize_password(secret_data):
 
 
 def serialize_cc(secret_data):
-    try:
-        return {
-            'holder': secret_data['holder'],
-            'expiration_month': secret_data['expiration_month'],
-            'expiration_year': secret_data['expiration_year'],
-            'number': secret_data['number'],
-            'security_code': secret_data['security_code'],
-            'password': secret_data['password'],
-        }
-    except KeyError as exc:
-        field = exc.args[0]
-        raise serializers.ValidationError(_('Missing required credit card field %(field)s') % {'field': field}) from exc
+    return get_required_payload_fields(
+        secret_data,
+        'holder',
+        'expiration_month',
+        'expiration_year',
+        'number',
+        'security_code',
+        'password',
+    )
 
 
 def serialize_file(secret_data):
-    return {'filename': secret_data['filename'], 'file_content': b64encode(secret_data['file_content']).decode()}
+    fields = get_required_payload_fields(secret_data, 'filename', 'file_content')
+    return {'filename': fields['filename'], 'file_content': b64encode(fields['file_content']).decode()}
 
 
-def _extract_data(secret_data, content_type: ContentTypeStr | int):
+def _extract_data(secret_data, content_type: ContentTypeStr | int, partial: bool = False):
     if content_type in {ContentTypeStr.PASSWORD, ContentTypeEnum.PASSWORD}:
-        data = serialize_password(secret_data)
+        data = serialize_password(secret_data, partial=partial)
     elif content_type in {ContentTypeStr.CC, ContentTypeEnum.CC}:
         data = serialize_cc(secret_data)
     elif content_type in {ContentTypeStr.FILE, ContentTypeEnum.FILE}:
@@ -176,8 +190,6 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             raise serializers.ValidationError(_('Missing required field secret_data')) from exc
 
         data = _extract_data(secret_data, content_type)
-        if not data:
-            raise serializers.ValidationError("missing secret field (e.g. 'password')")
 
         instance: Secret = self.Meta.model.objects.create(**validated_data)
 
@@ -255,7 +267,8 @@ class SecretDetailSerializer(SecretSerializer):
     def update(self, instance: Secret, validated_data):
         secret_data = validated_data.get('secret_data')
         if secret_data:
-            data = _extract_data(secret_data, instance.content_type)
+            partial = instance.current_revision_id is not None
+            data = _extract_data(secret_data, instance.content_type, partial=partial)
             if data:
                 self.plaintext_payload = data
 

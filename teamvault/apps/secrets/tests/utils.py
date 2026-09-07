@@ -36,7 +36,10 @@ _DEFAULT_PAYLOADS = {
 }
 
 
+OTP_ALGORITHM = 'SHA1'
+OTP_DIGITS = 6
 OTP_SECRET = 'JBSWY3DPEHPK3PXP'
+OTP_KEY_DATA = f'otpauth://totp/ACME:john?secret={OTP_SECRET}&digits={OTP_DIGITS}&algorithm={OTP_ALGORITHM}'
 
 
 def grouped_otp_secret(separator: str = ' ', secret: str = OTP_SECRET) -> str:
