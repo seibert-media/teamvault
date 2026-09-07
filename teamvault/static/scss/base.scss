@@ -11,6 +11,7 @@
 @import "./theme";
 @import "./avatars";
 @import "./list-group";
+@import "./pagination";
 @import "./scrollbar";
 @import "./search";
 @import "./secrets";
@@ -119,6 +120,7 @@ kbd {
     &:hover {
       filter: brightness(1.2);
     }
+
     &:active {
       filter: brightness(1.4);
       background-color: var(--bs-secondary-bg);
@@ -129,7 +131,7 @@ kbd {
 
   // bg-color for filter chips
   .bg-secondary-subtle {
-    background-color: #37383b!important;
+    background-color: #37383b !important;
   }
 }
 
