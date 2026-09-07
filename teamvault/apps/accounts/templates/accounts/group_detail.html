@@ -7,38 +7,84 @@
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <h1>{% trans "Group Details" %}</h1>
-                <br><br>
+                <div class="fs-6 mt-3 mb-4"><a href="{% url "accounts.group-list" %}"
+                                               class="breadcrumb-link">{% trans "Groups" %}</a>
+                    / {{ group.name }}</div>
+                <h1 class="my-4">{{ group.name }}</h1>
             </div>
         </div>
-
         <div class="row">
-            <div class="col-md-10">
+            <div class="col-md-4">
                 <div class="card">
-                    <table class="table mb-0 key-value-table">
-                        <tr>
-                            <td>{% trans "Groupname" %}</td>
-                            <td>{{ group.name }}</td>
-                        </tr>
-                        <tr>
-                            <td>{% trans "Secrets shared" %}</td>
-                            <td>{{ group.secret_share_data.count }}</td>
-                        </tr>
-                        <tr>
-                            <td>{% trans "Membercount" %}</td>
-                            <td>{{ group.user_set.count }}</td>
-                        </tr>
-                        <tr>
-                            <td>{% trans "Members" %}</td>
-                            <td id="group-members-wrapper"
-                                hx-get="{% url 'accounts.group-members' group.name %}"
-                                hx-trigger="load"
-                                hx-swap="innerHTML">
-                            </td>
-                        </tr>
-                    </table>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span>{% trans "Members" %}</span>
+                            <span>{{ group.user_set.count }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span>{% trans "Secrets shared" %}</span>
+                            <span>{{ count_of_secrets_shared_with_group }}</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between">
+                            <span>{% trans "Group-ID" %}</span>
+                            <span>{{ group.pk }}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-8">
+                <ul class="nav nav-tabs">
+                    <li class="nav-item">
+                        <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tab-members"
+                                type="button">
+                            {% trans "Members" %}
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#tab-secrets" type="button">
+                            {% trans "Secrets" %}
+                        </button>
+                    </li>
+                </ul>
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="tab-members">
+                        {% trans "Search members..." as members_placeholder %}
+                        {% url 'accounts.group-members' group.name as members_url %}
+                        {% include "accounts/_searchbar.html" with id="group-members-search" placeholder=members_placeholder url=members_url target="#group-members-wrapper" %}
+                        <div id="group-members-wrapper"
+                             hx-get="{{ members_url }}"
+                             hx-trigger="load"
+                             hx-swap="innerHTML">
+                        </div>
+                    </div>
+                    <div class="tab-pane fade" id="tab-secrets">
+                        {% trans "Search secrets..." as secrets_placeholder %}
+                        {% url 'accounts.group-secrets' group.name as secrets_url %}
+                        {% include "accounts/_searchbar.html" with id="group-secrets-search" placeholder=secrets_placeholder url=secrets_url target="#group-secrets-wrapper" %}
+                        <div id="group-secrets-wrapper"
+                             hx-get="{% url 'accounts.group-secrets' group.name %}"
+                             hx-trigger="revealed"
+                             hx-swap="innerHTML">
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
+{% endblock %}
+{% block additionalJS %}
+    <script>
+        if (location.hash) {
+            const targetButton =
+                document.querySelector(`[data-bs-target="${location.hash}"]`);
+            if (targetButton) {
+                bootstrap.Tab.getOrCreateInstance(targetButton).show();
+            }
+        }
+        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tabButton => {
+            tabButton.addEventListener('shown.bs.tab', event => {
+                history.pushState(null, '', event.target.getAttribute('data-bs-target'));
+            });
+        });
+    </script>
 {% endblock %}

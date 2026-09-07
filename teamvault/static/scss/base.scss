@@ -18,6 +18,8 @@
 @import "./card.scss";
 @import "./circularProgressbar";
 @import "./tom-select";
+@import "./tab-nav";
+@import "./tables";
 
 @import "./fontawesome";
 @import "./select2";
@@ -31,6 +33,10 @@ body {
 a {
   text-decoration: none;
   color: var(--bs-info);
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
 }
 
 .background {
