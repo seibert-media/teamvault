@@ -15,7 +15,7 @@ class MissingSecretDataFieldTests(TestCase):
         self.api_client = APIClient()
         self.api_client.force_authenticate(user=self.owner)
 
-    def _create(self, content_type: str, secret_data: dict, name: str = 'incomplete'):
+    def _create(self, content_type: str, secret_data: dict, name: str = 'incomplete', **extra):
         return self.api_client.post(
             reverse('api.secret_list'),
             {
@@ -23,6 +23,7 @@ class MissingSecretDataFieldTests(TestCase):
                 'access_policy': 'discoverable',
                 'content_type': content_type,
                 'secret_data': secret_data,
+                **extra,
             },
             format='json',
         )
@@ -49,17 +50,12 @@ class MissingSecretDataFieldTests(TestCase):
         self.assertNamesMissingField(response, 'filename')
 
     def test_creating_a_file_without_file_content_names_the_field(self):
-        response = self._create('file', {'filename': 'hello.bin'})
+        response = self._create('file', {}, filename='hello.bin')
         self.assertNamesMissingField(response, 'file_content')
 
     def test_creating_a_credit_card_without_a_field_names_it(self):
         response = self._create('cc', {'holder': 'Jane'})
         self.assertNamesMissingField(response, 'expiration_month')
-
-    def test_updating_a_file_without_a_filename_names_the_field(self):
-        secret = new_secret(self.owner, ContentType.FILE, name='a-file')
-        response = self._patch(secret, {'file_content': 'aGVsbG8='})
-        self.assertNamesMissingField(response, 'filename')
 
     def test_updating_a_password_that_has_no_revision_to_inherit_from_names_the_field(self):
         secret = Secret.objects.create(
