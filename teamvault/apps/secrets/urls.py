@@ -94,7 +94,7 @@ urlpatterns = (
         name='secrets.secret-search',
     ),
     path(
-        'share-info/',
+        'secrets/share-info/',
         views.get_share_info,
         name='secrets.share-info',
     ),

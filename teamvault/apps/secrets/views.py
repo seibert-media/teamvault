@@ -516,6 +516,7 @@ class SecretShareList(CreateView):
 secret_share_list = login_required(SecretShareList.as_view())
 
 
+@login_required
 @require_http_methods(['GET'])
 def get_share_info(request):
     kind = request.GET.get('type', '')
