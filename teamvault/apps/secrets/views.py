@@ -12,6 +12,7 @@ from django.db.models import FETCH_PEERS
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
@@ -437,6 +438,17 @@ class SecretShareList(CreateView):
                 'users': self.user_shares,
             },
         }
+
+        # refill share-info when form has errors
+        form = self.get_form()
+        if form.is_bound:
+            if form.data.get('user'):
+                user = get_object_or_404(User, pk=form.data['user'])
+                context['share_info'] = render_to_string('secrets/share_content/_user_info.html', {'user': user})
+            elif form.data.get('group'):
+                group = get_object_or_404(Group, pk=form.data['group'])
+                context['share_info'] = render_to_string('secrets/share_content/_group_info.html', {'group': group})
+
         return super().get_context_data(**context)
 
     def form_valid(self, form):
@@ -502,6 +514,21 @@ class SecretShareList(CreateView):
 
 
 secret_share_list = login_required(SecretShareList.as_view())
+
+
+@require_http_methods(['GET'])
+def get_share_info(request):
+    kind = request.GET.get('type', '')
+    entity_id = request.GET.get('id', '')
+    if not entity_id:
+        return HttpResponse('', status=400)
+    if kind == 'group':
+        group = get_object_or_404(Group, pk=entity_id)
+        return render(request, 'secrets/share_content/_group_info.html', {'group': group})
+    if kind == 'user':
+        user = get_object_or_404(User, pk=entity_id)
+        return render(request, 'secrets/share_content/_user_info.html', {'user': user})
+    return HttpResponse('', status=400)
 
 
 @login_required

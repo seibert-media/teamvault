@@ -93,4 +93,9 @@ urlpatterns = (
         views.secret_search,
         name='secrets.secret-search',
     ),
+    path(
+        'share-info/',
+        views.get_share_info,
+        name='secrets.share-info',
+    ),
 )
