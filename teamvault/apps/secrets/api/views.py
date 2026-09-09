@@ -180,6 +180,10 @@ def otp_get(request, hashid):
     secret_revision = get_object_or_404(SecretRevision, hashid=hashid)
     secret = secret_revision.secret
     secret.check_read_access(request.user)
+
+    if secret.content_type != ContentType.PASSWORD or not secret_revision.otp_key_set:
+        raise ValidationError([_('This secret has no OTP key.')])
+
     try:
         otp = secret.get_otp(request)
     except DjangoValidationError as exc:

@@ -25,7 +25,7 @@ from pyotp import TOTP
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from .exceptions import PermissionError
-from .validators import otp_digest
+from .validators import get_otp_params_from_payload, otp_digest
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
 
@@ -286,7 +286,8 @@ class Secret(HashIDModel):
         else:
             data = self.get_data(request.user)
             request.session[audited_session_key] = True
-        totp = TOTP(data['otp_key'], digits=int(data.get('digits', 6)), digest=otp_digest(data.get('algorithm')))
+        params = get_otp_params_from_payload(data)
+        totp = TOTP(params.otp_key, digits=params.digits, digest=otp_digest(params.algorithm))
         return totp.now()
 
     @classmethod
