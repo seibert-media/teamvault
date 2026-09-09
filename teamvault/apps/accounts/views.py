@@ -279,7 +279,7 @@ def search_user(request):
     results: list[dict[str, str]] = [
         {
             'username': user.username,
-            'cn': f'{user.first_name} {user.last_name}'.strip(),
+            'cn': user.get_full_name() or user.username,
         }
         for user in users_queryset
     ]
