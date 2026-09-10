@@ -188,13 +188,6 @@ class SecretEdit(UpdateView):
                 payload=plaintext_data,
             )
 
-        # clear saved otp key data cache after change
-        if (
-            'otp_key_data' in form.changed_data
-            and form.cleaned_data.get('otp_key_data')
-            and 'otp_key_data' in self.request.session
-        ):
-            del self.request.session['otp_key_data']
         return HttpResponseRedirect(secret.get_absolute_url())
 
     def get_context_data(self, **kwargs):
