@@ -1,4 +1,4 @@
-from base64 import b64encode
+from base64 import b64decode, b64encode
 from contextlib import suppress
 from typing import override
 
@@ -48,7 +48,7 @@ SECRET_STATUS_REPR = {
 SECRET_REPR_STATUS = {v: k for k, v in SECRET_STATUS_REPR.items()}
 
 REQUIRED_CC_FIELDS = {'holder', 'expiration_month', 'expiration_year', 'number', 'security_code'}
-STANDARD_FIELDS = {'access_policy', 'name', 'description', 'username', 'url'}
+STANDARD_FIELDS = {'access_policy', 'name', 'description', 'filename', 'username', 'url'}
 
 
 def get_required_payload_fields(secret_data, *fields) -> dict:
@@ -89,8 +89,33 @@ def serialize_cc(secret_data):
 
 
 def serialize_file(secret_data):
-    fields = get_required_payload_fields(secret_data, 'filename', 'file_content')
-    return {'filename': fields['filename'], 'file_content': b64encode(fields['file_content']).decode()}
+    """
+    The payload here is exactly `{'file_content': <base64 str>}`.
+    `filename` is a field on the Secret, not payload
+    """
+    fields = get_required_payload_fields(secret_data, 'file_content')
+    return {'file_content': normalized_base64(fields['file_content'])}
+
+
+def normalized_base64(file_content) -> str:
+    """Return `file_content` re-encoded as base64.
+
+    Since we have no bytes like object in JSON, clients have to send base64 and we store base64.
+    Line breaks are fine because base64 is commonly wrapped, but we have to
+    reject anything non-alphanumerical. (b64decode would also drop it silently)
+    """
+    invalid = serializers.ValidationError({
+        'secret_data': {'file_content': [_('Must be a non-empty base64 encoded string.')]}
+    })
+    if not isinstance(file_content, str):
+        raise invalid
+    try:
+        raw = b64decode(''.join(file_content.split()), validate=True)
+    except ValueError as exc:
+        raise invalid from exc
+    if not raw:
+        raise invalid
+    return b64encode(raw).decode('ascii')
 
 
 def _extract_data(secret_data, content_type: ContentTypeStr | int, partial: bool = False):
@@ -191,10 +216,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
         data = _extract_data(secret_data, content_type)
 
+        # gotta fix this once we use proper enums
+        validated_data['content_type'] = REPR_CONTENT_TYPE[content_type]
         instance: Secret = self.Meta.model.objects.create(**validated_data)
-
-        # transform string repr into integers
-        instance.content_type = REPR_CONTENT_TYPE[content_type]
         self.plaintext_payload = data
         instance.shared_users.add(instance.created_by)
         return instance
@@ -222,10 +246,16 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             rep['data_readable'] = False
         return rep
 
-    @staticmethod
-    def validate(data):
-        if ('file' in data) != ('filename' in data):
-            raise serializers.ValidationError(_('Must include both file and filename'))
+    def validate(self, data):
+        if self.instance is not None:
+            content_type = CONTENT_TYPE_REPR[self.instance.content_type]
+        else:
+            content_type = data.get('content_type')
+        if content_type == ContentTypeStr.FILE:
+            if self.instance is None and not data.get('filename'):
+                raise serializers.ValidationError({'filename': [_('This field is required.')]})
+        elif data.get('filename'):
+            raise serializers.ValidationError({'filename': [_('Only file secrets have a filename.')]})
         return data
 
     class Meta:
@@ -239,6 +269,7 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
             'current_revision',
             'data_readable',
             'description',
+            'filename',
             'last_read',
             'name',
             'needs_changing_on_leave',
@@ -256,10 +287,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SecretDetailSerializer(SecretSerializer):
-    content_type = serializers.ChoiceField(
-        choices=ContentTypeStr.choices,
-        required=False,  # content_type is unchangeable after a secret has been created
-    )
+    # A secret's content_type is fixed at creation, so any value sent on update is dropped
+    # before validation instead of being trusted.
+    content_type = serializers.ChoiceField(choices=ContentTypeStr.choices, read_only=True)
     name = serializers.CharField(
         required=False,
     )
