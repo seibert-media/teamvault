@@ -45,10 +45,13 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
         return obj
 
     def perform_update(self, serializer):
-        instance = serializer.save()
+        instance: Secret = serializer.save()
         if hasattr(instance, '_data'):
             RevisionService.save_payload(secret=instance, actor=self.request.user, payload=instance._data)
             del instance._data
+        # Only metadata changed
+        elif instance.current_revision:
+            RevisionService.save_payload(secret=instance, actor=self.request.user, payload=None)
 
 
 class SecretList(generics.ListCreateAPIView):
