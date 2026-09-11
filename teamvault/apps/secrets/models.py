@@ -25,6 +25,7 @@ from pyotp import TOTP
 
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
 from .exceptions import PermissionError
+from .validators import otp_digest
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices, LogEntry
 
@@ -278,18 +279,14 @@ class Secret(HashIDModel):
         return plaintext_data
 
     def get_otp(self, request):
-        cached_otp_session_key = f'otp_key_data-{self.hashid}-{self.current_revision_id}'
-        if request.session.get(cached_otp_session_key):
-            data = request.session[cached_otp_session_key]
+        # only log the OTP access *once*
+        audited_session_key = f'otp-audited-{self.hashid}-{self.current_revision_id}'
+        if request.session.get(audited_session_key):
+            data = self.current_revision.peek_data(request.user)
         else:
             data = self.get_data(request.user)
-            request.session[cached_otp_session_key] = {
-                'otp_key': data['otp_key'],
-                'digits': int(data.get('digits', 6)),
-            }
-        otp_key = data['otp_key']
-        digits = int(data.get('digits', 6))
-        totp = TOTP(otp_key, digits=digits)
+            request.session[audited_session_key] = True
+        totp = TOTP(data['otp_key'], digits=int(data.get('digits', 6)), digest=otp_digest(data.get('algorithm')))
         return totp.now()
 
     @classmethod

@@ -4,8 +4,7 @@ from pyotp import TOTP
 from teamvault.apps.secrets.enums import AccessPolicy
 from teamvault.apps.secrets.forms import PasswordForm
 from teamvault.apps.secrets.utils import extract_otp_params, normalize_otp_secret
-
-CANONICAL_SECRET = 'JBSWY3DPEHPK3PXP'
+from .utils import OTP_SECRET as CANONICAL_SECRET, grouped_otp_secret
 
 NBSP = chr(0x00A0)
 NARROW_NBSP = chr(0x202F)
@@ -15,25 +14,21 @@ SOFT_HYPHEN = chr(0x00AD)
 LEFT_TO_RIGHT_MARK = chr(0x200E)
 
 
-def _grouped(separator, secret=CANONICAL_SECRET):
-    return separator.join(secret[i : i + 4] for i in range(0, len(secret), 4))
-
-
 PASTED_VARIANTS = {
     'plain': CANONICAL_SECRET,
     'lowercase': CANONICAL_SECRET.lower(),
-    'spaces': _grouped(' '),
-    'lowercase spaces (google)': _grouped(' ', CANONICAL_SECRET.lower()),
-    'tabs': _grouped('\t'),
-    'newlines': _grouped('\n'),
-    'non-breaking spaces': _grouped(NBSP),
-    'narrow non-breaking spaces': _grouped(NARROW_NBSP),
-    'zero-width spaces': _grouped(ZWSP),
-    'word joiners': _grouped(WORD_JOINER),
-    'soft hyphens': _grouped(SOFT_HYPHEN),
-    'bidi marks': _grouped(LEFT_TO_RIGHT_MARK),
-    'hyphens': _grouped('-'),
-    'underscores': _grouped('_'),
+    'spaces': grouped_otp_secret(' '),
+    'lowercase spaces (google)': grouped_otp_secret(' ', CANONICAL_SECRET.lower()),
+    'tabs': grouped_otp_secret('\t'),
+    'newlines': grouped_otp_secret('\n'),
+    'non-breaking spaces': grouped_otp_secret(NBSP),
+    'narrow non-breaking spaces': grouped_otp_secret(NARROW_NBSP),
+    'zero-width spaces': grouped_otp_secret(ZWSP),
+    'word joiners': grouped_otp_secret(WORD_JOINER),
+    'soft hyphens': grouped_otp_secret(SOFT_HYPHEN),
+    'bidi marks': grouped_otp_secret(LEFT_TO_RIGHT_MARK),
+    'hyphens': grouped_otp_secret('-'),
+    'underscores': grouped_otp_secret('_'),
     'base32 padding': CANONICAL_SECRET + '====',
     'surrounding whitespace': f'  {CANONICAL_SECRET}\n',
 }
@@ -57,7 +52,7 @@ class NormalizeOtpSecretTests(TestCase):
 
 class ExtractOtpParamsTests(TestCase):
     def test_normalizes_the_secret_parameter(self):
-        params = extract_otp_params(f'?secret={_grouped("-")}&digits=6&algorithm=SHA1')
+        params = extract_otp_params(f'?secret={grouped_otp_secret("-")}&digits=6&algorithm=SHA1')
         self.assertEqual(params['secret'], CANONICAL_SECRET)
         self.assertEqual(params['digits'], '6')
         self.assertEqual(params['algorithm'], 'SHA1')
