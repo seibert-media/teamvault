@@ -247,9 +247,10 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
         return rep
 
     def validate(self, data):
-        content_type = data.get('content_type') or (
-            CONTENT_TYPE_REPR[self.instance.content_type] if self.instance else None
-        )
+        if self.instance is not None:
+            content_type = CONTENT_TYPE_REPR[self.instance.content_type]
+        else:
+            content_type = data.get('content_type')
         if content_type == ContentTypeStr.FILE:
             if self.instance is None and not data.get('filename'):
                 raise serializers.ValidationError({'filename': [_('This field is required.')]})
@@ -286,10 +287,9 @@ class SecretSerializer(serializers.HyperlinkedModelSerializer):
 
 
 class SecretDetailSerializer(SecretSerializer):
-    content_type = serializers.ChoiceField(
-        choices=ContentTypeStr.choices,
-        required=False,  # content_type is unchangeable after a secret has been created
-    )
+    # A secret's content_type is fixed at creation, so any value sent on update is dropped
+    # before validation instead of being trusted.
+    content_type = serializers.ChoiceField(choices=ContentTypeStr.choices, read_only=True)
     name = serializers.CharField(
         required=False,
     )

@@ -154,6 +154,37 @@ class FileSecretUpdateApiTests(TestCase):
         self.secret.refresh_from_db()
         self.assertEqual(self.secret.current_revision_id, revision_before)
 
+    def test_a_content_type_in_the_payload_is_ignored_on_update(self):
+        response = self._patch({'content_type': 'password', 'filename': 'renamed.bin'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, getattr(response, 'data', None))
+        self.secret.refresh_from_db()
+        self.assertEqual(self.secret.content_type, ContentType.FILE)
+        self.assertEqual(self.secret.filename, 'renamed.bin')
+
+
+@override_settings(**COMMON_OVERRIDES)
+class NonFileSecretUpdateApiTests(TestCase):
+    def setUp(self):
+        self.owner = make_user('owner')
+        self.api_client = APIClient()
+        self.api_client.force_authenticate(user=self.owner)
+        self.secret = new_secret(self.owner, ContentType.PASSWORD, name='a-password')
+
+    def _patch(self, body):
+        return self.api_client.patch(
+            reverse('api.secret_detail', args=[self.secret.hashid]),
+            body,
+            format='json',
+        )
+
+    def test_claiming_to_be_a_file_does_not_allow_a_filename(self):
+        response = self._patch({'content_type': 'file', 'filename': 'sneaky.bin'})
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST, getattr(response, 'data', None))
+        self.assertIn('filename', response.data)
+        self.secret.refresh_from_db()
+        self.assertEqual(self.secret.content_type, ContentType.PASSWORD)
+        self.assertFalse(self.secret.filename)
+
 
 @override_settings(**COMMON_OVERRIDES)
 class ContentTypePersistenceTests(TestCase):
