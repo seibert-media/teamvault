@@ -46,3 +46,17 @@ a {
     --tv-avatar-opacity: 90%;
   }
 }
+
+.avatar-stack {
+  display: flex;
+  align-items: center;
+
+  .avatar {
+    border: 2px solid var(--bs-body-bg) !important;
+    margin-left: -0.6rem;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+}

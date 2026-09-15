@@ -525,7 +525,13 @@ def get_share_info(request):
         return HttpResponse('', status=400)
     if kind == 'group':
         group = get_object_or_404(Group, pk=entity_id)
-        return render(request, 'secrets/share_content/_group_info.html', {'group': group})
+        cut_member_list = group.user_set.select_related('profile').order_by('username')[:5]
+        remaining_members = max(group.user_set.count() - 5, 0)
+        return render(
+            request,
+            'secrets/share_content/_group_info.html',
+            {'group': group, 'cut_member_list': cut_member_list, 'remaining_members': remaining_members},
+        )
     if kind == 'user':
         user = get_object_or_404(User, pk=entity_id)
         return render(request, 'secrets/share_content/_user_info.html', {'user': user})
