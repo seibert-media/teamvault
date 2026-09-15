@@ -19,7 +19,7 @@ urlpatterns = (
         name='secrets.secret-list',
     ),
     path(
-        'secrets/share-info/',
+        'secrets/<str:hashid>/share-info/',
         views.get_share_info,
         name='secrets.share-info',
     ),

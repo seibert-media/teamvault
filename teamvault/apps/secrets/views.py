@@ -522,10 +522,13 @@ secret_share_list = login_required(SecretShareList.as_view())
 
 @login_required
 @require_http_methods(['GET'])
-def get_share_info(request):
+def get_share_info(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
+    secret.check_share_access(request.user)
+
     kind = request.GET.get('type', '')
     entity_id = request.GET.get('id', '')
-    if not entity_id:
+    if not entity_id.isdigit():
         return HttpResponse('', status=400)
     if kind == 'group':
         group = get_object_or_404(Group, pk=entity_id)
