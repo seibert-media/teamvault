@@ -399,6 +399,30 @@ class SecretList(PageSizeMixin, ListView, FilterMixin):
 
 secret_list = login_required(SecretList.as_view())
 
+MEMBER_PREVIEW_SIZE = 5
+
+SHARE_INFO_TEMPLATES = {
+    'group': 'secrets/share_content/_group_info.html',
+    'user': 'secrets/share_content/_user_info.html',
+}
+
+
+def _share_info_context(kind, entity_id):
+    if not (entity_id and entity_id.isdigit()):
+        return None
+    if kind == 'group':
+        group = get_object_or_404(Group, pk=entity_id)
+        member_count = group.user_set.count()
+        return {
+            'group': group,
+            'member_count': member_count,
+            'preview_members': group.user_set.select_related('profile').order_by('username')[:MEMBER_PREVIEW_SIZE],
+            'remaining_member_count': max(member_count - MEMBER_PREVIEW_SIZE, 0),
+        }
+    if kind == 'user':
+        return {'user': get_object_or_404(User, pk=entity_id)}
+    return None
+
 
 class SecretShareList(CreateView):
     form_class = SecretShareForm
@@ -442,16 +466,10 @@ class SecretShareList(CreateView):
         # refill share-info when form has errors
         form = self.get_form()
         if form.is_bound:
-            if form.data.get('user'):
-                user = get_object_or_404(User, pk=form.data['user'])
-                context['share_info'] = render_to_string(
-                    'secrets/share_content/_user_info.html', {'user': user}, request=self.request
-                )
-            elif form.data.get('group'):
-                group = get_object_or_404(Group, pk=form.data['group'])
-                context['share_info'] = render_to_string(
-                    'secrets/share_content/_group_info.html', {'group': group}, request=self.request
-                )
+            kind = 'user' if form.data.get('user') else 'group' if form.data.get('group') else ''
+            info_context = _share_info_context(kind, form.data.get(kind, ''))
+            if info_context:
+                context['share_info'] = render_to_string(SHARE_INFO_TEMPLATES[kind], info_context, request=self.request)
 
         return super().get_context_data(**context)
 
@@ -527,22 +545,10 @@ def get_share_info(request, hashid):
     secret.check_share_access(request.user)
 
     kind = request.GET.get('type', '')
-    entity_id = request.GET.get('id', '')
-    if not entity_id.isdigit():
+    info_context = _share_info_context(kind, request.GET.get('id', ''))
+    if info_context is None:
         return HttpResponse('', status=400)
-    if kind == 'group':
-        group = get_object_or_404(Group, pk=entity_id)
-        cut_member_list = group.user_set.select_related('profile').order_by('username')[:5]
-        remaining_members = max(group.user_set.count() - 5, 0)
-        return render(
-            request,
-            'secrets/share_content/_group_info.html',
-            {'group': group, 'cut_member_list': cut_member_list, 'remaining_members': remaining_members},
-        )
-    if kind == 'user':
-        user = get_object_or_404(User, pk=entity_id)
-        return render(request, 'secrets/share_content/_user_info.html', {'user': user})
-    return HttpResponse('', status=400)
+    return render(request, SHARE_INFO_TEMPLATES[kind], info_context)
 
 
 @login_required
