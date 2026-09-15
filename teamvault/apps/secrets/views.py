@@ -444,10 +444,14 @@ class SecretShareList(CreateView):
         if form.is_bound:
             if form.data.get('user'):
                 user = get_object_or_404(User, pk=form.data['user'])
-                context['share_info'] = render_to_string('secrets/share_content/_user_info.html', {'user': user})
+                context['share_info'] = render_to_string(
+                    'secrets/share_content/_user_info.html', {'user': user}, request=self.request
+                )
             elif form.data.get('group'):
                 group = get_object_or_404(Group, pk=form.data['group'])
-                context['share_info'] = render_to_string('secrets/share_content/_group_info.html', {'group': group})
+                context['share_info'] = render_to_string(
+                    'secrets/share_content/_group_info.html', {'group': group}, request=self.request
+                )
 
         return super().get_context_data(**context)
 
