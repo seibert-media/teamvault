@@ -45,7 +45,7 @@
                         class="btn btn-tertiary d-flex w-100 justify-content-between" aria-label="Search"
                         data-bs-toggle="modal"
                         data-bs-target="#search-modal">
-                    <span><i class="fa fa-search"></i> {% translate "Search" %}</span>
+                    <span><i class="fa fa-search"></i> {% translate "Search secrets..." %}</span>
                     <span>
                         <kbd class="bg-transparent border border-secondary">
                             {% translate "CTRL" %}<span class="mx-1">/</span>⌘
@@ -66,12 +66,11 @@
                             <i class="fa fa-gear"></i>
                             {% translate "Administration" %}
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" aria-labelledby="adminmenu"
-                            style="top: 7px">
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" aria-labelledby="adminmenu">
                             <li>
                                 <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                    href="{% url 'audit.log' %}">
-                                    <i class="fa fa-table-list fa-fw"></i> {% trans "Audit Log" %}
+                                    <i class="fa fa-table-list"></i> {% trans "Audit Log" %}
                                 </a>
                             </li>
                             <li class="dropdown-divider"></li>
@@ -85,7 +84,7 @@
                             <li>
                                 <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                    href="{% url 'accounts.group-list' %}">
-                                    <i class="fa fa-people-group fa-fw"></i> {% trans "Groups" %}
+                                    <i class="fa fa-people-group"></i> {% trans "Groups" %}
                                 </a>
                             </li>
                         </ul>
