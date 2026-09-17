@@ -56,6 +56,11 @@ Some MacOS users have reported errors when running the dev server via bun. In th
 
 Now open http://localhost:8000
 
+## REST API
+
+TeamVault exposes a REST API at `/api/`. See [docs/api.md](docs/api.md) for authentication,
+the full endpoint reference and worked `curl` examples.
+
 ## Further reading
 
 For more detailed documentation, visit the [TeamVault Wiki](https://github.com/seibert-media/teamvault/wiki).
