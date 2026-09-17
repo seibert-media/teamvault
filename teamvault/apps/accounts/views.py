@@ -4,16 +4,17 @@ from functools import cached_property
 from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models import Max, Q
 from django.http import (
     HttpResponse,
-    HttpResponseBadRequest,
     HttpResponseRedirect,
     JsonResponse,
 )
 from django.shortcuts import get_object_or_404, render
 from django.urls import reverse, reverse_lazy
+from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from django.views.decorators.http import require_http_methods
 from django.views.generic import DetailView, ListView, UpdateView
@@ -130,15 +131,6 @@ class UserPendingSecretsView(PageSizeMixin, ListView):
 
 
 user_pending_secrets = user_passes_test(lambda u: u.is_superuser)(UserPendingSecretsView.as_view())
-
-
-@user_passes_test(lambda u: u.is_superuser)
-def user_detail_from_request(request):
-    username = request.GET.get('username', '').strip()
-    if not username:
-        return HttpResponseBadRequest(_('Username is required'))
-    user = get_object_or_404(User, username=username)
-    return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': user}))
 
 
 @user_passes_test(lambda u: u.is_superuser)
@@ -280,6 +272,7 @@ def search_user(request):
         {
             'username': user.username,
             'cn': user.get_full_name() or user.username,
+            'url': reverse('accounts.user-detail', kwargs={'username': user.username}),
         }
         for user in users_queryset
     ]
@@ -294,3 +287,146 @@ def get_user_avatar_partial(request):
         return {}
     user = User.objects.get(username=username)
     return render(request, 'accounts/_avatar.html', {'user': user, 'tooltip_title': username})
+
+
+class UserGroupsList(PageSizeMixin, ListView):
+    context_object_name = 'user_groups'
+    paginate_by = 10
+    template_name = 'accounts/user_groups.html'
+
+    @cached_property
+    def user_object(self):
+        return get_object_or_404(User, username=self.kwargs['username'])
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('HX-Request') != 'true':
+            return HttpResponseRedirect(reverse('accounts.user-detail', kwargs={'username': self.kwargs['username']}))
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        return self.user_object.groups.order_by('name')
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['user'] = self.user_object
+        return ctx
+
+
+user_groups = user_passes_test(lambda u: u.is_superuser)(UserGroupsList.as_view())
+
+
+class GroupList(PageSizeMixin, ListView):
+    context_object_name = 'groups'
+    model = Group
+    paginate_by = 25
+    template_name = 'accounts/group_list.html'
+
+    def get_queryset(self):
+        return self.model.objects.order_by('name')
+
+
+groups = user_passes_test(lambda u: u.is_superuser)(GroupList.as_view())
+
+
+class GroupDetail(DetailView):
+    context_object_name = 'group'
+    model = Group
+    slug_field = 'name'
+    slug_url_kwarg = 'groupname'
+    template_name = 'accounts/group_detail.html'
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        # only count secrets that are currently shared with the group
+        ctx['count_of_secrets_shared_with_group'] = self.object.secret_share_data.filter(
+            Q(granted_until__isnull=True) | Q(granted_until__gt=now())
+        ).count()
+        return ctx
+
+
+group_detail = user_passes_test(lambda u: u.is_superuser)(GroupDetail.as_view())
+
+
+def search_group(request):
+    if not request.user.is_superuser:
+        return {}
+    q = request.GET.get('q', '').strip()
+    if not q:
+        return {}
+    groups_queryset = Group.objects.filter(name__icontains=q)[:15]
+    results: list[dict[str, str]] = [
+        {
+            'name': group.name,
+            'url': reverse('accounts.group-detail', kwargs={'groupname': group.name}),
+        }
+        for group in groups_queryset
+    ]
+    return JsonResponse({'results': results})
+
+
+class GroupMemberList(PageSizeMixin, ListView):
+    context_object_name = 'group_members'
+    paginate_by = 10
+    template_name = 'accounts/group_members.html'
+
+    @cached_property
+    def group_object(self):
+        return get_object_or_404(Group, name=self.kwargs['groupname'])
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('HX-Request') != 'true':
+            return HttpResponseRedirect(
+                reverse('accounts.group-detail', kwargs={'groupname': self.kwargs['groupname']})
+            )
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = self.group_object.user_set.order_by('username')
+        query = self.request.GET.get('q', '').strip()
+        if query:
+            return qs.filter(username__icontains=query)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['group'] = self.group_object
+        return ctx
+
+
+group_members = user_passes_test(lambda u: u.is_superuser)(GroupMemberList.as_view())
+
+
+class GroupSecretList(PageSizeMixin, ListView):
+    context_object_name = 'group_secrets'
+    paginate_by = 25
+    template_name = 'accounts/group_secrets.html'
+
+    @cached_property
+    def group_object(self):
+        return get_object_or_404(Group, name=self.kwargs['groupname'])
+
+    def get(self, request, *args, **kwargs):
+        if request.headers.get('HX-Request') != 'true':
+            return HttpResponseRedirect(
+                reverse('accounts.group-detail', kwargs={'groupname': self.kwargs['groupname']})
+            )
+        return super().get(request, *args, **kwargs)
+
+    def get_queryset(self):
+        qs = self.group_object.secret_share_data.filter(
+            Q(granted_until__isnull=True) | Q(granted_until__gt=now())
+        ).order_by('secret__name')
+        query = self.request.GET.get('q', '').strip()
+        if query:
+            return qs.filter(secret__name__icontains=query)
+
+        return qs
+
+    def get_context_data(self, **kwargs):
+        ctx = super().get_context_data(**kwargs)
+        ctx['group'] = self.group_object
+        return ctx
+
+
+group_secrets = user_passes_test(lambda u: u.is_superuser)(GroupSecretList.as_view())
