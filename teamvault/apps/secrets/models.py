@@ -305,7 +305,8 @@ class Secret(HashIDModel):
     @classmethod
     def get_readable_ids_in_queryset(cls, user, secrets: QuerySet['Secret'] | list['Secret']):
         return set(
-            cls.get_all_readable_by_user(user)
+            cls
+            .get_all_readable_by_user(user)
             .filter(pk__in=[secret.pk for secret in secrets])
             .values_list('pk', flat=True)
         )
