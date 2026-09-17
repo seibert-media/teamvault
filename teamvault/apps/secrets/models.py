@@ -12,7 +12,7 @@ from django.contrib.auth.models import Group
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import BooleanField, Case, Max, Q, Value, When
+from django.db.models import BooleanField, Case, Max, Q, QuerySet, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
@@ -300,6 +300,14 @@ class Secret(HashIDModel):
             .filter(Q(access_policy=AccessPolicy.ANY) | Q(pk__in=allowed_shares))
             .exclude(status=SecretStatus.DELETED)
             .distinct()
+        )
+
+    @classmethod
+    def get_readable_ids_in_queryset(cls, user, secrets: QuerySet['Secret'] | list['Secret']):
+        return set(
+            cls.get_all_readable_by_user(user)
+            .filter(pk__in=[secret.pk for secret in secrets])
+            .values_list('pk', flat=True)
         )
 
     @classmethod
