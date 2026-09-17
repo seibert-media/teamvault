@@ -7,9 +7,12 @@
     <div class="container">
         <div class="row">
             <div class="col-md-12">
-                <div class="fs-6 mt-3 mb-4"><a href="{% url "accounts.group-list" %}"
-                                               class="breadcrumb-link">{% trans "Groups" %}</a>
-                    / {{ group.name }}</div>
+                <div class="fs-6 mt-3 mb-4">
+                    <a href="{% url "accounts.group-list" %}"
+                       class="breadcrumb-link">{% trans "Groups" %}
+                    </a>
+                    / {{ group.name }}
+                </div>
                 <h1 class="my-4">{{ group.name }}</h1>
             </div>
         </div>
@@ -23,7 +26,13 @@
                         </div>
                         <div class="list-group-item d-flex justify-content-between">
                             <span>{% trans "Secrets shared" %}</span>
-                            <span>{{ count_of_secrets_shared_with_group }}</span>
+                            <span id="group-shared-secrets-count"
+                                  hx-get="{% url 'accounts.group-detail' groupname=group.name %}"
+                                  hx-trigger="refreshShareData from:body"
+                                  hx-select="#group-shared-secrets-count"
+                                  hx-swap="outerHTML">
+                                {{ count_of_secrets_shared_with_group }}
+                            </span>
                         </div>
                         <div class="list-group-item d-flex justify-content-between">
                             <span>{% trans "Group-ID" %}</span>
