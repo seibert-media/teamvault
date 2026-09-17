@@ -292,7 +292,7 @@ def get_user_avatar_partial(request):
 class UserGroupsList(PageSizeMixin, ListView):
     context_object_name = 'user_groups'
     paginate_by = 10
-    template_name = 'accounts/user_groups.html#user-groups'
+    template_name = 'accounts/user_groups.html'
 
     @cached_property
     def user_object(self):
@@ -367,7 +367,7 @@ def search_group(request):
 class GroupMemberList(PageSizeMixin, ListView):
     context_object_name = 'group_members'
     paginate_by = 10
-    template_name = 'accounts/group_members.html#group-members'
+    template_name = 'accounts/group_members.html'
 
     @cached_property
     def group_object(self):
@@ -400,7 +400,7 @@ group_members = user_passes_test(lambda u: u.is_superuser)(GroupMemberList.as_vi
 class GroupSecretList(PageSizeMixin, ListView):
     context_object_name = 'group_secrets'
     paginate_by = 25
-    template_name = 'accounts/group_secrets.html#group-secrets'
+    template_name = 'accounts/group_secrets.html'
 
     @cached_property
     def group_object(self):
