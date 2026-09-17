@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
-from operator import itemgetter
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -337,14 +336,17 @@ class Secret(HashIDModel):
                 secret__isnull=False,
                 time__gte=since,
             )
-            .order_by('secret')
             .values('secret')
             .annotate(
                 access_count=models.Count('secret'),
             )
+            .order_by('-access_count', 'secret')[:limit]
         )
-        ordered_secrets = sorted(accessed_secrets, key=itemgetter('access_count'), reverse=True)
-        return [cls.objects.get(id=item['secret']) for item in ordered_secrets[:limit]]
+
+        ordered_secret_ids = [access['secret'] for access in accessed_secrets]
+        unordered_secrets = cls.objects.filter(id__in=ordered_secret_ids)
+        secret_map = {secret.id: secret for secret in unordered_secrets}
+        return [secret_map[secret_id] for secret_id in ordered_secret_ids if secret_id in secret_map]
 
     @classmethod
     def get_most_recently_used_for_user(cls, user, limit=5):
