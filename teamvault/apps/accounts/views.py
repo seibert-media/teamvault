@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import transaction
-from django.db.models import Max, Q
+from django.db.models import FETCH_PEERS, Max, Q
 from django.http import (
     HttpResponse,
     HttpResponseBadRequest,
@@ -215,9 +215,7 @@ def user_activate(request, username, deactivate=False):
                 secret__needs_changing_on_leave=False,
             )
             .exclude(secret__status=SecretStatus.NEEDS_CHANGING)
-            .select_related(
-                'secret',
-            )
+            .fetch_mode(FETCH_PEERS)
         )
         secrets = set()
         for rev in accessed_revs:

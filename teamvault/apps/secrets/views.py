@@ -9,6 +9,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group
 from django.core.exceptions import ObjectDoesNotExist, PermissionDenied
+from django.db.models import FETCH_PEERS
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
@@ -357,7 +358,7 @@ secret_detail = login_required(SecretDetail.as_view())
 @require_http_methods(['GET'])
 def secret_metadata(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    share_data = secret.share_data.with_expiry_state().filter(is_expired=False)
+    share_data = secret.share_data.with_expiry_state().filter(is_expired=False).fetch_mode(FETCH_PEERS)
     context = {
         'allowed_groups': share_data.groups(),
         'allowed_users': share_data.users(),
