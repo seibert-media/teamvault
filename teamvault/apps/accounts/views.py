@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.db import transaction
-from django.db.models import FETCH_PEERS, Max, Q
+from django.db.models import Max, Q
 from django.http import (
     HttpResponse,
     HttpResponseBadRequest,
@@ -25,7 +25,7 @@ from .models import UserProfile as UserProfileModel
 from .utils import get_pending_secrets_for_user
 from ..audit.auditlog import log
 from ..audit.models import AuditLogCategoryChoices
-from ..secrets.models import Secret, SecretRevision
+from ..secrets.models import Secret
 
 User = get_user_model()
 
@@ -206,21 +206,12 @@ def user_activate(request, username, deactivate=False):
     user.save()
     if deactivate:
         user.groups.clear()
-        accessed_revs = (
-            SecretRevision.objects
-            .filter(
-                accessed_by=user,
-            )
-            .exclude(
-                secret__needs_changing_on_leave=False,
-            )
-            .exclude(secret__status=SecretStatus.NEEDS_CHANGING)
-            .fetch_mode(FETCH_PEERS)
+        secrets = list(
+            Secret.objects.filter(
+                current_revision__accessed_by=user,
+                needs_changing_on_leave=True,
+            ).exclude(status=SecretStatus.NEEDS_CHANGING)
         )
-        secrets = set()
-        for rev in accessed_revs:
-            if rev.is_current_revision:
-                secrets.add(rev.secret)
         with transaction.atomic():
             for secret in secrets:
                 secret.status = SecretStatus.NEEDS_CHANGING
