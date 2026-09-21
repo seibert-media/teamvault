@@ -2,6 +2,7 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
+from django.db.models import FETCH_PEERS
 from django.utils.timezone import now
 from django.utils.translation import gettext_lazy as _
 from huey import crontab
@@ -16,7 +17,7 @@ huey_log = logging.getLogger('huey')
 
 @periodic_task(crontab(**settings.HUEY_TASKS['scheduler_frequency']))
 def prune_expired_shares():
-    for share in SharedSecretData.objects.with_expiry_state().filter(is_expired=True):
+    for share in SharedSecretData.objects.with_expiry_state().filter(is_expired=True).fetch_mode(FETCH_PEERS):
         huey_log.info(
             _(
                 "Removing expired share of '{secret}' ({secret_id}) for {share_type} '{who}', was valid until {until}"
@@ -40,7 +41,7 @@ def revoke_unused_shares():
 
     for share in SharedSecretData.objects.filter(
         granted_on__lt=grace_period,
-    ):
+    ).fetch_mode(FETCH_PEERS):
         users_to_check = []
 
         if share.user:

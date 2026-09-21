@@ -3,7 +3,7 @@ from base64 import b64encode
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.db.models import Max
+from django.db.models import FETCH_PEERS, Max
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
@@ -61,12 +61,13 @@ class SecretList(generics.ListCreateAPIView):
 
     def get_queryset(self):
         if 'search' in self.request.query_params:
-            return Secret.get_search_results(
+            queryset = Secret.get_search_results(
                 self.request.user,
                 self.request.query_params['search'],
             )
         else:
-            return Secret.get_all_visible_to_user(self.request.user)
+            queryset = Secret.get_all_visible_to_user(self.request.user)
+        return queryset.fetch_mode(FETCH_PEERS)
 
     def perform_create(self, serializer):
         instance = serializer.save(created_by=self.request.user)
@@ -99,7 +100,7 @@ class SecretShare(generics.ListCreateAPIView):
 
     def get_queryset(self):
         obj = self.get_object()
-        return obj.share_data.all()
+        return obj.share_data.all().fetch_mode(FETCH_PEERS)
 
     def get_serializer_context(self):
         context = super().get_serializer_context()

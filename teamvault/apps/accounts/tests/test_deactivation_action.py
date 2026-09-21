@@ -86,6 +86,25 @@ class TestUserDeactivationSideEffects(TestCase):
 
         self.assertEqual(secret.status, SecretStatus.NEEDS_CHANGING)
 
+    def test_deactivation_ignores_superseded_revisions(self):
+        """
+        If the user only accessed a revision that has since been replaced,
+        the secret doesn't have to be marked as NEEDS_CHANGING.
+        """
+        secret = self._create_secret_and_simulate_access('rotated', user_accessed=True)
+        new_revision = SecretRevision.objects.create(
+            secret=secret, set_by=self.admin, plaintext_data_sha256='hash_rotated_2', encrypted_data=b'fake2'
+        )
+        secret.current_revision = new_revision
+        secret.save()
+
+        self.client.force_login(self.admin)
+        url = reverse('accounts.user-deactivate', kwargs={'username': self.bob.username})
+        self.client.post(url)
+        secret.refresh_from_db()
+
+        self.assertEqual(secret.status, SecretStatus.OK)
+
     def test_deactivation_ignores_safe_secrets(self):
         """
         If needs_changing_on_leave=False,
