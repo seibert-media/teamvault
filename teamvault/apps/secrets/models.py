@@ -4,7 +4,6 @@ from dataclasses import dataclass
 from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
-from operator import itemgetter
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -13,7 +12,7 @@ from django.contrib.auth.models import Group
 from django.contrib.postgres.search import SearchVector, SearchVectorField
 from django.core.exceptions import PermissionDenied, ValidationError
 from django.db import models
-from django.db.models import BooleanField, Case, Max, Q, Value, When
+from django.db.models import BooleanField, Case, Max, Q, QuerySet, Value, When
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from django.http import Http404
@@ -304,6 +303,15 @@ class Secret(HashIDModel):
         )
 
     @classmethod
+    def get_readable_ids_in_queryset(cls, user, secrets: QuerySet['Secret'] | list['Secret']):
+        return set(
+            cls
+            .get_all_readable_by_user(user)
+            .filter(pk__in=[secret.pk for secret in secrets])
+            .values_list('pk', flat=True)
+        )
+
+    @classmethod
     def get_all_visible_to_user(cls, user, queryset=None):
         if queryset is None:
             queryset = cls.objects.all()
@@ -337,14 +345,17 @@ class Secret(HashIDModel):
                 secret__isnull=False,
                 time__gte=since,
             )
-            .order_by('secret')
             .values('secret')
             .annotate(
                 access_count=models.Count('secret'),
             )
+            .order_by('-access_count', 'secret')[:limit]
         )
-        ordered_secrets = sorted(accessed_secrets, key=itemgetter('access_count'), reverse=True)
-        return [cls.objects.get(id=item['secret']) for item in ordered_secrets[:limit]]
+
+        ordered_secret_ids = [access['secret'] for access in accessed_secrets]
+        unordered_secrets = cls.objects.filter(id__in=ordered_secret_ids)
+        secret_map = {secret.id: secret for secret in unordered_secrets}
+        return [secret_map[secret_id] for secret_id in ordered_secret_ids if secret_id in secret_map]
 
     @classmethod
     def get_most_recently_used_for_user(cls, user, limit=5):

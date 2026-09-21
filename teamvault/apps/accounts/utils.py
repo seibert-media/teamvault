@@ -1,10 +1,8 @@
 import logging
-from base64 import b64encode
 from hashlib import md5
 
-import requests
-
-from teamvault.apps.accounts.models import UserProfile, UserProfile as UserProfileModel
+from teamvault.apps.accounts.models import UserProfile
+from teamvault.apps.accounts.tasks import store_avatar
 from teamvault.apps.audit.models import LogEntry
 from teamvault.apps.secrets.enums import SecretStatus
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
@@ -12,29 +10,27 @@ from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretDa
 logger = logging.getLogger(__name__)
 
 
+def _refresh_avatar(user, url):
+    profile = UserProfile.objects.filter(user=user).first()
+    if profile and profile.avatar:
+        store_avatar(user.pk, url)
+    else:
+        # if no avatar is set (like on the first login),
+        # we'll just run this immediately
+        store_avatar.call_local(user.pk, url)
+
+
 def save_gravatar(user, *_args, **_kwargs):
     email_hash = md5(user.email.strip().lower().encode('utf-8')).hexdigest()
-    try:
-        resp = requests.get(f'https://gravatar.com/avatar/{email_hash}?s=200&r=g&d=mp')
-    except requests.RequestException:
-        logger.warning('Fetching Gravatar avatar failed for user %s', user)
-        return
-    if resp.ok:
-        user_settings = UserProfileModel.objects.get_or_create(user=user)[0]
-        user_settings.avatar = b64encode(resp.content)
-        user_settings.save()
+    _refresh_avatar(user, f'https://gravatar.com/avatar/{email_hash}?s=200&r=g&d=mp')
 
 
 def save_google_avatar(response, user, *_args, **_kwargs):
-    try:
-        resp = requests.get(response['picture'])
-    except requests.RequestException:
-        logger.warning('Fetching Google avatar failed for user %s', user)
+    picture = (response or {}).get('picture')
+    if not picture:
+        logger.info('Google returned no picture for user %s', user)
         return
-    if resp.ok:
-        user_settings = UserProfileModel.objects.get_or_create(user=user)[0]
-        user_settings.avatar = b64encode(resp.content)
-        user_settings.save()
+    _refresh_avatar(user, picture)
 
 
 def merge_users(user1, user2, dry_run=True):
