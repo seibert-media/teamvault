@@ -6,6 +6,7 @@ from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db.models import FETCH_PEERS, Max
 from django.shortcuts import get_object_or_404
 from django.utils.translation import gettext_lazy as _
+from django_filters import rest_framework as filters
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied, ValidationError
@@ -18,6 +19,7 @@ from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
 from teamvault.apps.secrets.exceptions import PermissionError as SecretPermissionError
 from teamvault.apps.secrets.services.revision import RevisionService
+from .filters import SecretListFilter
 from .serializers import (
     PendingSecretSerializer,
     SecretDetailSerializer,
@@ -58,6 +60,8 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 class SecretList(generics.ListCreateAPIView):
     model = Secret
     serializer_class = SecretSerializer
+    filter_backends = (filters.DjangoFilterBackend,)
+    filterset_class = SecretListFilter
 
     def get_queryset(self):
         if 'search' in self.request.query_params:
