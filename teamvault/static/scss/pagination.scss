@@ -1,0 +1,17 @@
+.pagination {
+  --bs-pagination-color: var(--bs-body-color);
+  --bs-pagination-bg: transparent;
+  --bs-pagination-border-color: var(--bs-border-color);
+  --bs-pagination-hover-color: var(--bs-accent);
+  --bs-pagination-hover-bg: color-mix(in srgb, var(--bs-accent) 8%, transparent);
+  --bs-pagination-hover-border-color: var(--bs-border-color);
+  --bs-pagination-focus-color: var(--bs-accent);
+  --bs-pagination-focus-bg: color-mix(in srgb, var(--bs-accent) 8%, transparent);
+  --bs-pagination-focus-box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--bs-accent) 25%, transparent);
+  --bs-pagination-active-color: var(--bs-accent);
+  --bs-pagination-active-bg: color-mix(in srgb, var(--bs-accent) 14%, transparent);
+  --bs-pagination-active-border-color: var(--bs-accent);
+  --bs-pagination-disabled-color: var(--bs-secondary-color);
+  --bs-pagination-disabled-bg: transparent;
+  --bs-pagination-disabled-border-color: var(--bs-border-color);
+}

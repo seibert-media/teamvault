@@ -10,12 +10,16 @@
 
 @import "./theme";
 @import "./avatars";
+@import "./list-group";
+@import "./pagination";
 @import "./scrollbar";
 @import "./search";
 @import "./secrets";
 @import "./card.scss";
 @import "./circularProgressbar";
 @import "./tom-select";
+@import "./tab-nav";
+@import "./tables";
 
 @import "./fontawesome";
 @import "./select2";
@@ -29,6 +33,10 @@ body {
 a {
   text-decoration: none;
   color: var(--bs-info);
+}
+
+.breadcrumb-link:hover {
+  text-decoration: underline;
 }
 
 .background {
@@ -118,6 +126,7 @@ kbd {
     &:hover {
       filter: brightness(1.2);
     }
+
     &:active {
       filter: brightness(1.4);
       background-color: var(--bs-secondary-bg);
@@ -128,7 +137,7 @@ kbd {
 
   // bg-color for filter chips
   .bg-secondary-subtle {
-    background-color: #37383b!important;
+    background-color: #37383b !important;
   }
 }
 
