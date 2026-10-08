@@ -247,6 +247,16 @@ class Secret(HashIDModel):
             raise PermissionDenied()
         return permissions.is_shareable()
 
+    def check_edit_access(self, user):
+        permissions = self.permission_checker(user)
+        if not permissions.is_visible():
+            raise Http404
+
+        editable = permissions.is_editable()
+        if not editable:
+            raise PermissionDenied()
+        return editable
+
     def get_data(self, user):
         if not self.current_revision:
             raise Http404
@@ -941,6 +951,20 @@ class PermissionChecker:
             return AccessPermissionTypes.ALLOWED
         # Or superusers
         if self._superuser_override(ignore_allow_superuser_reads=True):
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+
+        return AccessPermissionTypes.NOT_ALLOWED
+
+    def is_editable(self) -> AccessPermissionTypes:
+        """Checks if the user may change the secret: metadata, payload, delete, restore.
+
+        A temporary share only grants reading. Letting it edit would let the
+        holder flip access_policy to ANY, share the secret to themselves
+        permanently and flip it back.
+        """
+        if self.is_readable() == AccessPermissionTypes.ALLOWED:
+            return AccessPermissionTypes.ALLOWED
+        if self._superuser_override():
             return AccessPermissionTypes.SUPERUSER_ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED

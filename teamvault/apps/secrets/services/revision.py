@@ -67,7 +67,7 @@ class RevisionService:
         """Create or reuse a payload revision, set it current, and record
         a SecretChange with a metadata snapshot.
         """
-        if not skip_acl and secret.permission_checker(actor).is_readable() == AccessPermissionTypes.NOT_ALLOWED:
+        if not skip_acl and secret.permission_checker(actor).is_editable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User has no write access to secret payload')
 
         # 1. Build (or fetch) the revision representing _payload_
@@ -145,9 +145,8 @@ class RevisionService:
         if secret.pk != change.secret_id:
             raise ValueError('Change does not belong to secret')
 
-        chk = secret.permission_checker(actor)
-        # Permit restore to anyone who can edit (same gate as save_payload)
-        if chk.is_readable() == AccessPermissionTypes.NOT_ALLOWED:
+        # Same gate as save_payload
+        if secret.permission_checker(actor).is_editable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User may not restore revisions')
 
         # create or reuse revision w/ identical payload
