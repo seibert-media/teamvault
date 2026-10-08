@@ -46,9 +46,9 @@ export function init(config, revealApi) {
     const numEl = document.querySelector('.jp-card-number');
     const nameEl = document.querySelector('.jp-card-name');
     const expiryEl = document.querySelector('.jp-card-expiry');
-    numEl.innerHTML = number;
-    nameEl.innerHTML = name;
-    expiryEl.innerHTML = expirationMonth + '/' + expirationYear;
+    numEl.textContent = number;
+    nameEl.textContent = name;
+    expiryEl.textContent = expirationMonth + '/' + expirationYear;
   }
 
   let ccCodeClipboard;
