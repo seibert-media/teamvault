@@ -53,6 +53,7 @@ dev = [
     "faker",
     "playwright>=1.58.0",
     "ruff>=0.14.6",
+    "tblib>=3.2.2",
 ]
 
 [project.scripts]

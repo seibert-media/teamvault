@@ -441,6 +441,11 @@ def configure_session(config):
     return age, expire, secure
 
 
+def configure_share_reason(config, settings):
+    require_reason = get_from_config(config, 'teamvault', 'require_share_reason', 'True').lower()
+    settings.REQUIRE_SHARE_REASON = require_reason in {'1', 'enabled', 'true', 'yes'}
+
+
 def configure_superuser_reads(config, settings):
     settings.ALLOW_SUPERUSER_READS = False
     allow_reads = get_from_config(config, 'teamvault', 'allow_superuser_reads', 'False').lower()
@@ -494,6 +499,8 @@ session_expire_at_browser_close = True
 session_cookie_secure = False
 time_zone = UTC
 # allow_superuser_reads = False
+# require a reason when sharing a secret with a user or group
+# require_share_reason = True
 # data_dir = /var/lib/teamvault
 
 #[password_generator]

@@ -1,11 +1,12 @@
 import threading
 from configparser import ConfigParser
 from tempfile import TemporaryDirectory
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-from teamvault.apps.settings.config import configure_data_dir
+from teamvault.apps.settings.config import configure_data_dir, configure_share_reason
 
 
 class ConfigureDataDirTest(SimpleTestCase):
@@ -34,3 +35,21 @@ class ConfigureDataDirTest(SimpleTestCase):
                 thread.join()
 
         self.assertEqual(errors, [])
+
+
+def _configure_share_reason(config_text: str) -> SimpleNamespace:
+    config = ConfigParser()
+    config.read_string(config_text)
+    settings = SimpleNamespace()
+    configure_share_reason(config, settings)
+    return settings
+
+
+class ConfigureShareReasonTest(SimpleTestCase):
+    def test_requires_reason_by_default(self):
+        settings = _configure_share_reason('[teamvault]\n')
+        self.assertTrue(settings.REQUIRE_SHARE_REASON)
+
+    def test_can_be_disabled(self):
+        settings = _configure_share_reason('[teamvault]\nrequire_share_reason = false\n')
+        self.assertFalse(settings.REQUIRE_SHARE_REASON)

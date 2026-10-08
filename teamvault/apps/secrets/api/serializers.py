@@ -2,6 +2,7 @@ from base64 import b64decode, b64encode
 from contextlib import suppress
 from typing import override
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import PermissionDenied, ValidationError as DjangoValidationError
@@ -338,6 +339,11 @@ class SharedSecretDataSerializer(serializers.ModelSerializer):
         required=False,
         slug_field='username',
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['grant_description'].required = settings.REQUIRE_SHARE_REASON
+        self.fields['grant_description'].allow_blank = not settings.REQUIRE_SHARE_REASON
 
     def validate(self, data):
         if (data['group'] and data['user']) or (not data['group'] and not data['user']):

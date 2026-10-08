@@ -1,6 +1,7 @@
 from datetime import date
 
 from django import forms
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.core.exceptions import ValidationError
@@ -52,7 +53,11 @@ class SecretForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if cleaned_data['shared_groups_on_create'] and not cleaned_data['grant_description']:
+        if (
+            settings.REQUIRE_SHARE_REASON
+            and cleaned_data['shared_groups_on_create']
+            and not cleaned_data['grant_description']
+        ):
             self.add_error(
                 'grant_description',
                 _('Please provide a valid reason to share this secret with the groups selected above.'),
@@ -160,13 +165,17 @@ class SecretShareForm(forms.ModelForm):
     )
 
     grant_description = forms.CharField(
-        label=_('Reason'), required=True, widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'})
+        label=_('Reason'), required=False, widget=forms.Textarea(attrs={'cols': '15', 'rows': '2'})
     )
 
     granted_until = forms.DateTimeField(
         required=False,
         widget=forms.DateTimeInput(),
     )
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['grant_description'].required = settings.REQUIRE_SHARE_REASON
 
     def clean(self):
         cleaned_data = super().clean()
