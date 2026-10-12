@@ -1,14 +1,24 @@
 from hashlib import sha1
+from json import JSONDecodeError, loads
 
 from cryptography.fernet import Fernet
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
+from teamvault.apps.secrets.fingerprint import payload_fingerprint
 from teamvault.apps.secrets.models import SecretRevision
 from teamvault.apps.settings.models import Setting
 
 BATCH_SIZE = 500
+
+
+def _payload_from_plaintext(plaintext: bytes):
+    decoded = plaintext.decode('utf-8')
+    try:
+        return loads(decoded)
+    except JSONDecodeError:
+        return decoded
 
 
 class Command(BaseCommand):
@@ -47,7 +57,7 @@ class Command(BaseCommand):
 
         with transaction.atomic():
             re_encrypted = 0
-            queryset = SecretRevision.objects.only('pk', 'encrypted_data').order_by('pk')
+            queryset = SecretRevision.objects.only('pk', 'secret_id', 'encrypted_data').order_by('pk')
             last_pk = 0
 
             while True:
@@ -63,8 +73,13 @@ class Command(BaseCommand):
                             f'Failed to decrypt revision pk={revision.pk}: {exc}. No changes have been made.'
                         ) from exc
                     revision.encrypted_data = new_fernet.encrypt(plaintext)
+                    revision.plaintext_data_sha256 = payload_fingerprint(
+                        revision.secret_id, _payload_from_plaintext(plaintext), fernet_key=new_key
+                    )
 
-                SecretRevision.objects.bulk_update(batch, ['encrypted_data'], batch_size=BATCH_SIZE)
+                SecretRevision.objects.bulk_update(
+                    batch, ['encrypted_data', 'plaintext_data_sha256'], batch_size=BATCH_SIZE
+                )
 
                 re_encrypted += len(batch)
                 last_pk = batch[-1].pk

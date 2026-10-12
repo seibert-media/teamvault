@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from hashlib import sha256
 from json import dumps
 from typing import Any, Literal
 
@@ -14,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
+from teamvault.apps.secrets.fingerprint import payload_fingerprint
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     Secret,
@@ -213,12 +213,9 @@ class RevisionService:
                     if fld in prev:
                         payload[fld] = prev[fld]
 
-        sha_src = dumps(payload, sort_keys=True)
-        sha_sum = sha256(sha_src.encode()).hexdigest()
-
         revision, created = SecretRevision.objects.get_or_create(
             secret=secret,
-            plaintext_data_sha256=sha_sum,
+            plaintext_data_sha256=payload_fingerprint(secret.id, payload),
             defaults={'set_by': actor},
         )
 

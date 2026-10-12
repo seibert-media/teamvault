@@ -2,8 +2,7 @@ import base64
 import typing as t
 from dataclasses import dataclass
 from datetime import timedelta
-from hashlib import sha256
-from json import JSONDecodeError, dumps, loads
+from json import JSONDecodeError, loads
 from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
@@ -625,7 +624,7 @@ class SecretChange(HashIDModel):
     Invariants and intent:
     - Each change points to exactly one payload revision (SecretRevision) and contains the
       metadata of the secret at that point in time.
-    - Payload rows (SecretRevision) remain deduplicated by (secret, sha256) to
+    - Payload rows (SecretRevision) remain deduplicated by (secret, payload fingerprint) to
       preserve accessed_by and needs_changing semantics. Multiple changes may
       reference the same revision when a payload recurs (e.g., after a restore).
     - History is linear: each change has at most one parent (the previous head).

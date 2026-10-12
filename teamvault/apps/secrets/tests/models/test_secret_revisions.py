@@ -2,6 +2,7 @@ from copy import copy
 
 from django.test import TestCase, override_settings
 
+from teamvault.apps.secrets.fingerprint import payload_fingerprint
 from teamvault.apps.secrets.models import SecretChange, SecretRevision
 from teamvault.apps.secrets.services.revision import RevisionService
 from ..utils import COMMON_OVERRIDES, make_user, new_secret
@@ -40,3 +41,14 @@ class RevisionHistoryTests(TestCase):
         # History view contract: 3 rows (2 payload, 1 meta diff)
         rows = RevisionService.get_revision_history(s, self.owner)
         self.assertEqual(len(rows), 3)
+
+
+@override_settings(**COMMON_OVERRIDES)
+class RevisionFingerprintTests(TestCase):
+    def test_saved_revision_stores_keyed_fingerprint(self):
+        owner = make_user('owner')
+        payload = {'password': 'hunter2'}
+        secret = new_secret(owner, payload=payload)
+
+        revision = secret.current_revision
+        self.assertEqual(revision.plaintext_data_sha256, payload_fingerprint(secret.id, payload))

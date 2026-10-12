@@ -1,7 +1,6 @@
 import json
 import random
 from datetime import timedelta
-from hashlib import sha256
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -11,6 +10,7 @@ from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from teamvault.apps.secrets.enums import ContentType, SecretStatus
+from teamvault.apps.secrets.fingerprint import payload_fingerprint
 from teamvault.apps.secrets.models import Secret, SecretRevision, SharedSecretData
 
 User = get_user_model()
@@ -103,14 +103,13 @@ class Command(BaseCommand):
                     plaintext_password = fake.password(length=12)
                     plaintext_data = {'password': plaintext_password}
                     plaintext_data_json = json.dumps(plaintext_data)
-                    plaintext_data_sha256 = sha256(plaintext_data_json.encode('utf-8')).hexdigest()
                     encrypted_data = fernet.encrypt(plaintext_data_json.encode('utf-8'))
                     secret_revision = SecretRevision.objects.create(
                         secret=secret,
                         set_by=user,
                         encrypted_data=encrypted_data,
                         length=len(plaintext_password),
-                        plaintext_data_sha256=plaintext_data_sha256,
+                        plaintext_data_sha256=payload_fingerprint(secret.id, plaintext_data),
                     )
                     # Assign the current_revision
                     secret.current_revision = secret_revision
