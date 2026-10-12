@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from datetime import timedelta
 from hashlib import sha256
 from json import JSONDecodeError, dumps, loads
+from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -38,8 +39,15 @@ class AccessPermissionTypes(models.IntegerChoices):
     SUPERUSER_ALLOWED = 3
 
 
+SCRIPT_URL_SCHEMES = frozenset({'javascript', 'data', 'vbscript'})
+
+
+def url_scheme(value: str) -> str:
+    return urlsplit(value).scheme.lower()
+
+
 def validate_url(value):
-    if '://' not in value or value.startswith('javascript:') or value.startswith('data:'):
+    if '://' not in value or url_scheme(value) in SCRIPT_URL_SCHEMES:
         raise ValidationError(_('invalid URL'))
 
 
@@ -117,7 +125,7 @@ class HashIDModel(models.Model):
         return super().save(*args, **kwargs)
 
 
-class Secret(HashIDModel):
+class Secret(HashIDModel):  # noqa: PLR0904
     HASHID_NAMESPACE = 'Secret'
 
     if t.TYPE_CHECKING:
@@ -215,6 +223,10 @@ class Secret(HashIDModel):
     @property
     def full_url(self):
         return settings.BASE_URL.rstrip('/') + self.get_absolute_url()
+
+    @property
+    def url_is_linkable(self):
+        return bool(self.url) and url_scheme(self.url) not in SCRIPT_URL_SCHEMES
 
     def permission_checker(self, user):
         shares = self.share_data.for_user(user)
