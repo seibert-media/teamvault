@@ -201,7 +201,7 @@ class Secret(HashIDModel):
     search_index = SearchVectorField(blank=True, null=True)
 
     class Meta:
-        ordering = ('name', 'username')
+        ordering = ('name', 'username', 'hashid')
 
     def __str__(self):
         return self.name
