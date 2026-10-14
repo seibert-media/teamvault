@@ -253,3 +253,61 @@ class PermissionCheckerTests(TestCase):
             shareable=AccessPermissionTypes.ALLOWED,
             visible=AccessPermissionTypes.ALLOWED,
         )
+
+
+@override_settings(**COMMON_OVERRIDES)
+class EditPermissionTests(TestCase):
+    """
+    Mainly tests that temporarily shared secrets with a user
+    cannot be modified by said user.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.admin = make_user('admin', superuser=True)
+        cls.bob = make_user('bob')
+        cls.owner = make_user('owner')
+
+    @staticmethod
+    def _checker(user, secret):
+        return PermissionChecker(user, secret, secret.share_data.for_user(user))
+
+    def _share(self, secret, user, granted_until):
+        return SharedSecretData.objects.create(
+            secret=secret,
+            user=user,
+            granted_by=self.owner,
+            grant_description='share',
+            granted_until=granted_until,
+        )
+
+    def test_temporary_share_is_not_editable(self):
+        secret = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
+        self._share(secret, self.bob, now() + timedelta(days=1))
+        self.assertEqual(self._checker(self.bob, secret).is_editable(), AccessPermissionTypes.NOT_ALLOWED)
+
+    def test_permanent_share_is_editable(self):
+        secret = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
+        self._share(secret, self.bob, None)
+        self.assertEqual(self._checker(self.bob, secret).is_editable(), AccessPermissionTypes.ALLOWED)
+
+    def test_policy_any_is_editable_for_everyone(self):
+        secret = new_secret(self.owner, access_policy=AccessPolicy.ANY)
+        self.assertEqual(self._checker(self.bob, secret).is_editable(), AccessPermissionTypes.ALLOWED)
+
+    def test_discoverable_without_share_is_not_editable(self):
+        secret = new_secret(self.owner, access_policy=AccessPolicy.DISCOVERABLE)
+        self.assertEqual(self._checker(self.bob, secret).is_editable(), AccessPermissionTypes.NOT_ALLOWED)
+
+    def test_deleted_secret_is_not_editable_with_permanent_share(self):
+        secret = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
+        self._share(secret, self.bob, None)
+        secret.status = SecretStatus.DELETED
+        secret.save()
+        self.assertEqual(self._checker(self.bob, secret).is_editable(), AccessPermissionTypes.NOT_ALLOWED)
+
+    def test_superuser_override_follows_allow_superuser_reads(self):
+        secret = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
+        self.assertEqual(self._checker(self.admin, secret).is_editable(), AccessPermissionTypes.SUPERUSER_ALLOWED)
+        with override_settings(ALLOW_SUPERUSER_READS=False):
+            self.assertEqual(self._checker(self.admin, secret).is_editable(), AccessPermissionTypes.NOT_ALLOWED)

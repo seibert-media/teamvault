@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from datetime import datetime
-from hashlib import sha256
 from json import dumps
 from typing import Any, Literal
 
@@ -14,6 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from teamvault.apps.audit.auditlog import log
 from teamvault.apps.audit.models import AuditLogCategoryChoices
 from teamvault.apps.secrets.enums import AccessPolicy, ContentType, SecretStatus
+from teamvault.apps.secrets.fingerprint import payload_fingerprint
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     Secret,
@@ -67,7 +67,7 @@ class RevisionService:
         """Create or reuse a payload revision, set it current, and record
         a SecretChange with a metadata snapshot.
         """
-        if not skip_acl and secret.permission_checker(actor).is_readable() == AccessPermissionTypes.NOT_ALLOWED:
+        if not skip_acl and secret.permission_checker(actor).is_editable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User has no write access to secret payload')
 
         # 1. Build (or fetch) the revision representing _payload_
@@ -145,9 +145,8 @@ class RevisionService:
         if secret.pk != change.secret_id:
             raise ValueError('Change does not belong to secret')
 
-        chk = secret.permission_checker(actor)
-        # Permit restore to anyone who can edit (same gate as save_payload)
-        if chk.is_readable() == AccessPermissionTypes.NOT_ALLOWED:
+        # Same gate as save_payload
+        if secret.permission_checker(actor).is_editable() == AccessPermissionTypes.NOT_ALLOWED:
             raise PermissionDenied('User may not restore revisions')
 
         # create or reuse revision w/ identical payload
@@ -214,12 +213,9 @@ class RevisionService:
                     if fld in prev:
                         payload[fld] = prev[fld]
 
-        sha_src = dumps(payload, sort_keys=True)
-        sha_sum = sha256(sha_src.encode()).hexdigest()
-
         revision, created = SecretRevision.objects.get_or_create(
             secret=secret,
-            plaintext_data_sha256=sha_sum,
+            plaintext_data_sha256=payload_fingerprint(secret.id, payload),
             defaults={'set_by': actor},
         )
 

@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from rest_framework import generics, status
 from rest_framework.decorators import api_view
 from rest_framework.exceptions import PermissionDenied, ValidationError
-from rest_framework.permissions import IsAdminUser
+from rest_framework.permissions import SAFE_METHODS, IsAdminUser
 from rest_framework.response import Response
 
 from teamvault.apps.accounts.utils import get_pending_secrets_for_user
@@ -41,7 +41,11 @@ class SecretDetail(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         obj = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
-        if not obj.check_read_access(self.request.user):
+        if self.request.method in SAFE_METHODS:
+            allowed = obj.check_read_access(self.request.user)
+        else:
+            allowed = obj.check_edit_access(self.request.user)
+        if not allowed:
             self.permission_denied(self.request)
         return obj
 

@@ -5,7 +5,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from django.utils.timezone import now
 
-from teamvault.apps.secrets.enums import AccessPolicy
+from teamvault.apps.secrets.enums import AccessPolicy, SecretStatus
 from teamvault.apps.secrets.models import (
     AccessPermissionTypes,
     SharedSecretData,
@@ -113,3 +113,68 @@ class SecretVisibilityPermissionTests(TestCase):
         resp = self._get(self.other, secret)
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.context['readable'], AccessPermissionTypes.ALLOWED)
+
+
+@override_settings(**COMMON_OVERRIDES)
+class SecretEditPermissionTests(TestCase):
+    """
+    A temporary share should only grant the user read permissions.
+    Changing metadata like "access_policy" or deleting the secret altogether
+    requires permanent access, otherwise a user could make the secret public and/or
+    share it to themselves.
+    """
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.owner = make_user('owner')
+        cls.temp_reader = make_user('temp_reader')
+        cls.perm_reader = make_user('perm_reader')
+
+    def setUp(self):
+        self.secret = new_secret(self.owner, access_policy=AccessPolicy.HIDDEN)
+        SharedSecretData.objects.create(
+            secret=self.secret,
+            user=self.temp_reader,
+            granted_by=self.owner,
+            granted_until=now() + timedelta(days=1),
+        )
+        SharedSecretData.objects.create(secret=self.secret, user=self.perm_reader, granted_by=self.owner)
+        self.edit_url = reverse('secrets.secret-edit', args=[self.secret.hashid])
+        self.delete_url = reverse('secrets.secret-delete', args=[self.secret.hashid])
+
+    def _post_edit(self, user, access_policy):
+        self.client.force_login(user)
+        return self.client.post(
+            self.edit_url,
+            {'name': self.secret.name, 'access_policy': int(access_policy), 'needs_changing_on_leave': 'on'},
+        )
+
+    def test_temporary_reader_cannot_open_edit_form(self):
+        self.client.force_login(self.temp_reader)
+        self.assertEqual(self.client.get(self.edit_url).status_code, 403)
+
+    def test_temporary_reader_cannot_change_access_policy(self):
+        resp = self._post_edit(self.temp_reader, AccessPolicy.ANY)
+        self.assertEqual(resp.status_code, 403)
+        self.secret.refresh_from_db()
+        self.assertEqual(self.secret.access_policy, AccessPolicy.HIDDEN)
+
+    def test_permanent_reader_can_change_access_policy(self):
+        resp = self._post_edit(self.perm_reader, AccessPolicy.ANY)
+        self.assertEqual(resp.status_code, 302, getattr(resp, 'context', None) and resp.context.get('form'))
+        self.secret.refresh_from_db()
+        self.assertEqual(self.secret.access_policy, AccessPolicy.ANY)
+
+    def test_temporary_reader_cannot_delete(self):
+        self.client.force_login(self.temp_reader)
+        resp = self.client.post(self.delete_url)
+        self.assertEqual(resp.status_code, 403)
+        self.secret.refresh_from_db()
+        self.assertEqual(self.secret.status, SecretStatus.OK)
+
+    def test_temporary_reader_sees_edit_and_delete_disabled(self):
+        self.client.force_login(self.temp_reader)
+        resp = self.client.get(reverse('secrets.secret-detail', args=[self.secret.hashid]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.context['readable'], AccessPermissionTypes.TEMPORARILY_ALLOWED)
+        self.assertEqual(resp.context['editable'], AccessPermissionTypes.NOT_ALLOWED)

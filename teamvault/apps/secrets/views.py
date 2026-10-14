@@ -228,7 +228,7 @@ class SecretEdit(UpdateView):
 
     def get_object(self, queryset=None):  # noqa: ARG002
         secret = get_object_or_404(Secret, hashid=self.kwargs['hashid'])
-        secret.check_read_access(self.request.user)
+        secret.check_edit_access(self.request.user)
         return secret
 
     def get_template_names(self):
@@ -241,7 +241,7 @@ secret_edit = login_required(SecretEdit.as_view())
 @login_required
 def secret_delete(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
-    secret.check_read_access(request.user)
+    secret.check_edit_access(request.user)
     if request.method == 'POST':
         log(
             _("{user} deleted '{name}' ({id}:{revision})").format(
@@ -321,6 +321,7 @@ class SecretDetail(DetailView):
         context['ContentType'] = ContentType
         context['content_type'] = CONTENT_TYPE_IDENTIFIERS[secret.content_type]
         context['secret_revision'] = secret.current_revision
+        context['editable'] = permissions.is_editable()
         context['readable'] = permissions.is_readable()
         context['shareable'] = permissions.is_shareable()
         context['secret_deleted'] = secret.status == SecretStatus.DELETED
@@ -621,7 +622,7 @@ class SecretRevisionDetailView(TemplateView):
     def dispatch(self, request, *args, **kwargs):
         self.revision = self.get_revision()
         self.secret = self.revision.secret
-        self.read_permission = self.secret.check_read_access(request.user)
+        self.secret.check_read_access(request.user)
         return super().dispatch(request, *args, **kwargs)
 
     def get_revision(self):
@@ -697,7 +698,7 @@ class SecretRevisionDetailView(TemplateView):
             'ContentType': ContentType,
             'shown_change': self.shown_change,
             'meta': self.revision_for_display.secret,
-            'restore_allowed': self.read_permission,
+            'restore_allowed': self.secret.permission_checker(self.request.user).is_editable(),
             'restore_event': self.restore_event,
         })
         return context

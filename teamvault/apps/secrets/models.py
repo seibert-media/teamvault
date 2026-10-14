@@ -2,8 +2,8 @@ import base64
 import typing as t
 from dataclasses import dataclass
 from datetime import timedelta
-from hashlib import sha256
-from json import JSONDecodeError, dumps, loads
+from json import JSONDecodeError, loads
+from urllib.parse import urlsplit
 
 from cryptography.fernet import Fernet
 from django.conf import settings
@@ -38,8 +38,15 @@ class AccessPermissionTypes(models.IntegerChoices):
     SUPERUSER_ALLOWED = 3
 
 
+SCRIPT_URL_SCHEMES = frozenset({'javascript', 'data', 'vbscript'})
+
+
+def url_scheme(value: str) -> str:
+    return urlsplit(value).scheme.lower()
+
+
 def validate_url(value):
-    if '://' not in value or value.startswith('javascript:') or value.startswith('data:'):
+    if '://' not in value or url_scheme(value) in SCRIPT_URL_SCHEMES:
         raise ValidationError(_('invalid URL'))
 
 
@@ -117,7 +124,7 @@ class HashIDModel(models.Model):
         return super().save(*args, **kwargs)
 
 
-class Secret(HashIDModel):
+class Secret(HashIDModel):  # noqa: PLR0904
     HASHID_NAMESPACE = 'Secret'
 
     if t.TYPE_CHECKING:
@@ -216,6 +223,10 @@ class Secret(HashIDModel):
     def full_url(self):
         return settings.BASE_URL.rstrip('/') + self.get_absolute_url()
 
+    @property
+    def url_is_linkable(self):
+        return bool(self.url) and url_scheme(self.url) not in SCRIPT_URL_SCHEMES
+
     def permission_checker(self, user):
         shares = self.share_data.for_user(user)
         return PermissionChecker(user=user, secret=self, shares=shares)
@@ -246,6 +257,16 @@ class Secret(HashIDModel):
         if not permissions.is_shareable():
             raise PermissionDenied()
         return permissions.is_shareable()
+
+    def check_edit_access(self, user):
+        permissions = self.permission_checker(user)
+        if not permissions.is_visible():
+            raise Http404
+
+        editable = permissions.is_editable()
+        if not editable:
+            raise PermissionDenied()
+        return editable
 
     def get_data(self, user):
         if not self.current_revision:
@@ -494,78 +515,6 @@ class SecretRevision(HashIDModel):
         return f"<SecretRevision '{self.secret.name}' ({self.hashid})>"
 
     @classmethod
-    def _create_from_secret(
-        cls,
-        *,
-        secret: Secret,
-        set_by: User,
-        plaintext_data,
-        skip_access_check: bool = False,
-    ) -> t.Self:
-        # skip_access_check is used when initially creating a secret
-        # and makes it possible to create secrets you don't have access
-        # to
-        if not skip_access_check:
-            readable = secret.permission_checker(set_by).is_readable()
-            if not readable:
-                raise PermissionError(
-                    _("{user} not allowed access to '{name}' ({id})").format(
-                        id=secret.id, name=secret.name, user=set_by.username
-                    )
-                )
-
-        content_type = secret.content_type
-        set_password = content_type == ContentType.PASSWORD and 'password' in plaintext_data
-        set_otp = content_type == ContentType.PASSWORD and 'otp_key' in plaintext_data
-
-        fernet = Fernet(settings.TEAMVAULT_SECRET_KEY)
-
-        if secret.current_revision and content_type == ContentType.PASSWORD:
-            old_dec = fernet.decrypt(secret.current_revision.encrypted_data).decode()
-            try:
-                old_data = loads(old_dec)
-            except JSONDecodeError:
-                old_data = {'password': old_dec}
-
-            if not set_password:
-                plaintext_data['password'] = old_data['password']
-            if not set_otp and 'otp_key' in old_data:
-                for k in ('otp_key', 'digits', 'algorithm'):
-                    if k in old_data:
-                        plaintext_data[k] = old_data[k]
-                        set_otp = True
-
-        if content_type == ContentType.PASSWORD and 'password' in plaintext_data:
-            sha_src = plaintext_data['password']
-        else:
-            sha_src = dumps(plaintext_data)
-
-        sha_sum = sha256(sha_src.encode('utf-8')).hexdigest()
-
-        revision, created = cls.objects.get_or_create(
-            secret=secret,
-            plaintext_data_sha256=sha_sum,
-            defaults={
-                'otp_key_set': set_otp,
-                'set_by': set_by,
-            },
-        )
-
-        if created:
-            # save the length before encoding so multi-byte characters don't
-            # mess up the result
-            revision.length = (
-                len(plaintext_data['password'])
-                if content_type == ContentType.PASSWORD and 'password' in plaintext_data
-                else len(plaintext_data)
-            )
-            revision.encrypted_data = fernet.encrypt(dumps(plaintext_data).encode())
-            revision.save()
-        revision.accessed_by.add(set_by)
-
-        return revision
-
-    @classmethod
     def _create_from_revision(
         cls,
         *,
@@ -675,7 +624,7 @@ class SecretChange(HashIDModel):
     Invariants and intent:
     - Each change points to exactly one payload revision (SecretRevision) and contains the
       metadata of the secret at that point in time.
-    - Payload rows (SecretRevision) remain deduplicated by (secret, sha256) to
+    - Payload rows (SecretRevision) remain deduplicated by (secret, payload fingerprint) to
       preserve accessed_by and needs_changing semantics. Multiple changes may
       reference the same revision when a payload recurs (e.g., after a restore).
     - History is linear: each change has at most one parent (the previous head).
@@ -941,6 +890,20 @@ class PermissionChecker:
             return AccessPermissionTypes.ALLOWED
         # Or superusers
         if self._superuser_override(ignore_allow_superuser_reads=True):
+            return AccessPermissionTypes.SUPERUSER_ALLOWED
+
+        return AccessPermissionTypes.NOT_ALLOWED
+
+    def is_editable(self) -> AccessPermissionTypes:
+        """Checks if the user may change the secret: metadata, payload, delete, restore.
+
+        A temporary share only grants reading. Letting it edit would let the
+        holder flip access_policy to ANY, share the secret to themselves
+        permanently and flip it back.
+        """
+        if self.is_readable() == AccessPermissionTypes.ALLOWED:
+            return AccessPermissionTypes.ALLOWED
+        if self._superuser_override():
             return AccessPermissionTypes.SUPERUSER_ALLOWED
 
         return AccessPermissionTypes.NOT_ALLOWED
