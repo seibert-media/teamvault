@@ -45,7 +45,7 @@
                         class="btn btn-tertiary d-flex w-100 justify-content-between" aria-label="Search"
                         data-bs-toggle="modal"
                         data-bs-target="#search-modal">
-                    <span><i class="fa fa-search"></i> {% translate "Search" %}</span>
+                    <span><i class="fa fa-search"></i> {% translate "Search secrets..." %}</span>
                     <span>
                         <kbd class="bg-transparent border border-secondary">
                             {% translate "CTRL" %}<span class="mx-1">/</span>⌘
@@ -59,19 +59,18 @@
             {% if request.user.is_superuser %}
                 <div class="col-12 col-lg-auto me-lg-4 my-2 d-flex justify-content-center justify-content-lg-end align-items-center">
                     <div class="dropdown dropdown-center text-center text-lg-end">
-                        <button class="btn btn-accent btn-sm text-nowrap"
+                        <button class="btn btn-accent btn-sm text-nowrap dropdown-toggle"
                                 role="button"
                                 data-bs-toggle="dropdown"
                                 aria-expanded="false">
                             <i class="fa fa-gear"></i>
                             {% translate "Administration" %}
                         </button>
-                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" aria-labelledby="adminmenu"
-                            style="top: 7px">
+                        <ul class="dropdown-menu dropdown-menu-dark dropdown-menu-end my-2" aria-labelledby="adminmenu">
                             <li>
                                 <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                    href="{% url 'audit.log' %}">
-                                    <i class="fa fa-users-line"></i> {% trans "Audit log" %}
+                                    <i class="fa fa-table-list"></i> {% trans "Audit Log" %}
                                 </a>
                             </li>
                             <li class="dropdown-divider"></li>
@@ -79,6 +78,13 @@
                                 <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                    href="{% url 'accounts.user-list' %}">
                                     <i class="fa fa-users"></i> {% trans "Users" %}
+                                </a>
+                            </li>
+                            <li class="dropdown-divider"></li>
+                            <li>
+                                <a class="dropdown-item align-items-center d-inline-flex gap-2"
+                                   href="{% url 'accounts.group-list' %}">
+                                    <i class="fa fa-people-group"></i> {% trans "Groups" %}
                                 </a>
                             </li>
                         </ul>
@@ -110,7 +116,7 @@
                         {% include "accounts/_avatar.html" with user=request.user classes="avatar-lg" %}
                     </a>
 
-                    <ul class="dropdown-menu dropdown-menu-dark my-1">
+                    <ul class="dropdown-menu dropdown-menu-dark my-2">
                         <li>
                             <a class="dropdown-item align-items-center d-inline-flex gap-2"
                                href="{% url 'accounts.user-settings' %}">

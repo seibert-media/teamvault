@@ -20,7 +20,8 @@ class PageSizeMixin:
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
-        ctx['page_sizes'] = self.page_size_choices
+        if ctx['paginator'].count:
+            ctx['page_sizes'] = self.page_size_choices
         return ctx
 
 

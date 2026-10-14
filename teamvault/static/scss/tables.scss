@@ -1,0 +1,41 @@
+.fixed-table {
+  table-layout: fixed;
+}
+
+.members-table th:last-child,
+.members-table td:last-child {
+  width: 35%;
+  vertical-align: middle;
+}
+
+.secrets-table {
+  // Secret
+  th:nth-child(1), td:nth-child(1) {
+    width: 55%;
+  }
+
+  // Expiry
+  th:nth-child(2), td:nth-child(2) {
+    width: 15%;
+  }
+
+  // Shared by
+  th:nth-child(3), td:nth-child(3) {
+    width: 20%;
+  }
+
+  // Actions
+  th:nth-child(4), td:nth-child(4) {
+    width: 10%;
+  }
+}
+
+// TODO remove after redesign of user detail page
+.key-value-table {
+  table-layout: fixed;
+
+  td:first-child {
+    width: 45%;
+  }
+}
+
