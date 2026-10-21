@@ -25,6 +25,7 @@ classifiers = [
 ]
 keywords = ["password", "safe", "manager", "sharing"]
 dependencies = [
+    "certifi>=2026.10.19",  # minimum version after emSign root CA breach (GHSA-6q48-6c7w-9gw2)
     "cryptography~=50.0.0",
     "django-auth-ldap~=5.3.0",
     "django-bootstrap5==26.2",
@@ -63,7 +64,10 @@ Source = "https://github.com/seibert-media/teamvault"
 
 [tool.uv]
 package = true
+required-version = ">=0.13.4"  # emSign root CA breach (GHSA-hq85-5cpj-mr62)
 exclude-newer = "7 days"
+# Lets certifi 2026.10.19 through the 7-day cooldown. Remove after 2026-10-26.
+exclude-newer-package = { certifi = "2026-10-22T00:00:00Z" }
 
 [tool.uv.build-backend]
 module-root = ""
