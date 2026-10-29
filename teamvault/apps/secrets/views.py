@@ -407,11 +407,13 @@ SHARE_INFO_TEMPLATES = {
 }
 
 
-def _share_info_context(kind, entity_id):
-    if not (entity_id and entity_id.isdigit()):
+def _share_info_context(kind, value):
+    if not value:
         return None
     if kind == 'group':
-        group = get_object_or_404(Group, pk=entity_id)
+        if not (value.isascii() and value.isdigit()):
+            return None
+        group = get_object_or_404(Group, pk=value)
         member_count = group.user_set.count()
         return {
             'group': group,
@@ -420,7 +422,7 @@ def _share_info_context(kind, entity_id):
             'remaining_member_count': max(member_count - MEMBER_PREVIEW_SIZE, 0),
         }
     if kind == 'user':
-        return {'user': get_object_or_404(User, pk=entity_id)}
+        return {'user': get_object_or_404(User, username=value)}
     return None
 
 
@@ -544,8 +546,8 @@ def get_share_info(request, hashid):
     secret = get_object_or_404(Secret, hashid=hashid)
     secret.check_share_access(request.user)
 
-    kind = request.GET.get('type', '')
-    info_context = _share_info_context(kind, request.GET.get('id', ''))
+    kind = request.GET.get('kind', '')
+    info_context = _share_info_context(kind, request.GET.get('value', ''))
     if info_context is None:
         return HttpResponse('', status=400)
     return render(request, SHARE_INFO_TEMPLATES[kind], info_context)
