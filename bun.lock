@@ -36,6 +36,7 @@
       },
     },
   },
+  "trustedDependencies": [],
   "patchedDependencies": {
     "card@2.5.4": "patches/card@2.5.4.patch",
   },
