@@ -197,7 +197,7 @@ def otp_get(request, hashid):
         raise ValidationError([_('This secret has no OTP key.')])
 
     try:
-        otp = secret.get_otp(request)
+        otp = secret_revision.get_otp(request)
     except DjangoValidationError as exc:
         # This should only throw when an OTP has been set via the pre-fix API.
         # All correctly set OTPs without "algorithm" still assume the SHA1 default.
