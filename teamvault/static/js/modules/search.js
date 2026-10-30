@@ -42,6 +42,10 @@ export function initSearch() {
 
   // Track original data from API response
   let originalData = null;
+  // autocomplete.js skips its own debounced input handler when a custom one is
+  // supplied, so debouncing and cancellation of in-flight requests happen here.
+  let debounceTimer = null;
+  let inFlightRequest = null;
 
   searchModal.addEventListener('shown.bs.modal', () => {
     const searchModalInput = document.getElementById('search-modal-input');
@@ -63,8 +67,11 @@ export function initSearch() {
     name: 'secretSearchAutoComplete',
     data: {
       src: async (query) => {
+        inFlightRequest?.abort();
+        inFlightRequest = new AbortController();
+        searchIndicator.style.visibility = 'visible';
         try {
-          const source = await fetch(`${searchUrl}?q=${query}`);
+          const source = await fetch(`${searchUrl}?q=${encodeURIComponent(query)}`, {signal: inFlightRequest.signal});
           originalData = await source.json();
           return originalData.results;
         } catch (error) {
@@ -129,13 +136,9 @@ export function initSearch() {
     submit: true,
     events: {
       input: {
-        input: (event) => {
-          setTimeout(() => {
-            autoComplete.start();
-            if (event.target.value.length >= AUTOCOMPLETE_THRESHOLD) {
-              searchIndicator.style.visibility = 'visible';
-            }
-          }, AUTOCOMPLETE_DEBOUNCE);
+        input: () => {
+          clearTimeout(debounceTimer);
+          debounceTimer = setTimeout(() => autoComplete.start(), AUTOCOMPLETE_DEBOUNCE);
         },
         close: () => {
           searchModalResults.style.display = 'none';
@@ -151,6 +154,8 @@ export function initSearch() {
           event.preventDefault();
         },
         response: () => {
+          // An aborted request is superseded by a newer one that is still loading.
+          if (autoComplete.feedback?.name === 'AbortError') return;
           searchIndicator.style.visibility = 'hidden';
         },
         results: () => {
