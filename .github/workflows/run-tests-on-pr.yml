@@ -82,18 +82,12 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: ${{ matrix.python-version }}
-
       - name: Set Up uv
         uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
+          python-version: ${{ matrix.python-version }}
+          activate-environment: true
           enable-cache: true
-          # setup-uv only puts the python version into the cache key via its own
-          # python-version input; without this suffix all matrix jobs share one key
-          cache-suffix: ${{ matrix.python-version }}
           cache-dependency-glob: |
             **/uv.lock
             **/pyproject.toml
@@ -107,10 +101,6 @@ jobs:
       - name: Install dependencies
         working-directory: ${{ github.workspace }}
         run: uv sync
-
-      - name: Activate venv for later steps
-        shell: bash
-        run: echo "${{ github.workspace }}/.venv/bin" >> "$GITHUB_PATH"
 
       - name: Build frontend bundle
         working-directory: ${{ github.workspace }}
