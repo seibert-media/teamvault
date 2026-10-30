@@ -9,7 +9,7 @@ export async function refreshOtpEvery30Sec(inputElement, secret_url, bigElement)
   const otp = await response.json();
   let newFieldData = otp.slice(0, 3) + "<span class='separator mx-1'></span>" + otp.slice(3);
   inputElement.innerHTML = newFieldData;
-  if ( !bigElement.classList.contains("invisible")) {
+  if (bigElement && !bigElement.classList.contains("invisible")) {
     bigElement.children[1].innerHTML = newFieldData.replace('mx-1', 'mx-3');
   }
 }
@@ -19,7 +19,7 @@ export async function otpCountdown(countdownContainerEl, countdownNumberEl, inpu
   setCircleParams(document.getElementById("progress-circle"), countdownTime);
   countdownContainerEl.style.setProperty('--progress', countdownTime);
   countdownNumberEl.textContent = countdownTime;
-  if ( !bigElement.children[0].classList.contains("invisible")) {
+  if (bigElement && !bigElement.children[0].classList.contains("invisible")) {
     const bigCountdownElement = bigElement.children[0].children[0];
     const bigCountdownNumberElement = bigCountdownElement.children[0];
     const bigCountdownCircleElement = bigCountdownElement.children[1].children[0];

@@ -124,7 +124,7 @@ class HashIDModel(models.Model):
         return super().save(*args, **kwargs)
 
 
-class Secret(HashIDModel):  # noqa: PLR0904
+class Secret(HashIDModel):
     HASHID_NAMESPACE = 'Secret'
 
     if t.TYPE_CHECKING:
@@ -297,18 +297,6 @@ class Secret(HashIDModel):  # noqa: PLR0904
                 plaintext_data = {'password': plaintext_data}
 
         return plaintext_data
-
-    def get_otp(self, request):
-        # only log the OTP access *once*
-        audited_session_key = f'otp-audited-{self.hashid}-{self.current_revision_id}'
-        if request.session.get(audited_session_key):
-            data = self.current_revision.peek_data(request.user)
-        else:
-            data = self.get_data(request.user)
-            request.session[audited_session_key] = True
-        params = get_otp_params_from_payload(data)
-        totp = TOTP(params.otp_key, digits=params.digits, digest=otp_digest(params.algorithm))
-        return totp.now()
 
     @classmethod
     def get_all_readable_by_user(cls, user):
@@ -611,6 +599,18 @@ class SecretRevision(HashIDModel):
             if self.secret.content_type == ContentType.PASSWORD:
                 return {'password': s}
         return s
+
+    def get_otp(self, request):
+        # only log the OTP access *once*
+        audited_session_key = f'otp-audited-{self.secret.hashid}-{self.id}'
+        if request.session.get(audited_session_key):
+            data = self.peek_data(request.user)
+        else:
+            data = self.secret.get_data(request.user) if self.is_current_revision else self.get_data(request.user)
+            request.session[audited_session_key] = True
+        params = get_otp_params_from_payload(data)
+        totp = TOTP(params.otp_key, digits=params.digits, digest=otp_digest(params.algorithm))
+        return totp.now()
 
     @property
     def is_current_revision(self):

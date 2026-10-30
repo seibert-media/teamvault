@@ -9,6 +9,7 @@ module.exports = {
     base: './teamvault/static/js/entries/base.js',
     'secret-detail': './teamvault/static/js/entries/secret-detail.js',
     'secret-addedit': './teamvault/static/js/entries/secret-addedit.js',
+    'secret-revision': './teamvault/static/js/entries/secret-revision.js',
   },
   output: {
     path: path.resolve('./teamvault/static/bundled/'),
