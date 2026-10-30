@@ -19,7 +19,7 @@ class RotateFernetKeyTests(TestCase):
 
     def test_re_encrypts_and_rehashes_so_dedup_survives_rotation(self):
         with override_settings(TEAMVAULT_SECRET_KEY=NEW_KEY):
-            call_command('rotate_fernet_key', TEST_KEY.decode(), verbosity=0)
+            call_command('rotate_fernet_key', '--', TEST_KEY.decode(), verbosity=0)
 
             revision = SecretRevision.objects.get(secret=self.secret)
             self.assertEqual(revision.get_data(self.owner), self.payload)
