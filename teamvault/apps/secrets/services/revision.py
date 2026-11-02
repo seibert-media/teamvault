@@ -410,6 +410,28 @@ class RevisionService:
 
         return diffs
 
+    @staticmethod
+    def _field_diff(
+        *,
+        label: str,
+        fields: tuple[str, ...],
+        old_data: dict,
+        new_data: dict,
+        masked: bool,
+    ) -> dict | None:
+        """Return a diff row if any of `fields` changed. A masked row shows ∅ when the first field is absent."""
+        if [old_data.get(field) for field in fields] == [new_data.get(field) for field in fields]:
+            return None
+
+        key = fields[0]
+        if masked:
+            return {
+                'label': label,
+                'old': '••••' if old_data.get(key) else '∅',
+                'new': '••••' if new_data.get(key) else '∅',
+            }
+        return {'label': label, 'old': old_data.get(key, '∅'), 'new': new_data.get(key, '∅')}
+
     @classmethod
     def _get_payload_diff(cls, new_rev: SecretRevision, prev_rev: SecretRevision | None, user) -> list[dict]:
         """Compare payload between two revisions and return differences."""
@@ -422,7 +444,23 @@ class RevisionService:
         content_type = new_rev.secret.content_type
 
         if content_type == ContentType.PASSWORD:
-            return [{'label': 'Password', 'old': '••••', 'new': '••••'}]
+            try:
+                new_data = new_rev.peek_data(user)
+                old_data = prev_rev.peek_data(user)
+            except Exception:
+                return [{'label': 'Payload', 'old': '••••', 'new': '••••'}]
+
+            groups = (('Password', ('password',)), ('OTP key', ('otp_key', 'digits', 'algorithm')))
+            diffs = [
+                diff
+                for label, fields in groups
+                if (
+                    diff := cls._field_diff(
+                        label=label, fields=fields, old_data=old_data, new_data=new_data, masked=True
+                    )
+                )
+            ]
+            return diffs or [{'label': 'Payload', 'old': '∅', 'new': 'Changed'}]
 
         if content_type == ContentType.FILE:
             return [{'label': 'File', 'old': 'binary', 'new': 'binary'}]
@@ -439,17 +477,18 @@ class RevisionService:
             fields = ('holder', 'number', 'expiration_month', 'expiration_year', 'security_code', 'password')
             sensitive_fields = {'number', 'security_code', 'password'}
 
-            diffs = []
-            for field in fields:
-                if new_data.get(field) != old_data.get(field):
-                    display_name = field.replace('_', ' ').title()
-                    if field in sensitive_fields:
-                        diffs.append({'label': display_name, 'old': '••••', 'new': '••••'})
-                    else:
-                        diffs.append({
-                            'label': display_name,
-                            'old': old_data.get(field, '∅'),
-                            'new': new_data.get(field, '∅'),
-                        })
+            diffs = [
+                diff
+                for field in fields
+                if (
+                    diff := cls._field_diff(
+                        label=field.replace('_', ' ').title(),
+                        fields=(field,),
+                        old_data=old_data,
+                        new_data=new_data,
+                        masked=field in sensitive_fields,
+                    )
+                )
+            ]
 
             return diffs or [{'label': 'Payload', 'old': '∅', 'new': 'Changed'}]

@@ -700,6 +700,7 @@ class SecretRevisionDetailView(TemplateView):
             'meta': self.revision_for_display.secret,
             'restore_allowed': self.secret.permission_checker(self.request.user).is_editable(),
             'restore_event': self.restore_event,
+            'secret_url': reverse('api.secret-revision_data', kwargs={'hashid': self.revision.hashid}),
         })
         return context
 
