@@ -43,7 +43,7 @@ dependencies = [
     "psycopg~=3.3.2",
     "requests~=2.32",
     "social-auth-app-django~=6.0.0",
-    "whitenoise[brotli]~=6.12.0",
+    "whitenoise~=6.12.0",
 ]
 
 version = "0.15.1"  # automatically changed via "uv version"
