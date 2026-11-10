@@ -156,3 +156,9 @@
     }
   }
 }
+
+#search-modal-results:not(:has(.list-group)) {
+  &, + #search-modal-footer {
+    display: none;
+  }
+}
