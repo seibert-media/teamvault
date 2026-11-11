@@ -1,50 +1,32 @@
-import autoCompleteJS from '@tarekraafat/autocomplete.js';
-import DOMPurify from 'dompurify';
 import * as bootstrap from 'bootstrap';
+import htmx from 'htmx.org';
 import {scrollIfNeeded} from '../utils';
 
-const SEARCH_ITEM_HTML = `<div class="col-auto me-1"><i class="fa" data-search-icon></i></div>
-<div class="col-10 search-modal-result-content">
-    <span class="search-modal-result-content-title text-truncate" data-search-title></span>
-    <span class="search-modal-result-content-extras text-muted" data-search-meta></span>
-</div>
-<div class="col-1 search-modal-result-action align-items-center">
-    <i class="fa-solid fa-arrow-up-right-from-square search-modal-result-action-link p-2 rounded-5"></i>
-</div>`;
-
-const AUTOCOMPLETE_THRESHOLD = 3;
-const AUTOCOMPLETE_DEBOUNCE = 500;
-
-const ALLOWED_ICONS = new Set([
-  'user',
-  'file',
-  'credit-card',
-  'lock',
-  'lock-open',
-]);
-
-function sanitizeIcon(icon) {
-  return ALLOWED_ICONS.has(icon) ? icon : 'lock';
-}
+// Must match SEARCH_THRESHOLD in secrets/views.py
+const SEARCH_THRESHOLD = 3;
 
 export function initSearch() {
   const searchModal = document.getElementById('search-modal');
   if (!searchModal) return;
 
-  const searchUrl = searchModal.dataset.searchUrl;
-  if (!searchUrl) return;
-
-  const searchIndicator = document.getElementById('search-indicator');
-  const searchModalFooter = document.getElementById('search-modal-footer');
+  const searchModalInput = document.getElementById('search-modal-input');
   const searchModalResults = document.getElementById('search-modal-results');
-  const searchResultCountLink = document.getElementById('search-modal-result-count-link');
-  const searchResultCountSpan = document.getElementById('search-modal-result-count');
+  const searchIndicator = document.getElementById('search-indicator');
+  let selected = null;
 
-  // Track original data from API response
-  let originalData = null;
+  function select(item) {
+    selected?.setAttribute('aria-selected', 'false');
+    selected = item;
+    if (item) {
+      item.setAttribute('aria-selected', 'true');
+      searchModalInput.setAttribute('aria-activedescendant', item.id);
+      scrollIfNeeded(item, searchModalResults);
+    } else {
+      searchModalInput.removeAttribute('aria-activedescendant');
+    }
+  }
 
   searchModal.addEventListener('shown.bs.modal', () => {
-    const searchModalInput = document.getElementById('search-modal-input');
     searchModalInput.focus();
     if (searchModalInput.value) {
       const searchTermLen = searchModalInput.value.length;
@@ -55,112 +37,41 @@ export function initSearch() {
   document.addEventListener('keydown', (e) => {
     if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
       e.preventDefault();
-      bootstrap.Modal.getOrCreateInstance('#search-modal').show();
+      bootstrap.Modal.getOrCreateInstance(searchModal).show();
     }
   });
 
-  const autoComplete = new autoCompleteJS({
-    name: 'secretSearchAutoComplete',
-    data: {
-      src: async (query) => {
-        try {
-          const source = await fetch(`${searchUrl}?q=${query}`);
-          originalData = await source.json();
-          return originalData.results;
-        } catch (error) {
-          return error;
-        }
-      },
-      cache: false,
-    },
-    query: (input) => {
-      return DOMPurify.sanitize(input);
-    },
-    selector: '#search-modal-input',
-    threshold: AUTOCOMPLETE_THRESHOLD,
-    debounce: AUTOCOMPLETE_DEBOUNCE,
-    searchEngine: (query, record) => {
-      return record;
-    },
-    wrapper: false,
-    resultsList: {
-      class: 'list-group px-2',
-      destination: '#search-modal-results',
-      position: 'afterbegin',
-      element: (list, data) => {
-        if (data.results.length > 0) {
-          searchResultCountSpan.innerHTML = `Displaying <strong>${data.results.length}</strong> out of <strong>${originalData.count}</strong> results`;
-        } else {
-          searchResultCountSpan.innerHTML = `Found <strong>${data.matches.length}</strong> matching results for <strong>"${DOMPurify.sanitize(data.query)}"</strong>`;
-        }
-        searchModalFooter.style.display = 'block';
+  const isSearchable = () => searchModalInput.value.trim().length >= SEARCH_THRESHOLD;
 
-        let url = new URL(searchResultCountLink.href);
-        url.searchParams.set('search', DOMPurify.sanitize(data.query));
-        searchResultCountLink.href = url.href;
-      },
-      maxResults: undefined,
-      noResults: true,
-      tag: 'div',
-    },
-    resultItem: {
-      class: 'list-group-item list-group-item-action d-flex justify-content-between align-items-center py-3',
-      element: (item, data) => {
-        item.href = data.value.url;
-        item.innerHTML = SEARCH_ITEM_HTML;
-        const iconEl = item.querySelector('[data-search-icon]');
-        const titleEl = item.querySelector('[data-search-title]');
-        const metaEl = item.querySelector('[data-search-meta]');
+  // A request that is still running belongs to an outdated query, even when the new
+  // query is too short to send a request of its own.
+  // The indicator is toggled after the abort, whose cleanup removes it.
+  searchModalInput.addEventListener('input', () => {
+    htmx.trigger(searchModalInput, 'htmx:abort');
+    searchIndicator.classList.toggle('htmx-request', isSearchable());
+  });
 
-        iconEl.classList.add(`fa-${sanitizeIcon(data.value.icon)}`);
-        titleEl.textContent = data.value.name ?? '';
-        metaEl.textContent = data.value.meta ?? '';
-        if (data.value.locked) {
-          item.querySelector('.search-modal-result-action').insertAdjacentHTML(
-            'afterbegin',
-            '<i class="fa fa-lock text-danger"></i>',
-          );
-        }
-      },
-      highlight: 'autoComplete_highlight',
-      selected: 'autoComplete_selected',
-      tag: 'a',
-    },
-    submit: true,
-    events: {
-      input: {
-        input: (event) => {
-          setTimeout(() => {
-            autoComplete.start();
-            if (event.target.value.length >= AUTOCOMPLETE_THRESHOLD) {
-              searchIndicator.style.visibility = 'visible';
-            }
-          }, AUTOCOMPLETE_DEBOUNCE);
-        },
-        close: () => {
-          searchModalResults.style.display = 'none';
-          searchModalFooter.style.display = 'none';
-        },
-        selection: (event) => {
-          autoComplete.input.blur();
-          bootstrap.Modal.getInstance('#search-modal').hide();
-          const feedback = event.detail;
-          window.location.replace(feedback.selection.value['url']);
-        },
-        blur: (event) => {
-          event.preventDefault();
-        },
-        response: () => {
-          searchIndicator.style.visibility = 'hidden';
-        },
-        results: () => {
-          searchModalResults.style.display = 'block';
-        },
-        navigate: (event) => {
-          let el = searchModalResults.querySelector(`#autoComplete_result_${event.detail.selection.index}`);
-          scrollIfNeeded(el, searchModalResults);
-        },
-      },
-    },
+  searchModalInput.addEventListener('htmx:confirm', (e) => {
+    if (isSearchable()) return;
+    e.preventDefault();
+    searchModalResults.replaceChildren();
+    select(null);
+  });
+
+  searchModalResults.addEventListener('htmx:afterSwap', () => select(null));
+
+  searchModalInput.addEventListener('keydown', (e) => {
+    const items = [...searchModalResults.querySelectorAll('[role="option"]')];
+    const index = items.indexOf(selected);
+    if (e.key === 'ArrowDown' && items.length) {
+      e.preventDefault();
+      select(items[(index + 1) % items.length]);
+    } else if (e.key === 'ArrowUp' && items.length) {
+      e.preventDefault();
+      select(items[index <= 0 ? items.length - 1 : index - 1]);
+    } else if (e.key === 'Enter' && selected) {
+      e.preventDefault();
+      window.location.assign(selected.href);
+    }
   });
 }
