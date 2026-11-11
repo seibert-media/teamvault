@@ -6,7 +6,7 @@ export function initOtp(secretUrl) {
   const countdownNumberEl = document.getElementById('countdown-number');
   const bigElement = document.querySelector('.large-type');
 
-  if (!textElement || !countdownContainerEl || !countdownNumberEl || !bigElement) return;
+  if (!textElement || !countdownContainerEl || !countdownNumberEl) return;
 
   refreshOtpEvery30Sec(textElement, secretUrl, bigElement);
   otpCountdown(countdownContainerEl, countdownNumberEl, textElement, secretUrl, bigElement);
