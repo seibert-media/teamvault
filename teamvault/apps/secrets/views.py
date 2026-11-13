@@ -12,6 +12,7 @@ from django.db.models import FETCH_PEERS
 from django.http import Http404, HttpResponse, HttpResponseRedirect, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.defaultfilters import pluralize
+from django.template.loader import render_to_string
 from django.urls import reverse
 from django.utils.functional import cached_property
 from django.utils.translation import gettext_lazy as _
@@ -398,6 +399,32 @@ class SecretList(PageSizeMixin, ListView, FilterMixin):
 
 secret_list = login_required(SecretList.as_view())
 
+MEMBER_PREVIEW_SIZE = 5
+
+SHARE_INFO_TEMPLATES = {
+    'group': 'secrets/share_content/_group_info.html',
+    'user': 'secrets/share_content/_user_info.html',
+}
+
+
+def _share_info_context(kind, value):
+    if not value:
+        return None
+    if kind == 'group':
+        if not (value.isascii() and value.isdigit()):
+            return None
+        group = get_object_or_404(Group, pk=value)
+        member_count = group.user_set.count()
+        return {
+            'group': group,
+            'member_count': member_count,
+            'preview_members': group.user_set.select_related('profile').order_by('username')[:MEMBER_PREVIEW_SIZE],
+            'remaining_member_count': max(member_count - MEMBER_PREVIEW_SIZE, 0),
+        }
+    if kind == 'user':
+        return {'user': get_object_or_404(User, username=value)}
+    return None
+
 
 class SecretShareList(CreateView):
     form_class = SecretShareForm
@@ -437,6 +464,15 @@ class SecretShareList(CreateView):
                 'users': self.user_shares,
             },
         }
+
+        # refill share-info when form has errors
+        form = self.get_form()
+        if form.is_bound:
+            kind = 'user' if form.data.get('user') else 'group' if form.data.get('group') else ''
+            info_context = _share_info_context(kind, form.data.get(kind, ''))
+            if info_context:
+                context['share_info'] = render_to_string(SHARE_INFO_TEMPLATES[kind], info_context, request=self.request)
+
         return super().get_context_data(**context)
 
     def form_valid(self, form):
@@ -502,6 +538,19 @@ class SecretShareList(CreateView):
 
 
 secret_share_list = login_required(SecretShareList.as_view())
+
+
+@login_required
+@require_http_methods(['GET'])
+def get_share_info(request, hashid):
+    secret = get_object_or_404(Secret, hashid=hashid)
+    secret.check_share_access(request.user)
+
+    kind = request.GET.get('kind', '')
+    info_context = _share_info_context(kind, request.GET.get('value', ''))
+    if info_context is None:
+        return HttpResponse('', status=400)
+    return render(request, SHARE_INFO_TEMPLATES[kind], info_context)
 
 
 @login_required
