@@ -52,6 +52,7 @@ CONTENT_TYPE_NAMES = {
     'file': _CONTENT_TYPES[ContentType.FILE],
     'password': _CONTENT_TYPES[ContentType.PASSWORD],
 }
+SEARCH_THRESHOLD = 3
 
 
 class Dashboard(TemplateView):
@@ -548,14 +549,9 @@ def secret_share_delete(request, hashid, share_id):
     return response
 
 
-@login_required
-@require_http_methods(['GET'])
-def secret_search(request):
-    search_term = request.GET['q']
-    search_limit = request.GET.get('limit', 15)
-    search_results = []
-    raw_results = Secret.get_search_results(request.user, search_term)
-    filtered_secrets = list(raw_results[:search_limit])
+def _search_results(*, user, term, limit):
+    raw_results = Secret.get_search_results(user, term)
+    filtered_secrets = list(raw_results[:limit])
     unreadable_secrets = filtered_secrets.copy()
     sorted_secrets = []
 
@@ -563,7 +559,7 @@ def secret_search(request):
     for secret in filtered_secrets:
         metadata = ''
         icon = 'lock-open'
-        if secret.is_readable(request.user):
+        if secret.is_readable(user):
             if secret.content_type == ContentType.PASSWORD:
                 icon = 'user'
                 metadata = secret.username
@@ -580,16 +576,32 @@ def secret_search(request):
     for secret in unreadable_secrets:
         sorted_secrets.append((secret, 'lock', ''))
 
-    for secret, icon, metadata in sorted_secrets:
-        search_results.append({
+    results = [
+        {
             'icon': icon,
             'meta': metadata,
             'name': secret.name,
             'locked': icon == 'lock',
             'hashid': secret.hashid,
             'url': reverse('secrets.secret-detail', kwargs={'hashid': secret.hashid}),
-        })
-    return JsonResponse({'count': raw_results.count(), 'results': search_results})
+        }
+        for secret, icon, metadata in sorted_secrets
+    ]
+    return raw_results.count(), results
+
+
+@login_required
+@require_http_methods(['GET'])
+def secret_search(request):
+    term = request.GET.get('search', '').strip()
+    if request.headers.get('HX-Request') == 'true':
+        context = {'term': term}
+        if len(term) >= SEARCH_THRESHOLD:
+            context['count'], context['results'] = _search_results(user=request.user, term=term, limit=15)
+        return render(request, 'secrets/secret_search.html#results', context)
+
+    count, results = _search_results(user=request.user, term=term, limit=request.GET.get('limit', 15))
+    return JsonResponse({'count': count, 'results': results})
 
 
 class SecretRevisionHistoryView(TemplateView):
