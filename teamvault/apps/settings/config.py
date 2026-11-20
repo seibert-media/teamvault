@@ -257,9 +257,12 @@ def configure_huey(config):
                 )
             ) from exc
 
+    sync_ldap_groups = get_from_config(config, 'tasks', 'sync_ldap_groups', 'yes').lower()
+
     return {
         'revoke_unused_shares_after_days': revoke,
         'scheduler_frequency': scheduler_frequency,
+        'sync_ldap_groups': sync_ldap_groups in {'1', 'enabled', 'true', 'yes'},
     }
 
 
@@ -572,6 +575,7 @@ salt = {hashid_salt}
 #[tasks]
 #scheduler_frequency = daily  # or hourly, minutely
 #revoke_unused_shares_after_days = 365  # task disabled if unset
+#sync_ldap_groups = yes  # periodically sync LDAP group members, only used with [auth_ldap]
     """.format(
         django_key=b64encode(SECRET_KEY.encode('utf-8')).decode('utf-8'),
         hashid_salt=b64encode(HASHID_SALT.encode('utf-8')).decode('utf-8'),
