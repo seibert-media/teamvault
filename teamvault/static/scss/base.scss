@@ -43,8 +43,11 @@ a {
   margin-top: auto
 }
 
-.breadcrumb-link:hover {
-  text-decoration: underline;
+.hover-underline {
+  &:hover,
+  &:focus-visible {
+    text-decoration: underline;
+  }
 }
 
 .background {

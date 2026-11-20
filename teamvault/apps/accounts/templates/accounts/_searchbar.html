@@ -4,6 +4,7 @@
     <label for="{{ id }}" class="d-flex align-items-center flex-grow-1 ps-3">
         <i class="fa fa-search search-icon" aria-hidden="true"></i>
         <input type="search" id="{{ id }}" name="q"
+               data-q-for="{{ target }}"
                class="form-control bg-transparent border-0 ps-2 shadow-none"
                placeholder="{{ placeholder }}"
                value="{{ request.GET.q|default:'' }}"

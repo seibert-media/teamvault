@@ -19,6 +19,11 @@ urlpatterns = (
         name='secrets.secret-list',
     ),
     path(
+        'secrets/<str:hashid>/share-info/',
+        views.get_share_info,
+        name='secrets.share-info',
+    ),
+    path(
         'secrets/<str:hashid>/',
         views.secret_detail,
         name='secrets.secret-detail',

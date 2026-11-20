@@ -8,7 +8,7 @@
                     <select name="page_size" class="form-select form-select-sm" style="width: auto;"
                         {% if target %}
                             hx-get="{{ url|default:'' }}"
-                            hx-include="[name='q']"
+                            hx-include="[data-q-for='{{ target }}']"
                             hx-trigger="change"
                             hx-target="{{ target }}"
                             hx-swap="innerHTML"

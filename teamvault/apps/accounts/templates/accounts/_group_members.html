@@ -21,7 +21,7 @@
                 </a>
             </td>
             <td>
-                <span class="text-muted">{{ user.last_login }}</span>
+                <span class="text-muted">{{ user.last_login|date:"Y-m-d H:i:s e"|default:"-" }}</span>
             </td>
         </tr>
     {% empty %}
