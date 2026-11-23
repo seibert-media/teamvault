@@ -167,6 +167,7 @@ class SecretShareForm(forms.ModelForm):
 
     user = UserRepresentationField(
         required=False,
+        to_field_name='username',
         queryset=User.objects.none(),  # will be set in view
     )
 
