@@ -4,7 +4,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django_auth_ldap.backend import LDAPBackend, _LDAPUser
 from django_auth_ldap.config import LDAPSearch
-from social_core.exceptions import AuthForbidden
+from social_core.exceptions import AuthPolicyError
 
 User = get_user_model()
 
@@ -78,48 +78,27 @@ def search_by_mail(mail):
 def social_auth_link_user_via_ldap_uuid(backend, details: dict[str, Any], user=None, *_args, **_kwargs):
     """
     Enforce: social logins are only allowed for users that exist in LDAP.
-    - Find LDAP entry by social email.
+    - Find the LDAP entry by LDAP UUID for known users, by social email otherwise.
     - If not found -> deny login.
     - If found -> populate local User from LDAP (links by LDAP UUID via backend).
     - Return that user so PSA associates the social account with it.
     """
-    ldap_backend = UUIDLinkingLDAPBackend()
     username_attr = getattr(settings, 'AUTH_LDAP_USERNAME_ATTR', 'uid')
+    username = None
 
     if user is None:
         mail = (details or {}).get('email')
-        if not mail:
-            raise AuthForbidden(backend)
+        results = search_by_mail(mail) if mail else []
+        if len(results) == 1:
+            username = _get_attr(results[0][1], username_attr)
+    elif ldap_uuid := getattr(user, 'ldap_uuid', None):
+        results = search_by_ldap_uuid(ldap_uuid)
+        if results:
+            username = _get_attr(results[0][1], username_attr)
+    else:
+        username = getattr(user, User.USERNAME_FIELD)
 
-        results = search_by_mail(mail)
-        if not results or len(results) != 1:
-            raise AuthForbidden(backend)
-
-        _dn, attrs = results[0]
-        uid = _get_attr(attrs, username_attr)
-        if not uid:
-            raise AuthForbidden(backend)
-        linked = ldap_backend.populate_user(uid)
-        if not linked:
-            raise AuthForbidden(backend)
-        return {'user': linked}
-
-    ldap_uuid = getattr(user, 'ldap_uuid', None)
-    if not ldap_uuid:
-        uid = getattr(user, User.USERNAME_FIELD)
-        refreshed = ldap_backend.populate_user(uid)
-        if not refreshed:
-            raise AuthForbidden(backend)
-        return {'user': refreshed}
-
-    results = search_by_ldap_uuid(ldap_uuid)
-    if results:
-        _dn, attrs = results[0]
-        uid = _get_attr(attrs, username_attr)
-        if uid:
-            refreshed = ldap_backend.populate_user(uid)
-            if not refreshed:
-                raise AuthForbidden(backend)
-            return {'user': refreshed}
-
-    raise AuthForbidden(backend)
+    linked = UUIDLinkingLDAPBackend().populate_user(username) if username else None
+    if not linked:
+        raise AuthPolicyError(backend, stage='pipeline')
+    return {'user': linked}

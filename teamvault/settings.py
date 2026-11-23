@@ -73,6 +73,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',
     'teamvault.middleware.htmx_message_middleware',
 ]
 
@@ -135,6 +136,11 @@ REST_FRAMEWORK = {
 
 # Social Auth
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
+SOCIAL_AUTH_LOGIN_ERROR_URL = LOGIN_URL
+
+# Our Google associations use 'sub' as uid. social_django migration 0020 would otherwise label
+# them as keyed by email, and logins would no longer find them.
+SOCIAL_AUTH_OLD_ID_KEYS = {'google-oauth2': 'sub'}
 
 # Django-Bootstrap5
 BOOTSTRAP5 = {
